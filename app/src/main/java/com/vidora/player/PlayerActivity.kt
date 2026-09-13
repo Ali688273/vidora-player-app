@@ -54,6 +54,8 @@ class PlayerActivity : ComponentActivity() {
     private lateinit var aspectButton: Button
     private lateinit var subtitleButton: Button
     private lateinit var sleepTimerButton: Button
+    private lateinit var shareButton: Button
+    private lateinit var deleteButton: Button
     private lateinit var lockButton: Button
     private lateinit var fullscreenButton: Button
     private lateinit var gestureInfo: TextView
@@ -169,6 +171,12 @@ class PlayerActivity : ComponentActivity() {
         sleepTimerButton =
             findViewById(R.id.sleepTimerButton)
 
+        shareButton =
+            findViewById(R.id.shareButton)
+
+        deleteButton =
+            findViewById(R.id.deleteButton)
+
         lockButton =
             findViewById(R.id.lockButton)
 
@@ -277,6 +285,20 @@ class PlayerActivity : ComponentActivity() {
 
             if (!isLocked) {
                 showSleepTimerDialog()
+            }
+        }
+
+        shareButton.setOnClickListener {
+
+            if (!isLocked) {
+                shareCurrentVideo()
+            }
+        }
+
+        deleteButton.setOnClickListener {
+
+            if (!isLocked) {
+                deleteCurrentVideo()
             }
         }
 
@@ -1107,6 +1129,12 @@ class PlayerActivity : ComponentActivity() {
         sleepTimerButton.visibility =
             visibility
 
+        shareButton.visibility =
+            visibility
+
+        deleteButton.visibility =
+            visibility
+
         fullscreenButton.visibility =
             visibility
     }
@@ -1503,7 +1531,7 @@ class PlayerActivity : ComponentActivity() {
                 null
             )
             .setPositiveButton(
-                R.string.delete
+                R.string.delete_video
             ) { _, _ ->
 
                 deleteVideo(uri)
@@ -1688,6 +1716,12 @@ class PlayerActivity : ComponentActivity() {
                 View.GONE
 
             sleepTimerButton.visibility =
+                View.GONE
+
+            shareButton.visibility =
+                View.GONE
+
+            deleteButton.visibility =
                 View.GONE
 
             lockButton.visibility =
