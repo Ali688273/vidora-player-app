@@ -3,11 +3,18 @@ package com.vidora.player
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
-import android.view.Gravity
+import android.text.Editable
+import android.text.TextWatcher
+import android.view.LayoutInflater
+import android.widget.Button
+import android.widget.EditText
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.activity.ComponentActivity
@@ -19,6 +26,12 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var videoContainer: LinearLayout
     private lateinit var countText: TextView
+    private lateinit var searchInput: EditText
+    private lateinit var sortButton: Button
+
+    private val allVideos = mutableListOf<VideoItem>()
+
+    private var sortMode = SortMode.NEWEST
 
     private val permissionLauncher =
         registerForActivityResult(
@@ -34,16 +47,30 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
+    override fun onCreate(
+        savedInstanceState: Bundle?
+    ) {
         super.onCreate(savedInstanceState)
 
-        setContentView(R.layout.activity_main)
+        setContentView(
+            R.layout.activity_main
+        )
 
         videoContainer =
             findViewById(R.id.videoContainer)
 
         countText =
             findViewById(R.id.countText)
+
+        searchInput =
+            findViewById(R.id.searchInput)
+
+        sortButton =
+            findViewById(R.id.sortButton)
+
+        setupSearch()
+
+        setupSortButton()
 
         checkPermissionAndLoad()
     }
@@ -56,6 +83,78 @@ class MainActivity : ComponentActivity() {
         ) {
             loadVideos()
         }
+    }
+
+    private fun setupSearch() {
+
+        searchInput.addTextChangedListener(
+            object : TextWatcher {
+
+                override fun beforeTextChanged(
+                    s: CharSequence?,
+                    start: Int,
+                    count: Int,
+                    after: Int
+                ) {
+                }
+
+                override fun onTextChanged(
+                    s: CharSequence?,
+                    start: Int,
+                    before: Int,
+                    count: Int
+                ) {
+                    filterVideos(
+                        s?.toString().orEmpty()
+                    )
+                }
+
+                override fun afterTextChanged(
+                    s: Editable?
+                ) {
+                }
+            }
+        )
+    }
+
+    private fun setupSortButton() {
+
+        sortButton.setOnClickListener {
+
+            sortMode =
+                when (sortMode) {
+                    SortMode.NEWEST ->
+                        SortMode.NAME
+
+                    SortMode.NAME ->
+                        SortMode.SIZE
+
+                    SortMode.SIZE ->
+                        SortMode.NEWEST
+                }
+
+            updateSortButtonText()
+
+            filterVideos(
+                searchInput.text.toString()
+            )
+        }
+    }
+
+    private fun updateSortButtonText() {
+
+        sortButton.text =
+            when (sortMode) {
+
+                SortMode.NEWEST ->
+                    getString(R.string.sort_newest)
+
+                SortMode.NAME ->
+                    getString(R.string.sort_name)
+
+                SortMode.SIZE ->
+                    getString(R.string.sort_size)
+            }
     }
 
     private fun checkPermissionAndLoad() {
@@ -91,13 +190,14 @@ class MainActivity : ComponentActivity() {
 
     private fun loadVideos() {
 
-        videoContainer.removeAllViews()
+        allVideos.clear()
 
         val projection = arrayOf(
             MediaStore.Video.Media._ID,
             MediaStore.Video.Media.DISPLAY_NAME,
             MediaStore.Video.Media.DURATION,
-            MediaStore.Video.Media.SIZE
+            MediaStore.Video.Media.SIZE,
+            MediaStore.Video.Media.DATE_ADDED
         )
 
         val collection =
@@ -111,8 +211,6 @@ class MainActivity : ComponentActivity() {
 
                 MediaStore.Video.Media.EXTERNAL_CONTENT_URI
             }
-
-        val videos = mutableListOf<VideoItem>()
 
         contentResolver.query(
             collection,
@@ -142,6 +240,11 @@ class MainActivity : ComponentActivity() {
                     MediaStore.Video.Media.SIZE
                 )
 
+            val dateColumn =
+                cursor.getColumnIndexOrThrow(
+                    MediaStore.Video.Media.DATE_ADDED
+                )
+
             while (cursor.moveToNext()) {
 
                 val id =
@@ -156,29 +259,103 @@ class MainActivity : ComponentActivity() {
                 val size =
                     cursor.getLong(sizeColumn)
 
+                val dateAdded =
+                    cursor.getLong(dateColumn)
+
                 val uri =
                     Uri.withAppendedPath(
                         collection,
                         id.toString()
                     )
 
-                videos.add(
+                allVideos.add(
                     VideoItem(
                         uri = uri,
                         name = name,
                         duration = duration,
-                        size = size
+                        size = size,
+                        dateAdded = dateAdded
                     )
                 )
             }
         }
 
-        countText.text = videos.size.toString()
+        filterVideos(
+            searchInput.text.toString()
+        )
+    }
+
+    private fun filterVideos(
+        query: String
+    ) {
+
+        val normalizedQuery =
+            query.trim().lowercase(Locale.getDefault())
+
+        val filtered =
+            if (normalizedQuery.isEmpty()) {
+
+                allVideos.toList()
+
+            } else {
+
+                allVideos.filter {
+                    it.name
+                        .lowercase(Locale.getDefault())
+                        .contains(normalizedQuery)
+                }
+            }
+
+        val sorted =
+            when (sortMode) {
+
+                SortMode.NEWEST ->
+                    filtered.sortedByDescending {
+                        it.dateAdded
+                    }
+
+                SortMode.NAME ->
+                    filtered.sortedBy {
+                        it.name.lowercase(
+                            Locale.getDefault()
+                        )
+                    }
+
+                SortMode.SIZE ->
+                    filtered.sortedByDescending {
+                        it.size
+                    }
+            }
+
+        displayVideos(sorted)
+    }
+
+    private fun displayVideos(
+        videos: List<VideoItem>
+    ) {
+
+        videoContainer.removeAllViews()
+
+        countText.text =
+            videos.size.toString()
 
         if (videos.isEmpty()) {
 
             showMessage(
-                getString(R.string.no_videos)
+                if (
+                    searchInput.text
+                        .toString()
+                        .trim()
+                        .isEmpty()
+                ) {
+                    getString(
+                        R.string.no_videos
+                    )
+                } else {
+                    getString(
+                        R.string.no_videos
+                    )
+                }
             )
 
             return
@@ -189,120 +366,123 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun addVideoItem(video: VideoItem) {
+    private fun addVideoItem(
+        video: VideoItem
+    ) {
 
-        val item = LinearLayout(this).apply {
+        val view =
+            LayoutInflater.from(this)
+                .inflate(
+                    R.layout.item_video,
+                    videoContainer,
+                    false
+                )
 
-            orientation =
-                LinearLayout.VERTICAL
-
-            gravity =
-                Gravity.CENTER_VERTICAL
-
-            setPadding(
-                18,
-                18,
-                18,
-                18
+        val thumbnailImage =
+            view.findViewById<ImageView>(
+                R.id.thumbnailImage
             )
-
-            setBackgroundColor(
-                ContextCompat.getColor(
-                    this@MainActivity,
-                    R.color.vidora_surface
-                )
-            )
-
-            setOnClickListener {
-
-                val intent =
-                    Intent(
-                        this@MainActivity,
-                        PlayerActivity::class.java
-                    )
-
-                intent.putExtra(
-                    PlayerActivity.EXTRA_VIDEO_URI,
-                    video.uri.toString()
-                )
-
-                intent.putExtra(
-                    PlayerActivity.EXTRA_VIDEO_NAME,
-                    video.name
-                )
-
-                startActivity(intent)
-            }
-        }
 
         val nameText =
-            TextView(this).apply {
-
-                text = video.name
-
-                textSize = 17f
-
-                setTextColor(
-                    ContextCompat.getColor(
-                        this@MainActivity,
-                        R.color.vidora_text
-                    )
-                )
-
-                maxLines = 2
-            }
-
-        val infoText =
-            TextView(this).apply {
-
-                text = buildString {
-
-                    append(
-                        formatDuration(
-                            video.duration
-                        )
-                    )
-
-                    append("  •  ")
-
-                    append(
-                        formatSize(
-                            video.size
-                        )
-                    )
-                }
-
-                textSize = 13f
-
-                setTextColor(
-                    ContextCompat.getColor(
-                        this@MainActivity,
-                        R.color.vidora_text_secondary
-                    )
-                )
-
-                maxLines = 1
-            }
-
-        item.addView(nameText)
-
-        item.addView(infoText)
-
-        val params =
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
+            view.findViewById<TextView>(
+                R.id.nameText
             )
 
-        params.bottomMargin = 8
+        val infoText =
+            view.findViewById<TextView>(
+                R.id.infoText
+            )
 
-        videoContainer.addView(
-            item,
-            params
+        nameText.text =
+            video.name
+
+        infoText.text =
+            buildString {
+
+                append(
+                    formatDuration(
+                        video.duration
+                    )
+                )
+
+                append("  •  ")
+
+                append(
+                    formatSize(
+                        video.size
+                    )
+                )
+            }
+
+        loadThumbnail(
+            video.uri,
+            thumbnailImage
         )
+
+        view.setOnClickListener {
+
+            val intent =
+                Intent(
+                    this,
+                    PlayerActivity::class.java
+                )
+
+            intent.putExtra(
+                PlayerActivity.EXTRA_VIDEO_URI,
+                video.uri.toString()
+            )
+
+            intent.putExtra(
+                PlayerActivity.EXTRA_VIDEO_NAME,
+                video.name
+            )
+
+            startActivity(intent)
+        }
+
+        videoContainer.addView(view)
     }
 
-    private fun showMessage(message: String) {
+    private fun loadThumbnail(
+        uri: Uri,
+        imageView: ImageView
+    ) {
+
+        try {
+
+            val retriever =
+                MediaMetadataRetriever()
+
+            retriever.setDataSource(
+                this,
+                uri
+            )
+
+            val bitmap =
+                retriever.getFrameAtTime(
+                    1_000_000L,
+                    MediaMetadataRetriever
+                        .OPTION_CLOSEST_SYNC
+                )
+
+            retriever.release()
+
+            if (bitmap != null) {
+                imageView.setImageBitmap(
+                    bitmap
+                )
+            }
+
+        } catch (_: Exception) {
+            imageView.setImageResource(
+                android.R.color.transparent
+            )
+        }
+    }
+
+    private fun showMessage(
+        message: String
+    ) {
 
         videoContainer.removeAllViews()
 
@@ -313,7 +493,7 @@ class MainActivity : ComponentActivity() {
 
                 textSize = 16f
 
-                gravity = Gravity.CENTER
+                gravity = android.view.Gravity.CENTER
 
                 setTextColor(
                     ContextCompat.getColor(
@@ -331,8 +511,6 @@ class MainActivity : ComponentActivity() {
             }
 
         videoContainer.addView(text)
-
-        countText.text = "0"
     }
 
     private fun formatDuration(
@@ -409,6 +587,13 @@ class MainActivity : ComponentActivity() {
         val uri: Uri,
         val name: String,
         val duration: Long,
-        val size: Long
+        val size: Long,
+        val dateAdded: Long
     )
+
+    enum class SortMode {
+        NEWEST,
+        NAME,
+        SIZE
+    }
 }
