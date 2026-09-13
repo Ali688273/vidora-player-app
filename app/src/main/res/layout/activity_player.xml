@@ -12,108 +12,131 @@
         android:layout_height="match_parent"
         android:keepScreenOn="true" />
 
-    <LinearLayout
-        android:id="@+id/controlBar"
+    <HorizontalScrollView
+        android:id="@+id/controlScroll"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
-        android:orientation="horizontal"
-        android:gravity="center"
-        android:padding="6dp"
+        android:fillViewport="true"
+        android:scrollbars="none"
         android:background="#99000000">
 
-        <Button
-            android:id="@+id/previousButton"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:text="@string/previous_video"
-            android:textSize="18sp" />
+        <LinearLayout
+            android:id="@+id/controlBar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:padding="6dp">
 
-        <Button
-            android:id="@+id/nextButton"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:text="@string/next_video"
-            android:textSize="18sp" />
+            <Button
+                android:id="@+id/previousButton"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:text="@string/previous_video"
+                android:textSize="18sp" />
 
-        <Button
-            android:id="@+id/repeatButton"
-            android:layout_width="58dp"
-            android:layout_height="44dp"
-            android:text="@string/repeat_off"
-            android:textSize="10sp" />
+            <Button
+                android:id="@+id/nextButton"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:text="@string/next_video"
+                android:textSize="18sp" />
 
-        <Button
-            android:id="@+id/audioButton"
-            android:layout_width="62dp"
-            android:layout_height="44dp"
-            android:text="@string/audio_track"
-            android:textSize="10sp" />
+            <Button
+                android:id="@+id/repeatButton"
+                android:layout_width="58dp"
+                android:layout_height="44dp"
+                android:text="@string/repeat_off"
+                android:textSize="10sp" />
 
-        <Button
-            android:id="@+id/favoriteButton"
-            android:layout_width="52dp"
-            android:layout_height="44dp"
-            android:text="@string/favorite_off"
-            android:textSize="16sp" />
+            <Button
+                android:id="@+id/audioButton"
+                android:layout_width="62dp"
+                android:layout_height="44dp"
+                android:text="@string/audio_track"
+                android:textSize="10sp" />
 
-        <Button
-            android:id="@+id/speedMinusButton"
-            android:layout_width="42dp"
-            android:layout_height="44dp"
-            android:text="−"
-            android:textSize="18sp" />
+            <Button
+                android:id="@+id/favoriteButton"
+                android:layout_width="52dp"
+                android:layout_height="44dp"
+                android:text="@string/favorite_off"
+                android:textSize="16sp" />
 
-        <Button
-            android:id="@+id/speedButton"
-            android:layout_width="56dp"
-            android:layout_height="44dp"
-            android:text="@string/speed_default"
-            android:textSize="11sp" />
+            <Button
+                android:id="@+id/speedMinusButton"
+                android:layout_width="42dp"
+                android:layout_height="44dp"
+                android:text="−"
+                android:textSize="18sp" />
 
-        <Button
-            android:id="@+id/speedPlusButton"
-            android:layout_width="42dp"
-            android:layout_height="44dp"
-            android:text="+"
-            android:textSize="18sp" />
+            <Button
+                android:id="@+id/speedButton"
+                android:layout_width="56dp"
+                android:layout_height="44dp"
+                android:text="@string/speed_default"
+                android:textSize="11sp" />
 
-        <Button
-            android:id="@+id/aspectButton"
-            android:layout_width="56dp"
-            android:layout_height="44dp"
-            android:text="FIT"
-            android:textSize="10sp" />
+            <Button
+                android:id="@+id/speedPlusButton"
+                android:layout_width="42dp"
+                android:layout_height="44dp"
+                android:text="+"
+                android:textSize="18sp" />
 
-        <Button
-            android:id="@+id/subtitleButton"
-            android:layout_width="62dp"
-            android:layout_height="44dp"
-            android:text="@string/subtitle"
-            android:textSize="10sp" />
+            <Button
+                android:id="@+id/aspectButton"
+                android:layout_width="56dp"
+                android:layout_height="44dp"
+                android:text="FIT"
+                android:textSize="10sp" />
 
-        <Button
-            android:id="@+id/sleepTimerButton"
-            android:layout_width="62dp"
-            android:layout_height="44dp"
-            android:text="@string/sleep_timer"
-            android:textSize="10sp" />
+            <Button
+                android:id="@+id/subtitleButton"
+                android:layout_width="62dp"
+                android:layout_height="44dp"
+                android:text="@string/subtitle"
+                android:textSize="10sp" />
 
-        <Button
-            android:id="@+id/lockButton"
-            android:layout_width="56dp"
-            android:layout_height="44dp"
-            android:text="@string/lock"
-            android:textSize="10sp" />
+            <Button
+                android:id="@+id/sleepTimerButton"
+                android:layout_width="62dp"
+                android:layout_height="44dp"
+                android:text="@string/sleep_timer"
+                android:textSize="10sp" />
 
-        <Button
-            android:id="@+id/fullscreenButton"
-            android:layout_width="42dp"
-            android:layout_height="44dp"
-            android:text="@string/fullscreen"
-            android:textSize="16sp" />
+            <Button
+                android:id="@+id/shareButton"
+                android:layout_width="62dp"
+                android:layout_height="44dp"
+                android:text="@string/share_video"
+                android:textSize="10sp" />
 
-    </LinearLayout>
+            <Button
+                android:id="@+id/deleteButton"
+                android:layout_width="62dp"
+                android:layout_height="44dp"
+                android:text="@string/delete_video"
+                android:textSize="10sp" />
+
+            <Button
+                android:id="@+id/lockButton"
+                android:layout_width="56dp"
+                android:layout_height="44dp"
+                android:text="@string/lock"
+                android:textSize="10sp" />
+
+            <Button
+                android:id="@+id/fullscreenButton"
+                android:layout_width="42dp"
+                android:layout_height="44dp"
+                android:text="@string/fullscreen"
+                android:textSize="16sp" />
+
+        </LinearLayout>
+
+    </HorizontalScrollView>
 
     <TextView
         android:id="@+id/gestureInfo"
