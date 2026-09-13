@@ -11,6 +11,7 @@ import android.os.Bundle
 import android.provider.MediaStore
 import android.text.Editable
 import android.text.TextWatcher
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.widget.Button
 import android.widget.EditText
@@ -29,9 +30,11 @@ class MainActivity : ComponentActivity() {
     private lateinit var searchInput: EditText
     private lateinit var sortButton: Button
 
-    private val allVideos = mutableListOf<VideoItem>()
+    private val allVideos =
+        mutableListOf<VideoItem>()
 
-    private var sortMode = SortMode.NEWEST
+    private var sortMode =
+        SortMode.LAST_ACCESS
 
     private val permissionLauncher =
         registerForActivityResult(
@@ -42,7 +45,9 @@ class MainActivity : ComponentActivity() {
                 loadVideos()
             } else {
                 showMessage(
-                    getString(R.string.permission_denied)
+                    getString(
+                        R.string.permission_denied
+                    )
                 )
             }
         }
@@ -57,19 +62,26 @@ class MainActivity : ComponentActivity() {
         )
 
         videoContainer =
-            findViewById(R.id.videoContainer)
+            findViewById(
+                R.id.videoContainer
+            )
 
         countText =
-            findViewById(R.id.countText)
+            findViewById(
+                R.id.countText
+            )
 
         searchInput =
-            findViewById(R.id.searchInput)
+            findViewById(
+                R.id.searchInput
+            )
 
         sortButton =
-            findViewById(R.id.sortButton)
+            findViewById(
+                R.id.sortButton
+            )
 
         setupSearch()
-
         setupSortButton()
 
         checkPermissionAndLoad()
@@ -78,7 +90,8 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
 
-        if (::videoContainer.isInitialized &&
+        if (
+            ::videoContainer.isInitialized &&
             hasVideoPermission()
         ) {
             loadVideos()
@@ -119,24 +132,28 @@ class MainActivity : ComponentActivity() {
 
     private fun setupSortButton() {
 
+        updateSortButtonText()
+
         sortButton.setOnClickListener {
 
             sortMode =
                 when (sortMode) {
-                    SortMode.NEWEST ->
+
+                    SortMode.LAST_ACCESS ->
                         SortMode.NAME
 
                     SortMode.NAME ->
                         SortMode.SIZE
 
                     SortMode.SIZE ->
-                        SortMode.NEWEST
+                        SortMode.LAST_ACCESS
                 }
 
             updateSortButtonText()
 
             filterVideos(
-                searchInput.text.toString()
+                searchInput.text
+                    .toString()
             )
         }
     }
@@ -146,22 +163,31 @@ class MainActivity : ComponentActivity() {
         sortButton.text =
             when (sortMode) {
 
-                SortMode.NEWEST ->
-                    getString(R.string.sort_newest)
+                SortMode.LAST_ACCESS ->
+                    getString(
+                        R.string.sort_last_access
+                    )
 
                 SortMode.NAME ->
-                    getString(R.string.sort_name)
+                    getString(
+                        R.string.sort_name
+                    )
 
                 SortMode.SIZE ->
-                    getString(R.string.sort_size)
+                    getString(
+                        R.string.sort_size
+                    )
             }
     }
 
     private fun checkPermissionAndLoad() {
 
         if (hasVideoPermission()) {
+
             loadVideos()
+
         } else {
+
             permissionLauncher.launch(
                 requiredPermission()
             )
@@ -174,8 +200,11 @@ class MainActivity : ComponentActivity() {
             Build.VERSION.SDK_INT >=
             Build.VERSION_CODES.TIRAMISU
         ) {
+
             Manifest.permission.READ_MEDIA_VIDEO
+
         } else {
+
             Manifest.permission.READ_EXTERNAL_STORAGE
         }
     }
@@ -185,23 +214,37 @@ class MainActivity : ComponentActivity() {
         return ContextCompat.checkSelfPermission(
             this,
             requiredPermission()
-        ) == PackageManager.PERMISSION_GRANTED
+        ) ==
+            PackageManager.PERMISSION_GRANTED
     }
 
     private fun loadVideos() {
 
         allVideos.clear()
 
-        val projection = arrayOf(
-            MediaStore.Video.Media._ID,
-            MediaStore.Video.Media.DISPLAY_NAME,
-            MediaStore.Video.Media.DURATION,
-            MediaStore.Video.Media.SIZE,
-            MediaStore.Video.Media.DATE_ADDED
-        )
+        val projection =
+            mutableListOf(
+                MediaStore.Video.Media._ID,
+                MediaStore.Video.Media.DISPLAY_NAME,
+                MediaStore.Video.Media.DURATION,
+                MediaStore.Video.Media.SIZE,
+                MediaStore.Video.Media.DATE_ADDED
+            )
+
+        if (
+            Build.VERSION.SDK_INT >=
+            Build.VERSION_CODES.Q
+        ) {
+            projection.add(
+                MediaStore.Video.Media.BUCKET_DISPLAY_NAME
+            )
+        }
 
         val collection =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            if (
+                Build.VERSION.SDK_INT >=
+                Build.VERSION_CODES.Q
+            ) {
 
                 MediaStore.Video.Media.getContentUri(
                     MediaStore.VOLUME_EXTERNAL
@@ -214,7 +257,7 @@ class MainActivity : ComponentActivity() {
 
         contentResolver.query(
             collection,
-            projection,
+            projection.toTypedArray(),
             null,
             null,
             "${MediaStore.Video.Media.DATE_ADDED} DESC"
@@ -245,22 +288,57 @@ class MainActivity : ComponentActivity() {
                     MediaStore.Video.Media.DATE_ADDED
                 )
 
+            val bucketColumn =
+                cursor.getColumnIndex(
+                    MediaStore.Video.Media.BUCKET_DISPLAY_NAME
+                )
+
             while (cursor.moveToNext()) {
 
                 val id =
-                    cursor.getLong(idColumn)
+                    cursor.getLong(
+                        idColumn
+                    )
 
                 val name =
-                    cursor.getString(nameColumn)
+                    cursor.getString(
+                        nameColumn
+                    ) ?: getString(
+                        R.string.unknown_video
+                    )
 
                 val duration =
-                    cursor.getLong(durationColumn)
+                    cursor.getLong(
+                        durationColumn
+                    )
 
                 val size =
-                    cursor.getLong(sizeColumn)
+                    cursor.getLong(
+                        sizeColumn
+                    )
 
                 val dateAdded =
-                    cursor.getLong(dateColumn)
+                    cursor.getLong(
+                        dateColumn
+                    )
+
+                val folderName =
+                    if (bucketColumn >= 0) {
+
+                        cursor.getString(
+                            bucketColumn
+                        )?.takeIf {
+                            it.isNotBlank()
+                        } ?: getString(
+                            R.string.unknown_folder
+                        )
+
+                    } else {
+
+                        getString(
+                            R.string.unknown_folder
+                        )
+                    }
 
                 val uri =
                     Uri.withAppendedPath(
@@ -274,14 +352,16 @@ class MainActivity : ComponentActivity() {
                         name = name,
                         duration = duration,
                         size = size,
-                        dateAdded = dateAdded
+                        dateAdded = dateAdded,
+                        folderName = folderName
                     )
                 )
             }
         }
 
         filterVideos(
-            searchInput.text.toString()
+            searchInput.text
+                .toString()
         )
     }
 
@@ -290,44 +370,84 @@ class MainActivity : ComponentActivity() {
     ) {
 
         val normalizedQuery =
-            query.trim().lowercase(Locale.getDefault())
+            query.trim()
+                .lowercase(
+                    Locale.getDefault()
+                )
 
         val filtered =
-            if (normalizedQuery.isEmpty()) {
+
+            if (
+                normalizedQuery.isEmpty()
+            ) {
 
                 allVideos.toList()
 
             } else {
 
                 allVideos.filter {
+
                     it.name
-                        .lowercase(Locale.getDefault())
-                        .contains(normalizedQuery)
+                        .lowercase(
+                            Locale.getDefault()
+                        )
+                        .contains(
+                            normalizedQuery
+                        ) ||
+                        it.folderName
+                            .lowercase(
+                                Locale.getDefault()
+                            )
+                            .contains(
+                                normalizedQuery
+                            )
                 }
             }
 
         val sorted =
             when (sortMode) {
 
-                SortMode.NEWEST ->
-                    filtered.sortedByDescending {
-                        it.dateAdded
-                    }
+                SortMode.LAST_ACCESS ->
+                    filtered.sortedWith(
+                        compareByDescending<VideoItem> {
+                            getLastAccess(
+                                it.uri
+                            )
+                        }.thenBy {
+                            it.name.lowercase(
+                                Locale.getDefault()
+                            )
+                        }
+                    )
 
                 SortMode.NAME ->
-                    filtered.sortedBy {
-                        it.name.lowercase(
-                            Locale.getDefault()
-                        )
-                    }
+                    filtered.sortedWith(
+                        compareBy<VideoItem> {
+                            it.name.lowercase(
+                                Locale.getDefault()
+                            )
+                        }.thenBy {
+                            it.folderName.lowercase(
+                                Locale.getDefault()
+                            )
+                        }
+                    )
 
                 SortMode.SIZE ->
-                    filtered.sortedByDescending {
-                        it.size
-                    }
+                    filtered.sortedWith(
+                        compareByDescending<VideoItem> {
+                            it.size
+                        }.thenBy {
+                            it.name.lowercase(
+                                Locale.getDefault()
+                            )
+                        }
+                    )
             }
 
-        displayVideos(sorted)
+        displayVideos(
+            sorted
+        )
     }
 
     private fun displayVideos(
@@ -342,28 +462,74 @@ class MainActivity : ComponentActivity() {
         if (videos.isEmpty()) {
 
             showMessage(
-                if (
-                    searchInput.text
-                        .toString()
-                        .trim()
-                        .isEmpty()
-                ) {
-                    getString(
-                        R.string.no_videos
-                    )
-                } else {
-                    getString(
-                        R.string.no_videos
-                    )
-                }
+                getString(
+                    R.string.no_videos
+                )
             )
 
             return
         }
 
+        var currentFolder: String? = null
+
         videos.forEach { video ->
-            addVideoItem(video)
+
+            if (
+                currentFolder !=
+                video.folderName
+            ) {
+
+                addFolderHeader(
+                    video.folderName
+                )
+
+                currentFolder =
+                    video.folderName
+            }
+
+            addVideoItem(
+                video
+            )
         }
+    }
+
+    private fun addFolderHeader(
+        folderName: String
+    ) {
+
+        val folderText =
+            TextView(this).apply {
+
+                text =
+                    getString(
+                        R.string.folder_title,
+                        folderName
+                    )
+
+                textSize = 17f
+
+                setTextColor(
+                    ContextCompat.getColor(
+                        this@MainActivity,
+                        R.color.vidora_text
+                    )
+                )
+
+                setPadding(
+                    20,
+                    28,
+                    20,
+                    12
+                )
+
+                gravity =
+                    Gravity.START or
+                        Gravity.CENTER_VERTICAL
+            }
+
+        videoContainer.addView(
+            folderText
+        )
     }
 
     private fun addVideoItem(
@@ -405,7 +571,9 @@ class MainActivity : ComponentActivity() {
                     )
                 )
 
-                append("  •  ")
+                append(
+                    "  •  "
+                )
 
                 append(
                     formatSize(
@@ -420,6 +588,10 @@ class MainActivity : ComponentActivity() {
         )
 
         view.setOnClickListener {
+
+            saveLastAccess(
+                video.uri
+            )
 
             val intent =
                 Intent(
@@ -437,10 +609,50 @@ class MainActivity : ComponentActivity() {
                 video.name
             )
 
-            startActivity(intent)
+            startActivity(
+                intent
+            )
         }
 
-        videoContainer.addView(view)
+        videoContainer.addView(
+            view
+        )
+    }
+
+    private fun getLastAccess(
+        uri: Uri
+    ): Long {
+
+        return getSharedPreferences(
+            PREFS_NAME,
+            MODE_PRIVATE
+        ).getLong(
+            accessKey(uri),
+            0L
+        )
+    }
+
+    private fun saveLastAccess(
+        uri: Uri
+    ) {
+
+        getSharedPreferences(
+            PREFS_NAME,
+            MODE_PRIVATE
+        )
+            .edit()
+            .putLong(
+                accessKey(uri),
+                System.currentTimeMillis()
+            )
+            .apply()
+    }
+
+    private fun accessKey(
+        uri: Uri
+    ): String {
+
+        return "access_${uri}"
     }
 
     private fun loadThumbnail(
@@ -458,7 +670,7 @@ class MainActivity : ComponentActivity() {
                 uri
             )
 
-            val bitmap =
+            val bitmap: Bitmap? =
                 retriever.getFrameAtTime(
                     1_000_000L,
                     MediaMetadataRetriever
@@ -468,12 +680,14 @@ class MainActivity : ComponentActivity() {
             retriever.release()
 
             if (bitmap != null) {
+
                 imageView.setImageBitmap(
                     bitmap
                 )
             }
 
         } catch (_: Exception) {
+
             imageView.setImageResource(
                 android.R.color.transparent
             )
@@ -489,11 +703,13 @@ class MainActivity : ComponentActivity() {
         val text =
             TextView(this).apply {
 
-                this.text = message
+                this.text =
+                    message
 
                 textSize = 16f
 
-                gravity = android.view.Gravity.CENTER
+                gravity =
+                    Gravity.CENTER
 
                 setTextColor(
                     ContextCompat.getColor(
@@ -510,7 +726,9 @@ class MainActivity : ComponentActivity() {
                 )
             }
 
-        videoContainer.addView(text)
+        videoContainer.addView(
+            text
+        )
     }
 
     private fun formatDuration(
@@ -565,7 +783,9 @@ class MainActivity : ComponentActivity() {
         val megabytes =
             bytes / 1024.0 / 1024.0
 
-        return if (megabytes >= 1024.0) {
+        return if (
+            megabytes >= 1024.0
+        ) {
 
             String.format(
                 Locale.US,
@@ -588,12 +808,22 @@ class MainActivity : ComponentActivity() {
         val name: String,
         val duration: Long,
         val size: Long,
-        val dateAdded: Long
+        val dateAdded: Long,
+        val folderName: String
     )
 
     enum class SortMode {
-        NEWEST,
+        LAST_ACCESS,
         NAME,
         SIZE
+    }
+
+    companion object {
+
+        private const val PREFS_NAME =
+            "vidora_library_preferences"
+
+        private const val TAG =
+            "VidoraMainActivity"
     }
 }
