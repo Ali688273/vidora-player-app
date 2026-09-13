@@ -29,11 +29,12 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
-import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import androidx.media3.ui.TrackSelectionDialogBuilder
+import androidx.annotation.OptIn
+import androidx.media3.common.util.UnstableApi
 import kotlin.math.abs
 
 @OptIn(UnstableApi::class)
@@ -45,6 +46,7 @@ class PlayerActivity : ComponentActivity() {
     private lateinit var nextButton: Button
     private lateinit var repeatButton: Button
     private lateinit var audioButton: Button
+    private lateinit var favoriteButton: Button
 
     private lateinit var speedMinusButton: Button
     private lateinit var speedButton: Button
@@ -97,7 +99,6 @@ class PlayerActivity : ComponentActivity() {
         Handler(Looper.getMainLooper())
 
     private var sleepTimerRunnable: Runnable? = null
-    private var sleepTimerEndTime = 0L
 
     private val subtitlePicker =
         registerForActivityResult(
@@ -146,6 +147,9 @@ class PlayerActivity : ComponentActivity() {
 
         audioButton =
             findViewById(R.id.audioButton)
+
+        favoriteButton =
+            findViewById(R.id.favoriteButton)
 
         speedMinusButton =
             findViewById(R.id.speedMinusButton)
@@ -212,6 +216,12 @@ class PlayerActivity : ComponentActivity() {
         audioButton.setOnClickListener {
             if (!isLocked) {
                 showAudioTrackDialog()
+            }
+        }
+
+        favoriteButton.setOnClickListener {
+            if (!isLocked) {
+                toggleFavorite()
             }
         }
 
@@ -282,16 +292,79 @@ class PlayerActivity : ComponentActivity() {
 
         updateSpeedText()
         updateRepeatButton()
+        updateFavoriteButton()
+    }
+
+    private fun toggleFavorite() {
+
+        val uriString =
+            intent.getStringExtra(
+                EXTRA_VIDEO_URI
+            ) ?: return
+
+        val uri =
+            Uri.parse(uriString)
+
+        val favorite =
+            FavoriteManager.toggle(
+                this,
+                uri
+            )
+
+        updateFavoriteButton()
+
+        val message =
+            if (favorite) {
+                getString(
+                    R.string.added_to_favorites
+                )
+            } else {
+                getString(
+                    R.string.removed_from_favorites
+                )
+            }
+
+        showGestureInfo(
+            message
+        )
+
+        gestureInfo.postDelayed(
+            {
+                hideGestureInfo()
+            },
+            1200L
+        )
+    }
+
+    private fun updateFavoriteButton() {
+
+        val uriString =
+            intent.getStringExtra(
+                EXTRA_VIDEO_URI
+            ) ?: return
+
+        val favorite =
+            FavoriteManager.isFavorite(
+                this,
+                Uri.parse(uriString)
+            )
+
+        favoriteButton.text =
+            if (favorite) {
+                getString(
+                    R.string.favorite_on
+                )
+            } else {
+                getString(
+                    R.string.favorite_off
+                )
+            }
     }
 
     private fun showAudioTrackDialog() {
 
         val currentPlayer =
-            player
-
-        if (currentPlayer == null) {
-            return
-        }
+            player ?: return
 
         val audioGroups =
             currentPlayer.currentTracks.groups.filter {
@@ -529,16 +602,10 @@ class PlayerActivity : ComponentActivity() {
                 )
                 .times(60000L)
 
-        sleepTimerEndTime =
-            System.currentTimeMillis() +
-                delayMillis
-
         sleepTimerRunnable =
             Runnable {
 
                 player?.pause()
-
-                sleepTimerEndTime = 0L
 
                 sleepTimerButton.text =
                     getString(
@@ -567,7 +634,6 @@ class PlayerActivity : ComponentActivity() {
         }
 
         sleepTimerRunnable = null
-        sleepTimerEndTime = 0L
 
         if (
             ::sleepTimerButton.isInitialized
@@ -909,6 +975,9 @@ class PlayerActivity : ComponentActivity() {
         audioButton.visibility =
             visibility
 
+        favoriteButton.visibility =
+            visibility
+
         speedMinusButton.visibility =
             visibility
 
@@ -938,12 +1007,9 @@ class PlayerActivity : ComponentActivity() {
                 EXTRA_VIDEO_URI
             ) ?: return
 
-        val videoUri =
-            Uri.parse(uriString)
-
         createPlayer(
             MediaItem.fromUri(
-                videoUri
+                Uri.parse(uriString)
             )
         )
     }
@@ -1064,6 +1130,8 @@ class PlayerActivity : ComponentActivity() {
             EXTRA_VIDEO_URI,
             videoUriString
         )
+
+        updateFavoriteButton()
     }
 
     private fun getVideoUris(): List<Uri> {
@@ -1096,14 +1164,11 @@ class PlayerActivity : ComponentActivity() {
                 MediaStore.Video.Media.EXTERNAL_CONTENT_URI
             }
 
-        val projection =
-            arrayOf(
-                MediaStore.Video.Media._ID
-            )
-
         contentResolver.query(
             collection,
-            projection,
+            arrayOf(
+                MediaStore.Video.Media._ID
+            ),
             null,
             null,
             "${MediaStore.Video.Media.DATE_ADDED} DESC"
@@ -1116,15 +1181,12 @@ class PlayerActivity : ComponentActivity() {
 
             while (cursor.moveToNext()) {
 
-                val id =
-                    cursor.getLong(
-                        idColumn
-                    )
-
                 result.add(
                     Uri.withAppendedPath(
                         collection,
-                        id.toString()
+                        cursor.getLong(
+                            idColumn
+                        ).toString()
                     )
                 )
             }
@@ -1139,11 +1201,8 @@ class PlayerActivity : ComponentActivity() {
             Build.VERSION.SDK_INT >=
             Build.VERSION_CODES.TIRAMISU
         ) {
-
             Manifest.permission.READ_MEDIA_VIDEO
-
         } else {
-
             Manifest.permission.READ_EXTERNAL_STORAGE
         }
     }
@@ -1240,28 +1299,22 @@ class PlayerActivity : ComponentActivity() {
         uri: Uri
     ): String {
 
-        val projection =
-            arrayOf(
-                MediaStore.Video.Media.DISPLAY_NAME
-            )
-
         return contentResolver.query(
             uri,
-            projection,
+            arrayOf(
+                MediaStore.Video.Media.DISPLAY_NAME
+            ),
             null,
             null,
             null
         )?.use { cursor ->
 
             if (cursor.moveToFirst()) {
-
                 cursor.getString(0)
                     ?: getString(
                         R.string.unknown_video
                     )
-
             } else {
-
                 getString(
                     R.string.unknown_video
                 )
@@ -1380,6 +1433,9 @@ class PlayerActivity : ComponentActivity() {
             audioButton.visibility =
                 View.GONE
 
+            favoriteButton.visibility =
+                View.GONE
+
             speedMinusButton.visibility =
                 View.GONE
 
@@ -1451,9 +1507,7 @@ class PlayerActivity : ComponentActivity() {
     override fun onDestroy() {
 
         sleepTimerRunnable?.let {
-            sleepHandler.removeCallbacks(
-                it
-            )
+            sleepHandler.removeCallbacks(it)
         }
 
         sleepTimerRunnable = null
