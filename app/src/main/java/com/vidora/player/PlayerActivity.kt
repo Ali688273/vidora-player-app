@@ -1,9 +1,12 @@
 package com.vidora.player
 
+import android.app.PictureInPictureParams
 import android.content.Context
 import android.media.AudioManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.util.Rational
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
@@ -606,6 +609,98 @@ class PlayerActivity : ComponentActivity() {
                 }
     }
 
+    private fun enterPictureInPictureModeIfPossible() {
+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            return
+        }
+
+        if (isInPictureInPictureMode) {
+            return
+        }
+
+        val params =
+            PictureInPictureParams.Builder()
+                .setAspectRatio(
+                    Rational(16, 9)
+                )
+                .build()
+
+        enterPictureInPictureMode(params)
+    }
+
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            enterPictureInPictureModeIfPossible()
+        }
+    }
+
+    override fun onPictureInPictureModeChanged(
+        isInPictureInPictureMode: Boolean
+    ) {
+        super.onPictureInPictureModeChanged(
+            isInPictureInPictureMode
+        )
+
+        if (isInPictureInPictureMode) {
+
+            speedMinusButton.visibility =
+                View.GONE
+
+            speedButton.visibility =
+                View.GONE
+
+            speedPlusButton.visibility =
+                View.GONE
+
+            aspectButton.visibility =
+                View.GONE
+
+            subtitleButton.visibility =
+                View.GONE
+
+            lockButton.visibility =
+                View.GONE
+
+            fullscreenButton.visibility =
+                View.GONE
+
+            gestureInfo.visibility =
+                View.GONE
+
+            lockedOverlay.visibility =
+                View.GONE
+
+        } else {
+
+            lockButton.visibility =
+                View.VISIBLE
+
+            if (!isLocked) {
+
+                speedMinusButton.visibility =
+                    View.VISIBLE
+
+                speedButton.visibility =
+                    View.VISIBLE
+
+                speedPlusButton.visibility =
+                    View.VISIBLE
+
+                aspectButton.visibility =
+                    View.VISIBLE
+
+                subtitleButton.visibility =
+                    View.VISIBLE
+
+                fullscreenButton.visibility =
+                    View.VISIBLE
+            }
+        }
+    }
+
     private fun savePosition() {
 
         val uriString =
@@ -643,9 +738,10 @@ class PlayerActivity : ComponentActivity() {
 
     override fun onStop() {
 
-        savePosition()
-
-        player?.pause()
+        if (!isInPictureInPictureMode) {
+            savePosition()
+            player?.pause()
+        }
 
         super.onStop()
     }
