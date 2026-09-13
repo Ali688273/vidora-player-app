@@ -5,11 +5,9 @@
     <string name="app_name">Vidora Player</string>
 
     <string name="search_videos">جستجوی ویدئو...</string>
-
     <string name="sort_newest">جدیدترین</string>
     <string name="sort_name">نام</string>
     <string name="sort_size">حجم</string>
-
     <string name="video_thumbnail">تصویر بندانگشتی ویدئو</string>
 
     <string name="enhance_on">✨ بهبود روشن</string>
@@ -18,19 +16,18 @@
     <string name="speed_default">1.0×</string>
     <string name="speed_format">%1$.1f×</string>
 
+    <string name="subtitle">زیرنویس</string>
+
     <string name="lock">🔒 قفل</string>
     <string name="unlock">🔓 بازکردن</string>
-
     <string name="fullscreen">⛶</string>
 
     <string name="screen_locked">صفحه قفل است</string>
 
     <string name="volume_percent">صدا %1$d%%</string>
-
     <string name="brightness_percent">روشنایی %1$d%%</string>
 
     <string name="permission_denied">دسترسی به ویدئوها داده نشد</string>
-
     <string name="no_videos">هیچ ویدئویی پیدا نشد</string>
 
 </resources>
