@@ -23,6 +23,11 @@
     <string name="speed_default">1.0×</string>
     <string name="speed_format">%1$.1f×</string>
 
+    <string name="previous_video">‹</string>
+    <string name="next_video">›</string>
+    <string name="repeat_off">تکرار</string>
+    <string name="repeat_on">تکرار روشن</string>
+
     <string name="subtitle">زیرنویس</string>
 
     <string name="sleep_timer">تایمر خواب</string>
