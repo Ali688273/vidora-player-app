@@ -90,7 +90,9 @@ class PlayerActivity : ComponentActivity() {
             ActivityResultContracts.OpenDocument()
         ) { uri ->
 
-            if (uri == null) return@registerForActivityResult
+            if (uri == null) {
+                return@registerForActivityResult
+            }
 
             try {
                 contentResolver.takePersistableUriPermission(
@@ -112,7 +114,8 @@ class PlayerActivity : ComponentActivity() {
 
         setContentView(R.layout.activity_player)
 
-        playerView = findViewById(R.id.playerView)
+        playerView =
+            findViewById(R.id.playerView)
 
         speedMinusButton =
             findViewById(R.id.speedMinusButton)
@@ -177,7 +180,10 @@ class PlayerActivity : ComponentActivity() {
         }
 
         aspectButton.setOnClickListener {
-            if (isLocked) return@setOnClickListener
+
+            if (isLocked) {
+                return@setOnClickListener
+            }
 
             aspectIndex++
 
@@ -193,7 +199,9 @@ class PlayerActivity : ComponentActivity() {
         }
 
         subtitleButton.setOnClickListener {
+
             if (!isLocked) {
+
                 subtitlePicker.launch(
                     arrayOf(
                         "text/*",
@@ -205,6 +213,7 @@ class PlayerActivity : ComponentActivity() {
         }
 
         sleepTimerButton.setOnClickListener {
+
             if (!isLocked) {
                 showSleepTimerDialog()
             }
@@ -221,7 +230,9 @@ class PlayerActivity : ComponentActivity() {
         updateSpeedText()
     }
 
-    private fun changeSpeed(amount: Float) {
+    private fun changeSpeed(
+        amount: Float
+    ) {
 
         currentSpeed =
             (currentSpeed + amount)
@@ -269,7 +280,9 @@ class PlayerActivity : ComponentActivity() {
             InputType.TYPE_CLASS_NUMBER
 
         input.hint =
-            getString(R.string.sleep_timer_hint)
+            getString(
+                R.string.sleep_timer_hint
+            )
 
         input.setSingleLine(true)
 
@@ -280,8 +293,10 @@ class PlayerActivity : ComponentActivity() {
             LinearLayout.VERTICAL
 
         val padding =
-            (24 * resources.displayMetrics.density)
-                .toInt()
+            (
+                24 *
+                    resources.displayMetrics.density
+                ).toInt()
 
         container.setPadding(
             padding,
@@ -415,6 +430,7 @@ class PlayerActivity : ComponentActivity() {
         sleepTimerEndTime = 0L
 
         if (::sleepTimerButton.isInitialized) {
+
             sleepTimerButton.text =
                 getString(
                     R.string.sleep_timer
@@ -426,7 +442,10 @@ class PlayerActivity : ComponentActivity() {
 
         playerView.setOnTouchListener { _, event ->
 
-            if (event.action == MotionEvent.ACTION_DOWN) {
+            if (
+                event.action ==
+                MotionEvent.ACTION_DOWN
+            ) {
 
                 downX = event.x
                 downY = event.y
@@ -440,7 +459,8 @@ class PlayerActivity : ComponentActivity() {
                     )
 
                 startBrightness =
-                    window.attributes.screenBrightness
+                    window.attributes
+                        .screenBrightness
                         .takeIf { it >= 0f }
                         ?: 0.5f
 
@@ -473,6 +493,7 @@ class PlayerActivity : ComponentActivity() {
                             abs(deltaX) > 30 &&
                             abs(deltaX) > abs(deltaY)
                         ) {
+
                             gestureMode =
                                 GestureMode.SEEK
 
@@ -498,4 +519,567 @@ class PlayerActivity : ComponentActivity() {
                         GestureMode.SEEK ->
                             handleSeek(deltaX)
 
-                       
+                        GestureMode.VOLUME ->
+                            handleVolume(deltaY)
+
+                        GestureMode.BRIGHTNESS ->
+                            handleBrightness(deltaY)
+
+                        GestureMode.NONE ->
+                            Unit
+                    }
+
+                    true
+                }
+
+                MotionEvent.ACTION_UP -> {
+
+                    if (
+                        gestureMode ==
+                        GestureMode.NONE
+                    ) {
+                        false
+                    } else {
+                        hideGestureInfo()
+                        true
+                    }
+                }
+
+                MotionEvent.ACTION_CANCEL -> {
+
+                    hideGestureInfo()
+                    true
+                }
+
+                else -> false
+            }
+        }
+    }
+
+    private fun handleSeek(
+        deltaX: Float
+    ) {
+
+        val currentPlayer =
+            player ?: return
+
+        val duration =
+            currentPlayer.duration
+
+        if (duration <= 0L) {
+            return
+        }
+
+        val seekAmount =
+            (
+                deltaX /
+                    playerView.width
+                ) * 60000L
+
+        val newPosition =
+            (
+                startPosition +
+                    seekAmount.toLong()
+                ).coerceIn(
+                    0L,
+                    duration
+                )
+
+        currentPlayer.seekTo(
+            newPosition
+        )
+
+        val seconds =
+            seekAmount.toLong() / 1000
+
+        val sign =
+            if (seconds >= 0) {
+                "+"
+            } else {
+                ""
+            }
+
+        showGestureInfo(
+            "$sign${seconds}s"
+        )
+    }
+
+    private fun handleVolume(
+        deltaY: Float
+    ) {
+
+        val maxVolume =
+            audioManager.getStreamMaxVolume(
+                AudioManager.STREAM_MUSIC
+            )
+
+        val volumeChange =
+            (
+                -deltaY /
+                    playerView.height *
+                    maxVolume
+                ).toInt()
+
+        val newVolume =
+            (
+                startVolume +
+                    volumeChange
+                ).coerceIn(
+                    0,
+                    maxVolume
+                )
+
+        audioManager.setStreamVolume(
+            AudioManager.STREAM_MUSIC,
+            newVolume,
+            0
+        )
+
+        val percent =
+            if (maxVolume > 0) {
+                newVolume * 100 /
+                    maxVolume
+            } else {
+                0
+            }
+
+        showGestureInfo(
+            getString(
+                R.string.volume_percent,
+                percent
+            )
+        )
+    }
+
+    private fun handleBrightness(
+        deltaY: Float
+    ) {
+
+        val change =
+            -deltaY /
+                playerView.height
+
+        val newBrightness =
+            (
+                startBrightness +
+                    change
+                ).coerceIn(
+                    0.05f,
+                    1.0f
+                )
+
+        val attributes =
+            window.attributes
+
+        attributes.screenBrightness =
+            newBrightness
+
+        window.attributes =
+            attributes
+
+        val percent =
+            (newBrightness * 100).toInt()
+
+        showGestureInfo(
+            getString(
+                R.string.brightness_percent,
+                percent
+            )
+        )
+    }
+
+    private fun showGestureInfo(
+        text: String
+    ) {
+
+        gestureInfo.text = text
+
+        gestureInfo.visibility =
+            View.VISIBLE
+    }
+
+    private fun hideGestureInfo() {
+
+        gestureInfo.visibility =
+            View.GONE
+    }
+
+    private fun toggleLock() {
+
+        isLocked = !isLocked
+
+        if (isLocked) {
+
+            lockedOverlay.visibility =
+                View.VISIBLE
+
+            lockButton.text =
+                getString(R.string.unlock)
+
+            speedMinusButton.visibility =
+                View.GONE
+
+            speedButton.visibility =
+                View.GONE
+
+            speedPlusButton.visibility =
+                View.GONE
+
+            aspectButton.visibility =
+                View.GONE
+
+            subtitleButton.visibility =
+                View.GONE
+
+            sleepTimerButton.visibility =
+                View.GONE
+
+            fullscreenButton.visibility =
+                View.GONE
+
+        } else {
+
+            lockedOverlay.visibility =
+                View.GONE
+
+            lockButton.text =
+                getString(R.string.lock)
+
+            speedMinusButton.visibility =
+                View.VISIBLE
+
+            speedButton.visibility =
+                View.VISIBLE
+
+            speedPlusButton.visibility =
+                View.VISIBLE
+
+            aspectButton.visibility =
+                View.VISIBLE
+
+            subtitleButton.visibility =
+                View.VISIBLE
+
+            sleepTimerButton.visibility =
+                View.VISIBLE
+
+            fullscreenButton.visibility =
+                View.VISIBLE
+        }
+    }
+
+    private fun initializePlayer() {
+
+        val uriString =
+            intent.getStringExtra(
+                EXTRA_VIDEO_URI
+            ) ?: return
+
+        val videoUri =
+            Uri.parse(uriString)
+
+        createPlayer(
+            MediaItem.fromUri(videoUri)
+        )
+    }
+
+    private fun loadVideoWithSubtitle(
+        subtitleUri: Uri
+    ) {
+
+        val videoUriString =
+            intent.getStringExtra(
+                EXTRA_VIDEO_URI
+            ) ?: return
+
+        val videoUri =
+            Uri.parse(videoUriString)
+
+        val subtitleMimeType =
+            when (
+                contentResolver.getType(
+                    subtitleUri
+                )
+            ) {
+
+                "text/vtt" ->
+                    MimeTypes.TEXT_VTT
+
+                "application/x-subrip" ->
+                    MimeTypes.APPLICATION_SUBRIP
+
+                else ->
+                    MimeTypes.APPLICATION_SUBRIP
+            }
+
+        val subtitle =
+            MediaItem.SubtitleConfiguration
+                .Builder(subtitleUri)
+                .setMimeType(
+                    subtitleMimeType
+                )
+                .setLanguage("fa")
+                .setSelectionFlags(1)
+                .build()
+
+        val mediaItem =
+            MediaItem.Builder()
+                .setUri(videoUri)
+                .setSubtitleConfigurations(
+                    listOf(subtitle)
+                )
+                .build()
+
+        createPlayer(mediaItem)
+    }
+
+    private fun createPlayer(
+        mediaItem: MediaItem
+    ) {
+
+        val videoUriString =
+            intent.getStringExtra(
+                EXTRA_VIDEO_URI
+            ) ?: return
+
+        val savedPosition =
+            getSavedPosition(
+                videoUriString
+            )
+
+        player?.release()
+
+        player =
+            ExoPlayer.Builder(this)
+                .build()
+                .also { exoPlayer ->
+
+                    playerView.player =
+                        exoPlayer
+
+                    exoPlayer.setMediaItem(
+                        mediaItem
+                    )
+
+                    exoPlayer.prepare()
+
+                    if (savedPosition > 0L) {
+                        exoPlayer.seekTo(
+                            savedPosition
+                        )
+                    }
+
+                    exoPlayer.playWhenReady =
+                        true
+
+                    exoPlayer.playbackParameters =
+                        PlaybackParameters(
+                            currentSpeed
+                        )
+                }
+    }
+
+    private fun getSavedPosition(
+        uri: String
+    ): Long {
+
+        return getSharedPreferences(
+            PREFS_NAME,
+            MODE_PRIVATE
+        ).getLong(
+            uri,
+            0L
+        )
+    }
+
+    private fun savePosition() {
+
+        val uriString =
+            intent.getStringExtra(
+                EXTRA_VIDEO_URI
+            ) ?: return
+
+        val currentPlayer =
+            player ?: return
+
+        val position =
+            currentPlayer.currentPosition
+
+        if (position <= 0L) {
+            return
+        }
+
+        getSharedPreferences(
+            PREFS_NAME,
+            MODE_PRIVATE
+        )
+            .edit()
+            .putLong(
+                uriString,
+                position
+            )
+            .apply()
+    }
+
+    private fun enterPictureInPictureModeIfPossible() {
+
+        if (
+            Build.VERSION.SDK_INT <
+            Build.VERSION_CODES.O
+        ) {
+            return
+        }
+
+        if (isInPictureInPictureMode) {
+            return
+        }
+
+        val params =
+            PictureInPictureParams.Builder()
+                .setAspectRatio(
+                    Rational(16, 9)
+                )
+                .build()
+
+        enterPictureInPictureMode(
+            params
+        )
+    }
+
+    override fun onUserLeaveHint() {
+
+        super.onUserLeaveHint()
+
+        if (
+            Build.VERSION.SDK_INT >=
+            Build.VERSION_CODES.O
+        ) {
+            enterPictureInPictureModeIfPossible()
+        }
+    }
+
+    override fun onPictureInPictureModeChanged(
+        isInPictureInPictureMode: Boolean
+    ) {
+
+        super.onPictureInPictureModeChanged(
+            isInPictureInPictureMode
+        )
+
+        if (isInPictureInPictureMode) {
+
+            speedMinusButton.visibility =
+                View.GONE
+
+            speedButton.visibility =
+                View.GONE
+
+            speedPlusButton.visibility =
+                View.GONE
+
+            aspectButton.visibility =
+                View.GONE
+
+            subtitleButton.visibility =
+                View.GONE
+
+            sleepTimerButton.visibility =
+                View.GONE
+
+            lockButton.visibility =
+                View.GONE
+
+            fullscreenButton.visibility =
+                View.GONE
+
+            gestureInfo.visibility =
+                View.GONE
+
+            lockedOverlay.visibility =
+                View.GONE
+
+        } else {
+
+            lockButton.visibility =
+                View.VISIBLE
+
+            if (!isLocked) {
+
+                speedMinusButton.visibility =
+                    View.VISIBLE
+
+                speedButton.visibility =
+                    View.VISIBLE
+
+                speedPlusButton.visibility =
+                    View.VISIBLE
+
+                aspectButton.visibility =
+                    View.VISIBLE
+
+                subtitleButton.visibility =
+                    View.VISIBLE
+
+                sleepTimerButton.visibility =
+                    View.VISIBLE
+
+                fullscreenButton.visibility =
+                    View.VISIBLE
+            }
+        }
+    }
+
+    private fun enterFullscreen() {
+
+        window.decorView.systemUiVisibility =
+            View.SYSTEM_UI_FLAG_FULLSCREEN or
+                View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or
+                View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+                View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
+                View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+    }
+
+    override fun onStop() {
+
+        if (!isInPictureInPictureMode) {
+
+            savePosition()
+
+            player?.pause()
+        }
+
+        super.onStop()
+    }
+
+    override fun onDestroy() {
+
+        sleepTimerRunnable?.let {
+            sleepHandler.removeCallbacks(it)
+        }
+
+        sleepTimerRunnable = null
+
+        savePosition()
+
+        playerView.player = null
+
+        player?.release()
+
+        player = null
+
+        super.onDestroy()
+    }
+
+    companion object {
+
+        const val EXTRA_VIDEO_URI =
+            "com.vidora.player.EXTRA_VIDEO_URI"
+
+        const val EXTRA_VIDEO_NAME =
+            "com.vidora.player.EXTRA_VIDEO_NAME"
+
+        private const val PREFS_NAME =
+            "vidora_player_positions"
+    }
+}
