@@ -1,14 +1,17 @@
 package com.vidora.player
 
+import android.Manifest
 import android.app.AlertDialog
 import android.app.PictureInPictureParams
 import android.content.Context
+import android.content.pm.PackageManager
 import android.media.AudioManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.provider.MediaStore
 import android.text.InputType
 import android.util.Rational
 import android.view.MotionEvent
@@ -20,9 +23,11 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackParameters
+import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
@@ -33,6 +38,11 @@ import kotlin.math.abs
 class PlayerActivity : ComponentActivity() {
 
     private lateinit var playerView: PlayerView
+
+    private lateinit var previousButton: Button
+    private lateinit var nextButton: Button
+    private lateinit var repeatButton: Button
+
     private lateinit var speedMinusButton: Button
     private lateinit var speedButton: Button
     private lateinit var speedPlusButton: Button
@@ -49,6 +59,7 @@ class PlayerActivity : ComponentActivity() {
     private var isLocked = false
     private var currentSpeed = 1.0f
     private var aspectIndex = 0
+    private var repeatEnabled = false
 
     private val aspectModes = intArrayOf(
         AspectRatioFrameLayout.RESIZE_MODE_FIT,
@@ -105,17 +116,30 @@ class PlayerActivity : ComponentActivity() {
             loadVideoWithSubtitle(uri)
         }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
+    override fun onCreate(
+        savedInstanceState: Bundle?
+    ) {
         super.onCreate(savedInstanceState)
 
         window.addFlags(
             WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
         )
 
-        setContentView(R.layout.activity_player)
+        setContentView(
+            R.layout.activity_player
+        )
 
         playerView =
             findViewById(R.id.playerView)
+
+        previousButton =
+            findViewById(R.id.previousButton)
+
+        nextButton =
+            findViewById(R.id.nextButton)
+
+        repeatButton =
+            findViewById(R.id.repeatButton)
 
         speedMinusButton =
             findViewById(R.id.speedMinusButton)
@@ -161,6 +185,24 @@ class PlayerActivity : ComponentActivity() {
 
     private fun setupButtons() {
 
+        previousButton.setOnClickListener {
+            if (!isLocked) {
+                playPreviousVideo()
+            }
+        }
+
+        nextButton.setOnClickListener {
+            if (!isLocked) {
+                playNextVideo()
+            }
+        }
+
+        repeatButton.setOnClickListener {
+            if (!isLocked) {
+                toggleRepeat()
+            }
+        }
+
         speedMinusButton.setOnClickListener {
             if (!isLocked) {
                 changeSpeed(-0.1f)
@@ -201,7 +243,6 @@ class PlayerActivity : ComponentActivity() {
         subtitleButton.setOnClickListener {
 
             if (!isLocked) {
-
                 subtitlePicker.launch(
                     arrayOf(
                         "text/*",
@@ -228,6 +269,36 @@ class PlayerActivity : ComponentActivity() {
         }
 
         updateSpeedText()
+        updateRepeatButton()
+    }
+
+    private fun toggleRepeat() {
+
+        repeatEnabled =
+            !repeatEnabled
+
+        player?.repeatMode =
+            if (repeatEnabled) {
+                Player.REPEAT_MODE_ONE
+            } else {
+                Player.REPEAT_MODE_OFF
+            }
+
+        updateRepeatButton()
+    }
+
+    private fun updateRepeatButton() {
+
+        repeatButton.text =
+            if (repeatEnabled) {
+                getString(
+                    R.string.repeat_on
+                )
+            } else {
+                getString(
+                    R.string.repeat_off
+                )
+            }
     }
 
     private fun changeSpeed(
@@ -235,8 +306,12 @@ class PlayerActivity : ComponentActivity() {
     ) {
 
         currentSpeed =
-            (currentSpeed + amount)
-                .coerceIn(0.1f, 5.0f)
+            (
+                currentSpeed + amount
+            ).coerceIn(
+                0.1f,
+                5.0f
+            )
 
         currentSpeed =
             String.format(
@@ -246,7 +321,9 @@ class PlayerActivity : ComponentActivity() {
             ).toFloat()
 
         player?.playbackParameters =
-            PlaybackParameters(currentSpeed)
+            PlaybackParameters(
+                currentSpeed
+            )
 
         updateSpeedText()
     }
@@ -256,7 +333,9 @@ class PlayerActivity : ComponentActivity() {
         currentSpeed = 1.0f
 
         player?.playbackParameters =
-            PlaybackParameters(currentSpeed)
+            PlaybackParameters(
+                currentSpeed
+            )
 
         updateSpeedText()
     }
@@ -358,7 +437,9 @@ class PlayerActivity : ComponentActivity() {
                     return@setOnClickListener
                 }
 
-                startSleepTimer(minutes)
+                startSleepTimer(
+                    minutes
+                )
 
                 dialog.dismiss()
             }
@@ -429,7 +510,9 @@ class PlayerActivity : ComponentActivity() {
         sleepTimerRunnable = null
         sleepTimerEndTime = 0L
 
-        if (::sleepTimerButton.isInitialized) {
+        if (
+            ::sleepTimerButton.isInitialized
+        ) {
 
             sleepTimerButton.text =
                 getString(
@@ -461,7 +544,9 @@ class PlayerActivity : ComponentActivity() {
                 startBrightness =
                     window.attributes
                         .screenBrightness
-                        .takeIf { it >= 0f }
+                        .takeIf {
+                            it >= 0f
+                        }
                         ?: 0.5f
 
                 gestureMode =
@@ -491,7 +576,8 @@ class PlayerActivity : ComponentActivity() {
 
                         if (
                             abs(deltaX) > 30 &&
-                            abs(deltaX) > abs(deltaY)
+                            abs(deltaX) >
+                            abs(deltaY)
                         ) {
 
                             gestureMode =
@@ -499,7 +585,8 @@ class PlayerActivity : ComponentActivity() {
 
                         } else if (
                             abs(deltaY) > 30 &&
-                            abs(deltaY) > abs(deltaX)
+                            abs(deltaY) >
+                            abs(deltaX)
                         ) {
 
                             gestureMode =
@@ -548,6 +635,7 @@ class PlayerActivity : ComponentActivity() {
                 MotionEvent.ACTION_CANCEL -> {
 
                     hideGestureInfo()
+
                     true
                 }
 
@@ -706,7 +794,8 @@ class PlayerActivity : ComponentActivity() {
 
     private fun toggleLock() {
 
-        isLocked = !isLocked
+        isLocked =
+            !isLocked
 
         if (isLocked) {
 
@@ -714,28 +803,13 @@ class PlayerActivity : ComponentActivity() {
                 View.VISIBLE
 
             lockButton.text =
-                getString(R.string.unlock)
+                getString(
+                    R.string.unlock
+                )
 
-            speedMinusButton.visibility =
-                View.GONE
-
-            speedButton.visibility =
-                View.GONE
-
-            speedPlusButton.visibility =
-                View.GONE
-
-            aspectButton.visibility =
-                View.GONE
-
-            subtitleButton.visibility =
-                View.GONE
-
-            sleepTimerButton.visibility =
-                View.GONE
-
-            fullscreenButton.visibility =
-                View.GONE
+            setPlayerControlsVisibility(
+                false
+            )
 
         } else {
 
@@ -743,29 +817,56 @@ class PlayerActivity : ComponentActivity() {
                 View.GONE
 
             lockButton.text =
-                getString(R.string.lock)
+                getString(
+                    R.string.lock
+                )
 
-            speedMinusButton.visibility =
-                View.VISIBLE
-
-            speedButton.visibility =
-                View.VISIBLE
-
-            speedPlusButton.visibility =
-                View.VISIBLE
-
-            aspectButton.visibility =
-                View.VISIBLE
-
-            subtitleButton.visibility =
-                View.VISIBLE
-
-            sleepTimerButton.visibility =
-                View.VISIBLE
-
-            fullscreenButton.visibility =
-                View.VISIBLE
+            setPlayerControlsVisibility(
+                true
+            )
         }
+    }
+
+    private fun setPlayerControlsVisibility(
+        visible: Boolean
+    ) {
+
+        val visibility =
+            if (visible) {
+                View.VISIBLE
+            } else {
+                View.GONE
+            }
+
+        previousButton.visibility =
+            visibility
+
+        nextButton.visibility =
+            visibility
+
+        repeatButton.visibility =
+            visibility
+
+        speedMinusButton.visibility =
+            visibility
+
+        speedButton.visibility =
+            visibility
+
+        speedPlusButton.visibility =
+            visibility
+
+        aspectButton.visibility =
+            visibility
+
+        subtitleButton.visibility =
+            visibility
+
+        sleepTimerButton.visibility =
+            visibility
+
+        fullscreenButton.visibility =
+            visibility
     }
 
     private fun initializePlayer() {
@@ -779,7 +880,9 @@ class PlayerActivity : ComponentActivity() {
             Uri.parse(uriString)
 
         createPlayer(
-            MediaItem.fromUri(videoUri)
+            MediaItem.fromUri(
+                videoUri
+            )
         )
     }
 
@@ -814,7 +917,9 @@ class PlayerActivity : ComponentActivity() {
 
         val subtitle =
             MediaItem.SubtitleConfiguration
-                .Builder(subtitleUri)
+                .Builder(
+                    subtitleUri
+                )
                 .setMimeType(
                     subtitleMimeType
                 )
@@ -830,7 +935,9 @@ class PlayerActivity : ComponentActivity() {
                 )
                 .build()
 
-        createPlayer(mediaItem)
+        createPlayer(
+            mediaItem
+        )
     }
 
     private fun createPlayer(
@@ -838,9 +945,13 @@ class PlayerActivity : ComponentActivity() {
     ) {
 
         val videoUriString =
-            intent.getStringExtra(
-                EXTRA_VIDEO_URI
-            ) ?: return
+            mediaItem.localConfiguration
+                ?.uri
+                ?.toString()
+                ?: intent.getStringExtra(
+                    EXTRA_VIDEO_URI
+                )
+                ?: return
 
         val savedPosition =
             getSavedPosition(
@@ -861,9 +972,18 @@ class PlayerActivity : ComponentActivity() {
                         mediaItem
                     )
 
+                    exoPlayer.repeatMode =
+                        if (repeatEnabled) {
+                            Player.REPEAT_MODE_ONE
+                        } else {
+                            Player.REPEAT_MODE_OFF
+                        }
+
                     exoPlayer.prepare()
 
-                    if (savedPosition > 0L) {
+                    if (
+                        savedPosition > 0L
+                    ) {
                         exoPlayer.seekTo(
                             savedPosition
                         )
@@ -877,6 +997,222 @@ class PlayerActivity : ComponentActivity() {
                             currentSpeed
                         )
                 }
+
+        intent.putExtra(
+            EXTRA_VIDEO_URI,
+            videoUriString
+        )
+    }
+
+    private fun getVideoUris(): List<Uri> {
+
+        if (
+            ContextCompat.checkSelfPermission(
+                this,
+                requiredVideoPermission()
+            ) !=
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            return emptyList()
+        }
+
+        val result =
+            mutableListOf<Uri>()
+
+        val collection =
+            if (
+                Build.VERSION.SDK_INT >=
+                Build.VERSION_CODES.Q
+            ) {
+
+                MediaStore.Video.Media.getContentUri(
+                    MediaStore.VOLUME_EXTERNAL
+                )
+
+            } else {
+
+                MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+            }
+
+        val projection =
+            arrayOf(
+                MediaStore.Video.Media._ID
+            )
+
+        contentResolver.query(
+            collection,
+            projection,
+            null,
+            null,
+            "${MediaStore.Video.Media.DATE_ADDED} DESC"
+        )?.use { cursor ->
+
+            val idColumn =
+                cursor.getColumnIndexOrThrow(
+                    MediaStore.Video.Media._ID
+                )
+
+            while (cursor.moveToNext()) {
+
+                val id =
+                    cursor.getLong(
+                        idColumn
+                    )
+
+                result.add(
+                    Uri.withAppendedPath(
+                        collection,
+                        id.toString()
+                    )
+                )
+            }
+        }
+
+        return result
+    }
+
+    private fun requiredVideoPermission(): String {
+
+        return if (
+            Build.VERSION.SDK_INT >=
+            Build.VERSION_CODES.TIRAMISU
+        ) {
+
+            Manifest.permission.READ_MEDIA_VIDEO
+
+        } else {
+
+            Manifest.permission.READ_EXTERNAL_STORAGE
+        }
+    }
+
+    private fun playPreviousVideo() {
+
+        val videos =
+            getVideoUris()
+
+        if (videos.isEmpty()) {
+            return
+        }
+
+        val currentUri =
+            intent.getStringExtra(
+                EXTRA_VIDEO_URI
+            )
+
+        val currentIndex =
+            videos.indexOfFirst {
+                it.toString() ==
+                    currentUri
+            }
+
+        val previousIndex =
+            if (currentIndex <= 0) {
+                videos.lastIndex
+            } else {
+                currentIndex - 1
+            }
+
+        openVideo(
+            videos[previousIndex]
+        )
+    }
+
+    private fun playNextVideo() {
+
+        val videos =
+            getVideoUris()
+
+        if (videos.isEmpty()) {
+            return
+        }
+
+        val currentUri =
+            intent.getStringExtra(
+                EXTRA_VIDEO_URI
+            )
+
+        val currentIndex =
+            videos.indexOfFirst {
+                it.toString() ==
+                    currentUri
+            }
+
+        val nextIndex =
+            if (
+                currentIndex < 0 ||
+                currentIndex >= videos.lastIndex
+            ) {
+                0
+            } else {
+                currentIndex + 1
+            }
+
+        openVideo(
+            videos[nextIndex]
+        )
+    }
+
+    private fun openVideo(
+        uri: Uri
+    ) {
+
+        val currentPlayer =
+            player
+
+        if (currentPlayer != null) {
+            savePosition()
+        }
+
+        intent.putExtra(
+            EXTRA_VIDEO_URI,
+            uri.toString()
+        )
+
+        intent.putExtra(
+            EXTRA_VIDEO_NAME,
+            getVideoName(uri)
+        )
+
+        createPlayer(
+            MediaItem.fromUri(uri)
+        )
+    }
+
+    private fun getVideoName(
+        uri: Uri
+    ): String {
+
+        val projection =
+            arrayOf(
+                MediaStore.Video.Media.DISPLAY_NAME
+            )
+
+        return contentResolver.query(
+            uri,
+            projection,
+            null,
+            null,
+            null
+        )?.use { cursor ->
+
+            if (cursor.moveToFirst()) {
+
+                cursor.getString(0)
+                    ?: getString(
+                        R.string.unknown_video
+                    )
+
+            } else {
+
+                getString(
+                    R.string.unknown_video
+                )
+            }
+
+        } ?: getString(
+            R.string.unknown_video
+        )
     }
 
     private fun getSavedPosition(
@@ -930,14 +1266,19 @@ class PlayerActivity : ComponentActivity() {
             return
         }
 
-        if (isInPictureInPictureMode) {
+        if (
+            isInPictureInPictureMode
+        ) {
             return
         }
 
         val params =
             PictureInPictureParams.Builder()
                 .setAspectRatio(
-                    Rational(16, 9)
+                    Rational(
+                        16,
+                        9
+                    )
                 )
                 .build()
 
@@ -966,7 +1307,18 @@ class PlayerActivity : ComponentActivity() {
             isInPictureInPictureMode
         )
 
-        if (isInPictureInPictureMode) {
+        if (
+            isInPictureInPictureMode
+        ) {
+
+            previousButton.visibility =
+                View.GONE
+
+            nextButton.visibility =
+                View.GONE
+
+            repeatButton.visibility =
+                View.GONE
 
             speedMinusButton.visibility =
                 View.GONE
@@ -1004,27 +1356,9 @@ class PlayerActivity : ComponentActivity() {
                 View.VISIBLE
 
             if (!isLocked) {
-
-                speedMinusButton.visibility =
-                    View.VISIBLE
-
-                speedButton.visibility =
-                    View.VISIBLE
-
-                speedPlusButton.visibility =
-                    View.VISIBLE
-
-                aspectButton.visibility =
-                    View.VISIBLE
-
-                subtitleButton.visibility =
-                    View.VISIBLE
-
-                sleepTimerButton.visibility =
-                    View.VISIBLE
-
-                fullscreenButton.visibility =
-                    View.VISIBLE
+                setPlayerControlsVisibility(
+                    true
+                )
             }
         }
     }
@@ -1042,7 +1376,9 @@ class PlayerActivity : ComponentActivity() {
 
     override fun onStop() {
 
-        if (!isInPictureInPictureMode) {
+        if (
+            !isInPictureInPictureMode
+        ) {
 
             savePosition()
 
@@ -1055,7 +1391,9 @@ class PlayerActivity : ComponentActivity() {
     override fun onDestroy() {
 
         sleepTimerRunnable?.let {
-            sleepHandler.removeCallbacks(it)
+            sleepHandler.removeCallbacks(
+                it
+            )
         }
 
         sleepTimerRunnable = null
