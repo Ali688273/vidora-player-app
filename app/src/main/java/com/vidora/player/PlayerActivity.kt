@@ -3,16 +3,23 @@ package com.vidora.player
 import android.net.Uri
 import android.os.Bundle
 import android.view.WindowManager
+import android.widget.Button
 import androidx.activity.ComponentActivity
 import androidx.media3.common.MediaItem
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.effect.Contrast
+import androidx.media3.effect.HslAdjustment
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 
+@OptIn(UnstableApi::class)
 class PlayerActivity : ComponentActivity() {
 
     private lateinit var playerView: PlayerView
+    private lateinit var enhanceButton: Button
 
     private var player: ExoPlayer? = null
+    private var enhancementEnabled = false
 
     override fun onCreate(
         savedInstanceState: Bundle?
@@ -29,6 +36,13 @@ class PlayerActivity : ComponentActivity() {
 
         playerView =
             findViewById(R.id.playerView)
+
+        enhanceButton =
+            findViewById(R.id.enhanceButton)
+
+        enhanceButton.setOnClickListener {
+            toggleImageEnhancement()
+        }
 
         initializePlayer()
     }
@@ -65,6 +79,50 @@ class PlayerActivity : ComponentActivity() {
                     exoPlayer.playWhenReady =
                         true
                 }
+    }
+
+    private fun toggleImageEnhancement() {
+
+        val currentPlayer =
+            player ?: return
+
+        enhancementEnabled =
+            !enhancementEnabled
+
+        if (enhancementEnabled) {
+
+            val contrastEffect =
+                Contrast(0.12f)
+
+            val colorEffect =
+                HslAdjustment.Builder()
+                    .adjustSaturation(8f)
+                    .adjustLightness(2f)
+                    .build()
+
+            currentPlayer.setVideoEffects(
+                listOf(
+                    contrastEffect,
+                    colorEffect
+                )
+            )
+
+            enhanceButton.text =
+                getString(
+                    R.string.enhance_on
+                )
+
+        } else {
+
+            currentPlayer.setVideoEffects(
+                emptyList()
+            )
+
+            enhanceButton.text =
+                getString(
+                    R.string.enhance_off
+                )
+        }
     }
 
     override fun onStop() {
