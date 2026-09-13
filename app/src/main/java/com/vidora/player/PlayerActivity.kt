@@ -583,6 +583,16 @@ class PlayerActivity : ComponentActivity() {
         mediaItem: MediaItem
     ) {
 
+        val videoUriString =
+            intent.getStringExtra(
+                EXTRA_VIDEO_URI
+            ) ?: return
+
+        val savedPosition =
+            getSavedPosition(
+                videoUriString
+            )
+
         player?.release()
 
         player =
@@ -599,6 +609,12 @@ class PlayerActivity : ComponentActivity() {
 
                     exoPlayer.prepare()
 
+                    if (savedPosition > 0L) {
+                        exoPlayer.seekTo(
+                            savedPosition
+                        )
+                    }
+
                     exoPlayer.playWhenReady =
                         true
 
@@ -607,6 +623,46 @@ class PlayerActivity : ComponentActivity() {
                             currentSpeed
                         )
                 }
+    }
+
+    private fun getSavedPosition(
+        uri: String
+    ): Long {
+
+        return getSharedPreferences(
+            PREFS_NAME,
+            MODE_PRIVATE
+        ).getLong(
+            uri,
+            0L
+        )
+    }
+
+    private fun savePosition() {
+
+        val uriString =
+            intent.getStringExtra(
+                EXTRA_VIDEO_URI
+            ) ?: return
+
+        val currentPlayer =
+            player ?: return
+
+        val position =
+            currentPlayer.currentPosition
+
+        if (position <= 0L) return
+
+        getSharedPreferences(
+            PREFS_NAME,
+            MODE_PRIVATE
+        )
+            .edit()
+            .putLong(
+                uriString,
+                position
+            )
+            .apply()
     }
 
     private fun enterPictureInPictureModeIfPossible() {
@@ -699,30 +755,6 @@ class PlayerActivity : ComponentActivity() {
                     View.VISIBLE
             }
         }
-    }
-
-    private fun savePosition() {
-
-        val uriString =
-            intent.getStringExtra(
-                EXTRA_VIDEO_URI
-            ) ?: return
-
-        val position =
-            player?.currentPosition ?: return
-
-        if (position <= 0) return
-
-        getSharedPreferences(
-            PREFS_NAME,
-            MODE_PRIVATE
-        )
-            .edit()
-            .putLong(
-                uriString,
-                position
-            )
-            .apply()
     }
 
     private fun enterFullscreen() {
