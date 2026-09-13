@@ -24,6 +24,7 @@ import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackParameters
@@ -32,6 +33,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
+import androidx.media3.ui.TrackSelectionDialogBuilder
 import kotlin.math.abs
 
 @OptIn(UnstableApi::class)
@@ -42,6 +44,7 @@ class PlayerActivity : ComponentActivity() {
     private lateinit var previousButton: Button
     private lateinit var nextButton: Button
     private lateinit var repeatButton: Button
+    private lateinit var audioButton: Button
 
     private lateinit var speedMinusButton: Button
     private lateinit var speedButton: Button
@@ -141,6 +144,9 @@ class PlayerActivity : ComponentActivity() {
         repeatButton =
             findViewById(R.id.repeatButton)
 
+        audioButton =
+            findViewById(R.id.audioButton)
+
         speedMinusButton =
             findViewById(R.id.speedMinusButton)
 
@@ -200,6 +206,12 @@ class PlayerActivity : ComponentActivity() {
         repeatButton.setOnClickListener {
             if (!isLocked) {
                 toggleRepeat()
+            }
+        }
+
+        audioButton.setOnClickListener {
+            if (!isLocked) {
+                showAudioTrackDialog()
             }
         }
 
@@ -270,6 +282,53 @@ class PlayerActivity : ComponentActivity() {
 
         updateSpeedText()
         updateRepeatButton()
+    }
+
+    private fun showAudioTrackDialog() {
+
+        val currentPlayer =
+            player
+
+        if (currentPlayer == null) {
+            return
+        }
+
+        val audioGroups =
+            currentPlayer.currentTracks.groups.filter {
+                it.type == C.TRACK_TYPE_AUDIO
+            }
+
+        if (audioGroups.isEmpty()) {
+
+            AlertDialog.Builder(this)
+                .setTitle(
+                    R.string.audio_track
+                )
+                .setMessage(
+                    R.string.no_audio_tracks
+                )
+                .setPositiveButton(
+                    R.string.ok,
+                    null
+                )
+                .show()
+
+            return
+        }
+
+        TrackSelectionDialogBuilder(
+            this,
+            getString(
+                R.string.audio_track
+            ),
+            currentPlayer,
+            C.TRACK_TYPE_AUDIO
+        )
+            .setAllowAdaptiveSelections(
+                false
+            )
+            .build()
+            .show()
     }
 
     private fun toggleRepeat() {
@@ -847,6 +906,9 @@ class PlayerActivity : ComponentActivity() {
         repeatButton.visibility =
             visibility
 
+        audioButton.visibility =
+            visibility
+
         speedMinusButton.visibility =
             visibility
 
@@ -1157,12 +1219,7 @@ class PlayerActivity : ComponentActivity() {
         uri: Uri
     ) {
 
-        val currentPlayer =
-            player
-
-        if (currentPlayer != null) {
-            savePosition()
-        }
+        savePosition()
 
         intent.putExtra(
             EXTRA_VIDEO_URI,
@@ -1318,6 +1375,9 @@ class PlayerActivity : ComponentActivity() {
                 View.GONE
 
             repeatButton.visibility =
+                View.GONE
+
+            audioButton.visibility =
                 View.GONE
 
             speedMinusButton.visibility =
