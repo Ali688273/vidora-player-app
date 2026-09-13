@@ -562,9 +562,7 @@ class PlayerActivity : ComponentActivity() {
                 .Builder(subtitleUri)
                 .setMimeType(subtitleMimeType)
                 .setLanguage("fa")
-                .setSelectionFlags(
-                    MediaItem.SELECTION_FLAG_DEFAULT
-                )
+                .setSelectionFlags(1)
                 .build()
 
         val mediaItem =
@@ -606,19 +604,6 @@ class PlayerActivity : ComponentActivity() {
                             currentSpeed
                         )
                 }
-    }
-
-    private fun getSavedPosition(
-        uri: String
-    ): Long {
-
-        return getSharedPreferences(
-            PREFS_NAME,
-            MODE_PRIVATE
-        ).getLong(
-            uri,
-            0L
-        )
     }
 
     private fun savePosition() {
