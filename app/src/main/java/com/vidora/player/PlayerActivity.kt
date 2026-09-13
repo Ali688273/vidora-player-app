@@ -22,7 +22,9 @@ import kotlin.math.abs
 class PlayerActivity : ComponentActivity() {
 
     private lateinit var playerView: PlayerView
+    private lateinit var speedMinusButton: Button
     private lateinit var speedButton: Button
+    private lateinit var speedPlusButton: Button
     private lateinit var aspectButton: Button
     private lateinit var lockButton: Button
     private lateinit var fullscreenButton: Button
@@ -32,25 +34,8 @@ class PlayerActivity : ComponentActivity() {
     private var player: ExoPlayer? = null
 
     private var isLocked = false
-    private var speedIndex = 2
+    private var currentSpeed = 1.0f
     private var aspectIndex = 0
-
-    // سرعت‌های پخش تا 5 برابر
-    private val speeds = floatArrayOf(
-        0.25f,
-        0.5f,
-        0.75f,
-        1.0f,
-        1.25f,
-        1.5f,
-        2.0f,
-        2.5f,
-        3.0f,
-        3.5f,
-        4.0f,
-        4.5f,
-        5.0f
-    )
 
     private val aspectModes = intArrayOf(
         AspectRatioFrameLayout.RESIZE_MODE_FIT,
@@ -91,15 +76,35 @@ class PlayerActivity : ComponentActivity() {
         setContentView(R.layout.activity_player)
 
         playerView = findViewById(R.id.playerView)
-        speedButton = findViewById(R.id.speedButton)
-        aspectButton = findViewById(R.id.aspectButton)
-        lockButton = findViewById(R.id.lockButton)
-        fullscreenButton = findViewById(R.id.fullscreenButton)
-        gestureInfo = findViewById(R.id.gestureInfo)
-        lockedOverlay = findViewById(R.id.lockedOverlay)
+
+        speedMinusButton =
+            findViewById(R.id.speedMinusButton)
+
+        speedButton =
+            findViewById(R.id.speedButton)
+
+        speedPlusButton =
+            findViewById(R.id.speedPlusButton)
+
+        aspectButton =
+            findViewById(R.id.aspectButton)
+
+        lockButton =
+            findViewById(R.id.lockButton)
+
+        fullscreenButton =
+            findViewById(R.id.fullscreenButton)
+
+        gestureInfo =
+            findViewById(R.id.gestureInfo)
+
+        lockedOverlay =
+            findViewById(R.id.lockedOverlay)
 
         audioManager =
-            getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            getSystemService(
+                Context.AUDIO_SERVICE
+            ) as AudioManager
 
         setupButtons()
         setupGestures()
@@ -110,25 +115,22 @@ class PlayerActivity : ComponentActivity() {
 
     private fun setupButtons() {
 
-        speedButton.setOnClickListener {
-            if (isLocked) return@setOnClickListener
-
-            speedIndex++
-
-            if (speedIndex >= speeds.size) {
-                speedIndex = 0
+        speedMinusButton.setOnClickListener {
+            if (!isLocked) {
+                changeSpeed(-0.1f)
             }
+        }
 
-            val speed = speeds[speedIndex]
+        speedPlusButton.setOnClickListener {
+            if (!isLocked) {
+                changeSpeed(0.1f)
+            }
+        }
 
-            player?.playbackParameters =
-                PlaybackParameters(speed)
-
-            speedButton.text =
-                getString(
-                    R.string.speed_format,
-                    speed
-                )
+        speedButton.setOnClickListener {
+            if (!isLocked) {
+                resetSpeed()
+            }
         }
 
         aspectButton.setOnClickListener {
@@ -154,6 +156,47 @@ class PlayerActivity : ComponentActivity() {
         fullscreenButton.setOnClickListener {
             enterFullscreen()
         }
+
+        updateSpeedText()
+    }
+
+    private fun changeSpeed(amount: Float) {
+
+        currentSpeed =
+            (currentSpeed + amount)
+                .coerceIn(0.1f, 5.0f)
+
+        currentSpeed =
+            String.format(
+                java.util.Locale.US,
+                "%.1f",
+                currentSpeed
+            ).toFloat()
+
+        player?.playbackParameters =
+            PlaybackParameters(currentSpeed)
+
+        updateSpeedText()
+    }
+
+    private fun resetSpeed() {
+
+        currentSpeed = 1.0f
+
+        player?.playbackParameters =
+            PlaybackParameters(currentSpeed)
+
+        updateSpeedText()
+    }
+
+    private fun updateSpeedText() {
+
+        speedButton.text =
+            String.format(
+                java.util.Locale.US,
+                "%.1f×",
+                currentSpeed
+            )
     }
 
     private fun setupGestures() {
@@ -178,7 +221,8 @@ class PlayerActivity : ComponentActivity() {
                         .takeIf { it >= 0f }
                         ?: 0.5f
 
-                gestureMode = GestureMode.NONE
+                gestureMode =
+                    GestureMode.NONE
 
                 return@setOnTouchListener isLocked
             }
@@ -197,13 +241,18 @@ class PlayerActivity : ComponentActivity() {
                     val deltaY =
                         event.y - downY
 
-                    if (gestureMode == GestureMode.NONE) {
+                    if (
+                        gestureMode ==
+                        GestureMode.NONE
+                    ) {
 
                         if (
                             abs(deltaX) > 30 &&
                             abs(deltaX) > abs(deltaY)
                         ) {
-                            gestureMode = GestureMode.SEEK
+                            gestureMode =
+                                GestureMode.SEEK
+
                         } else if (
                             abs(deltaY) > 30 &&
                             abs(deltaY) > abs(deltaX)
@@ -223,17 +272,14 @@ class PlayerActivity : ComponentActivity() {
 
                     when (gestureMode) {
 
-                        GestureMode.SEEK -> {
+                        GestureMode.SEEK ->
                             handleSeek(deltaX)
-                        }
 
-                        GestureMode.VOLUME -> {
+                        GestureMode.VOLUME ->
                             handleVolume(deltaY)
-                        }
 
-                        GestureMode.BRIGHTNESS -> {
+                        GestureMode.BRIGHTNESS ->
                             handleBrightness(deltaY)
-                        }
 
                         GestureMode.NONE -> Unit
                     }
@@ -244,7 +290,8 @@ class PlayerActivity : ComponentActivity() {
                 MotionEvent.ACTION_UP -> {
 
                     if (
-                        gestureMode == GestureMode.NONE
+                        gestureMode ==
+                        GestureMode.NONE
                     ) {
                         false
                     } else {
@@ -265,7 +312,8 @@ class PlayerActivity : ComponentActivity() {
 
     private fun handleSeek(deltaX: Float) {
 
-        val currentPlayer = player ?: return
+        val currentPlayer =
+            player ?: return
 
         val duration =
             currentPlayer.duration
@@ -360,12 +408,16 @@ class PlayerActivity : ComponentActivity() {
     }
 
     private fun showGestureInfo(text: String) {
+
         gestureInfo.text = text
-        gestureInfo.visibility = View.VISIBLE
+        gestureInfo.visibility =
+            View.VISIBLE
     }
 
     private fun hideGestureInfo() {
-        gestureInfo.visibility = View.GONE
+
+        gestureInfo.visibility =
+            View.GONE
     }
 
     private fun toggleLock() {
@@ -380,7 +432,13 @@ class PlayerActivity : ComponentActivity() {
             lockButton.text =
                 getString(R.string.unlock)
 
+            speedMinusButton.visibility =
+                View.GONE
+
             speedButton.visibility =
+                View.GONE
+
+            speedPlusButton.visibility =
                 View.GONE
 
             aspectButton.visibility =
@@ -397,7 +455,13 @@ class PlayerActivity : ComponentActivity() {
             lockButton.text =
                 getString(R.string.lock)
 
+            speedMinusButton.visibility =
+                View.VISIBLE
+
             speedButton.visibility =
+                View.VISIBLE
+
+            speedPlusButton.visibility =
                 View.VISIBLE
 
             aspectButton.visibility =
@@ -434,7 +498,9 @@ class PlayerActivity : ComponentActivity() {
                     )
 
                     val savedPosition =
-                        getSavedPosition(uriString)
+                        getSavedPosition(
+                            uriString
+                        )
 
                     exoPlayer.prepare()
 
@@ -449,7 +515,7 @@ class PlayerActivity : ComponentActivity() {
 
                     exoPlayer.playbackParameters =
                         PlaybackParameters(
-                            speeds[speedIndex]
+                            currentSpeed
                         )
                 }
     }
