@@ -2,12 +2,10 @@
 
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Android 12 and lower -->
     <uses-permission
         android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
 
-    <!-- Android 13 and higher -->
     <uses-permission
         android:name="android.permission.READ_MEDIA_VIDEO" />
 
@@ -22,6 +20,8 @@
         <activity
             android:name=".PlayerActivity"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize"
+            android:screenOrientation="unspecified"
+            android:supportsPictureInPicture="true"
             android:exported="false" />
 
         <activity
@@ -29,11 +29,8 @@
             android:exported="true">
 
             <intent-filter>
-
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
-
             </intent-filter>
 
         </activity>
