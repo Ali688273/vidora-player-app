@@ -10,7 +10,9 @@ import android.view.WindowManager
 import android.widget.Button
 import android.widget.TextView
 import androidx.activity.ComponentActivity
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
@@ -26,6 +28,7 @@ class PlayerActivity : ComponentActivity() {
     private lateinit var speedButton: Button
     private lateinit var speedPlusButton: Button
     private lateinit var aspectButton: Button
+    private lateinit var subtitleButton: Button
     private lateinit var lockButton: Button
     private lateinit var fullscreenButton: Button
     private lateinit var gestureInfo: TextView
@@ -66,6 +69,24 @@ class PlayerActivity : ComponentActivity() {
 
     private lateinit var audioManager: AudioManager
 
+    private val subtitlePicker =
+        registerForActivityResult(
+            ActivityResultContracts.OpenDocument()
+        ) { uri ->
+
+            if (uri == null) return@registerForActivityResult
+
+            try {
+                contentResolver.takePersistableUriPermission(
+                    uri,
+                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (_: Exception) {
+            }
+
+            loadVideoWithSubtitle(uri)
+        }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -88,6 +109,9 @@ class PlayerActivity : ComponentActivity() {
 
         aspectButton =
             findViewById(R.id.aspectButton)
+
+        subtitleButton =
+            findViewById(R.id.subtitleButton)
 
         lockButton =
             findViewById(R.id.lockButton)
@@ -147,6 +171,18 @@ class PlayerActivity : ComponentActivity() {
 
             aspectButton.text =
                 aspectNames[aspectIndex]
+        }
+
+        subtitleButton.setOnClickListener {
+            if (!isLocked) {
+                subtitlePicker.launch(
+                    arrayOf(
+                        "text/*",
+                        "application/x-subrip",
+                        "text/vtt"
+                    )
+                )
+            }
         }
 
         lockButton.setOnClickListener {
@@ -444,6 +480,9 @@ class PlayerActivity : ComponentActivity() {
             aspectButton.visibility =
                 View.GONE
 
+            subtitleButton.visibility =
+                View.GONE
+
             fullscreenButton.visibility =
                 View.GONE
 
@@ -467,6 +506,9 @@ class PlayerActivity : ComponentActivity() {
             aspectButton.visibility =
                 View.VISIBLE
 
+            subtitleButton.visibility =
+                View.VISIBLE
+
             fullscreenButton.visibility =
                 View.VISIBLE
         }
@@ -482,6 +524,66 @@ class PlayerActivity : ComponentActivity() {
         val videoUri =
             Uri.parse(uriString)
 
+        createPlayer(
+            MediaItem.fromUri(videoUri)
+        )
+    }
+
+    private fun loadVideoWithSubtitle(
+        subtitleUri: Uri
+    ) {
+
+        val videoUriString =
+            intent.getStringExtra(
+                EXTRA_VIDEO_URI
+            ) ?: return
+
+        val videoUri =
+            Uri.parse(videoUriString)
+
+        val subtitleMimeType =
+            when (
+                contentResolver.getType(
+                    subtitleUri
+                )
+            ) {
+                "text/vtt" ->
+                    MimeTypes.TEXT_VTT
+
+                "application/x-subrip" ->
+                    MimeTypes.APPLICATION_SUBRIP
+
+                else ->
+                    MimeTypes.APPLICATION_SUBRIP
+            }
+
+        val subtitle =
+            MediaItem.SubtitleConfiguration
+                .Builder(subtitleUri)
+                .setMimeType(subtitleMimeType)
+                .setLanguage("fa")
+                .setSelectionFlags(
+                    MediaItem.SELECTION_FLAG_DEFAULT
+                )
+                .build()
+
+        val mediaItem =
+            MediaItem.Builder()
+                .setUri(videoUri)
+                .setSubtitleConfigurations(
+                    listOf(subtitle)
+                )
+                .build()
+
+        createPlayer(mediaItem)
+    }
+
+    private fun createPlayer(
+        mediaItem: MediaItem
+    ) {
+
+        player?.release()
+
         player =
             ExoPlayer.Builder(this)
                 .build()
@@ -490,25 +592,11 @@ class PlayerActivity : ComponentActivity() {
                     playerView.player =
                         exoPlayer
 
-                    val mediaItem =
-                        MediaItem.fromUri(videoUri)
-
                     exoPlayer.setMediaItem(
                         mediaItem
                     )
 
-                    val savedPosition =
-                        getSavedPosition(
-                            uriString
-                        )
-
                     exoPlayer.prepare()
-
-                    if (savedPosition > 0) {
-                        exoPlayer.seekTo(
-                            savedPosition
-                        )
-                    }
 
                     exoPlayer.playWhenReady =
                         true
