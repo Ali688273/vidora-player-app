@@ -6,7 +6,7 @@ plugins {
 android {
     namespace = "com.vidora.player"
 
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.vidora.player"
@@ -47,7 +47,6 @@ android {
 }
 
 dependencies {
-
     implementation("androidx.core:core-ktx:1.18.0")
     implementation("androidx.activity:activity-ktx:1.13.0")
 
