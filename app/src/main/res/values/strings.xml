@@ -10,6 +10,7 @@
     <string name="sort_newest">جدیدترین</string>
     <string name="sort_name">الفبا</string>
     <string name="sort_size">حجم</string>
+    <string name="sort_favorites">⭐ علاقه‌مندی‌ها</string>
 
     <string name="folder_title">📁 %1$s</string>
     <string name="unknown_folder">سایر ویدئوها</string>
@@ -32,6 +33,12 @@
     <string name="audio_track">صدا</string>
     <string name="no_audio_tracks">این ویدئو ترک صوتی دیگری ندارد.</string>
     <string name="ok">باشه</string>
+
+    <string name="favorite_off">☆</string>
+    <string name="favorite_on">⭐</string>
+    <string name="added_to_favorites">به علاقه‌مندی‌ها اضافه شد</string>
+    <string name="removed_from_favorites">از علاقه‌مندی‌ها حذف شد</string>
+    <string name="no_favorites">هنوز ویدئویی به علاقه‌مندی‌ها اضافه نشده است</string>
 
     <string name="subtitle">زیرنویس</string>
 
