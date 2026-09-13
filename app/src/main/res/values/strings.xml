@@ -51,6 +51,13 @@
     <string name="sleep_timer_invalid">یک عدد بزرگ‌تر از صفر وارد کنید</string>
     <string name="cancel">انصراف</string>
 
+    <string name="share_video">اشتراک</string>
+
+    <string name="delete_video">حذف</string>
+    <string name="delete_video_title">حذف ویدئو</string>
+    <string name="delete_video_message">آیا مطمئن هستید که می‌خواهید این ویدئو را حذف کنید؟</string>
+    <string name="video_deleted">ویدئو حذف شد</string>
+
     <string name="lock">🔒 قفل</string>
     <string name="unlock">🔓 بازکردن</string>
     <string name="fullscreen">⛶</string>
@@ -59,6 +66,9 @@
 
     <string name="volume_percent">صدا %1$d%%</string>
     <string name="brightness_percent">روشنایی %1$d%%</string>
+
+    <string name="seek_backward">−10 ثانیه</string>
+    <string name="seek_forward">+10 ثانیه</string>
 
     <string name="permission_denied">دسترسی به ویدئوها داده نشد</string>
     <string name="no_videos">هیچ ویدئویی پیدا نشد</string>
