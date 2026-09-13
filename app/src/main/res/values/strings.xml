@@ -16,7 +16,7 @@
     <string name="enhance_off">✨ بهبود کیفیت</string>
 
     <string name="speed_default">1.0×</string>
-    <string name="speed_format">%1$.2f×</string>
+    <string name="speed_format">%1$.1f×</string>
 
     <string name="lock">🔒 قفل</string>
     <string name="unlock">🔓 بازکردن</string>
@@ -27,8 +27,10 @@
 
     <string name="volume_percent">صدا %1$d%%</string>
 
-    <string name="brightness_percent">
-        روشنایی %1$d%%
-    </string>
+    <string name="brightness_percent">روشنایی %1$d%%</string>
+
+    <string name="permission_denied">دسترسی به ویدئوها داده نشد</string>
+
+    <string name="no_videos">هیچ ویدئویی پیدا نشد</string>
 
 </resources>
