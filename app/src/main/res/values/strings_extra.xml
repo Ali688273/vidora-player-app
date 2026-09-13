@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<resources>
+
+    <string name="share_video">اشتراک‌گذاری ویدئو</string>
+
+    <string name="delete_video">حذف ویدئو</string>
+
+    <string name="delete_video_title">حذف ویدئو</string>
+
+    <string name="delete_video_message">
+        آیا مطمئن هستید که می‌خواهید این ویدئو حذف شود؟
+    </string>
+
+    <string name="delete">حذف</string>
+
+    <string name="history">تاریخچه</string>
+
+    <string name="continue_watching">ادامه تماشا</string>
+
+    <string name="progress_percent">%1$d%% مشاهده شده</string>
+
+    <string name="seek_backward">−10 ثانیه</string>
+
+    <string name="seek_forward">+10 ثانیه</string>
+
+    <string name="video_deleted">ویدئو حذف شد</string>
+
+</resources>
