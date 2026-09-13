@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.AlertDialog
 import android.app.PictureInPictureParams
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.AudioManager
 import android.net.Uri
@@ -46,8 +47,7 @@ class PlayerActivity : ComponentActivity() {
     private lateinit var nextButton: Button
     private lateinit var repeatButton: Button
     private lateinit var audioButton: Button
-    private lateinit var favoriteButton: Button
-
+    private lateinit var favoriteButton
     private lateinit var speedMinusButton: Button
     private lateinit var speedButton: Button
     private lateinit var speedPlusButton: Button
@@ -100,19 +100,21 @@ class PlayerActivity : ComponentActivity() {
 
     private var sleepTimerRunnable: Runnable? = null
 
+    private var lastTapTime = 0L
+    private var lastTapX = 0f
+    private var lastTapY = 0f
+
     private val subtitlePicker =
         registerForActivityResult(
             ActivityResultContracts.OpenDocument()
         ) { uri ->
 
-            if (uri == null) {
-                return@registerForActivityResult
-            }
+            if (uri == null) return@registerForActivityResult
 
             try {
                 contentResolver.takePersistableUriPermission(
                     uri,
-                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
                 )
             } catch (_: Exception) {
             }
@@ -129,27 +131,15 @@ class PlayerActivity : ComponentActivity() {
             WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
         )
 
-        setContentView(
-            R.layout.activity_player
-        )
+        setContentView(R.layout.activity_player)
 
-        playerView =
-            findViewById(R.id.playerView)
+        playerView = findViewById(R.id.playerView)
 
-        previousButton =
-            findViewById(R.id.previousButton)
-
-        nextButton =
-            findViewById(R.id.nextButton)
-
-        repeatButton =
-            findViewById(R.id.repeatButton)
-
-        audioButton =
-            findViewById(R.id.audioButton)
-
-        favoriteButton =
-            findViewById(R.id.favoriteButton)
+        previousButton = findViewById(R.id.previousButton)
+        nextButton = findViewById(R.id.nextButton)
+        repeatButton = findViewById(R.id.repeatButton)
+        audioButton = findViewById(R.id.audioButton)
+        favoriteButton = findViewById(R.id.favoriteButton)
 
         speedMinusButton =
             findViewById(R.id.speedMinusButton)
@@ -182,14 +172,12 @@ class PlayerActivity : ComponentActivity() {
             findViewById(R.id.lockedOverlay)
 
         audioManager =
-            getSystemService(
-                Context.AUDIO_SERVICE
-            ) as AudioManager
+            getSystemService(Context.AUDIO_SERVICE)
+                    as AudioManager
 
         setupButtons()
         setupGestures()
         initializePlayer()
-
         enterFullscreen()
     }
 
@@ -298,9 +286,8 @@ class PlayerActivity : ComponentActivity() {
     private fun toggleFavorite() {
 
         val uriString =
-            intent.getStringExtra(
-                EXTRA_VIDEO_URI
-            ) ?: return
+            intent.getStringExtra(EXTRA_VIDEO_URI)
+                ?: return
 
         val uri =
             Uri.parse(uriString)
@@ -324,24 +311,14 @@ class PlayerActivity : ComponentActivity() {
                 )
             }
 
-        showGestureInfo(
-            message
-        )
-
-        gestureInfo.postDelayed(
-            {
-                hideGestureInfo()
-            },
-            1200L
-        )
+        showTemporaryMessage(message)
     }
 
     private fun updateFavoriteButton() {
 
         val uriString =
-            intent.getStringExtra(
-                EXTRA_VIDEO_URI
-            ) ?: return
+            intent.getStringExtra(EXTRA_VIDEO_URI)
+                ?: return
 
         val favorite =
             FavoriteManager.isFavorite(
@@ -351,13 +328,9 @@ class PlayerActivity : ComponentActivity() {
 
         favoriteButton.text =
             if (favorite) {
-                getString(
-                    R.string.favorite_on
-                )
+                getString(R.string.favorite_on)
             } else {
-                getString(
-                    R.string.favorite_off
-                )
+                getString(R.string.favorite_off)
             }
     }
 
@@ -367,19 +340,16 @@ class PlayerActivity : ComponentActivity() {
             player ?: return
 
         val audioGroups =
-            currentPlayer.currentTracks.groups.filter {
-                it.type == C.TRACK_TYPE_AUDIO
-            }
+            currentPlayer.currentTracks.groups
+                .filter {
+                    it.type == C.TRACK_TYPE_AUDIO
+                }
 
         if (audioGroups.isEmpty()) {
 
             AlertDialog.Builder(this)
-                .setTitle(
-                    R.string.audio_track
-                )
-                .setMessage(
-                    R.string.no_audio_tracks
-                )
+                .setTitle(R.string.audio_track)
+                .setMessage(R.string.no_audio_tracks)
                 .setPositiveButton(
                     R.string.ok,
                     null
@@ -391,15 +361,11 @@ class PlayerActivity : ComponentActivity() {
 
         TrackSelectionDialogBuilder(
             this,
-            getString(
-                R.string.audio_track
-            ),
+            getString(R.string.audio_track),
             currentPlayer,
             C.TRACK_TYPE_AUDIO
         )
-            .setAllowAdaptiveSelections(
-                false
-            )
+            .setAllowAdaptiveSelections(false)
             .build()
             .show()
     }
@@ -423,13 +389,9 @@ class PlayerActivity : ComponentActivity() {
 
         repeatButton.text =
             if (repeatEnabled) {
-                getString(
-                    R.string.repeat_on
-                )
+                getString(R.string.repeat_on)
             } else {
-                getString(
-                    R.string.repeat_off
-                )
+                getString(R.string.repeat_off)
             }
     }
 
@@ -438,12 +400,11 @@ class PlayerActivity : ComponentActivity() {
     ) {
 
         currentSpeed =
-            (
-                currentSpeed + amount
-            ).coerceIn(
-                0.1f,
-                5.0f
-            )
+            (currentSpeed + amount)
+                .coerceIn(
+                    0.1f,
+                    5.0f
+                )
 
         currentSpeed =
             String.format(
@@ -569,9 +530,7 @@ class PlayerActivity : ComponentActivity() {
                     return@setOnClickListener
                 }
 
-                startSleepTimer(
-                    minutes
-                )
+                startSleepTimer(minutes)
 
                 dialog.dismiss()
             }
@@ -638,7 +597,6 @@ class PlayerActivity : ComponentActivity() {
         if (
             ::sleepTimerButton.isInitialized
         ) {
-
             sleepTimerButton.text =
                 getString(
                     R.string.sleep_timer
@@ -650,43 +608,41 @@ class PlayerActivity : ComponentActivity() {
 
         playerView.setOnTouchListener { _, event ->
 
-            if (
-                event.action ==
-                MotionEvent.ACTION_DOWN
-            ) {
-
-                downX = event.x
-                downY = event.y
-
-                startPosition =
-                    player?.currentPosition ?: 0L
-
-                startVolume =
-                    audioManager.getStreamVolume(
-                        AudioManager.STREAM_MUSIC
-                    )
-
-                startBrightness =
-                    window.attributes
-                        .screenBrightness
-                        .takeIf {
-                            it >= 0f
-                        }
-                        ?: 0.5f
-
-                gestureMode =
-                    GestureMode.NONE
-
-                return@setOnTouchListener isLocked
-            }
-
-            if (isLocked) {
-                return@setOnTouchListener true
-            }
-
             when (event.action) {
 
+                MotionEvent.ACTION_DOWN -> {
+
+                    downX = event.x
+                    downY = event.y
+
+                    startPosition =
+                        player?.currentPosition ?: 0L
+
+                    startVolume =
+                        audioManager.getStreamVolume(
+                            AudioManager.STREAM_MUSIC
+                        )
+
+                    startBrightness =
+                        window.attributes.screenBrightness
+                            .takeIf { it >= 0f }
+                            ?: 0.5f
+
+                    gestureMode =
+                        GestureMode.NONE
+
+                    if (isLocked) {
+                        return@setOnTouchListener true
+                    }
+
+                    true
+                }
+
                 MotionEvent.ACTION_MOVE -> {
+
+                    if (isLocked) {
+                        return@setOnTouchListener true
+                    }
 
                     val deltaX =
                         event.x - downX
@@ -701,8 +657,7 @@ class PlayerActivity : ComponentActivity() {
 
                         if (
                             abs(deltaX) > 30 &&
-                            abs(deltaX) >
-                            abs(deltaY)
+                            abs(deltaX) > abs(deltaY)
                         ) {
 
                             gestureMode =
@@ -710,8 +665,7 @@ class PlayerActivity : ComponentActivity() {
 
                         } else if (
                             abs(deltaY) > 30 &&
-                            abs(deltaY) >
-                            abs(deltaX)
+                            abs(deltaY) > abs(deltaX)
                         ) {
 
                             gestureMode =
@@ -746,27 +700,128 @@ class PlayerActivity : ComponentActivity() {
 
                 MotionEvent.ACTION_UP -> {
 
+                    if (isLocked) {
+                        return@setOnTouchListener true
+                    }
+
+                    val deltaX =
+                        event.x - downX
+
+                    val deltaY =
+                        event.y - downY
+
+                    val movement =
+                        abs(deltaX) +
+                            abs(deltaY)
+
+                    val now =
+                        System.currentTimeMillis()
+
                     if (
                         gestureMode ==
-                        GestureMode.NONE
+                        GestureMode.NONE &&
+                        movement < 30
                     ) {
-                        false
-                    } else {
-                        hideGestureInfo()
-                        true
-                    }
-                }
 
-                MotionEvent.ACTION_CANCEL -> {
+                        val doubleTap =
+                            now - lastTapTime < 350L &&
+                                abs(event.x - lastTapX) < 80f &&
+                                abs(event.y - lastTapY) < 80f
+
+                        if (doubleTap) {
+
+                            handleDoubleTap(
+                                event.x
+                            )
+
+                            lastTapTime = 0L
+
+                        } else {
+
+                            lastTapTime = now
+                            lastTapX = event.x
+                            lastTapY = event.y
+                        }
+
+                        return@setOnTouchListener true
+                    }
+
+                    gestureMode =
+                        GestureMode.NONE
 
                     hideGestureInfo()
 
                     true
                 }
 
-                else -> false
+                MotionEvent.ACTION_CANCEL -> {
+
+                    gestureMode =
+                        GestureMode.NONE
+
+                    hideGestureInfo()
+
+                    true
+                }
+
+                else -> true
             }
         }
+    }
+
+    private fun handleDoubleTap(
+        x: Float
+    ) {
+
+        val currentPlayer =
+            player ?: return
+
+        val duration =
+            currentPlayer.duration
+
+        if (duration <= 0L) {
+            return
+        }
+
+        val amount =
+            10_000L
+
+        val newPosition =
+            if (
+                x < playerView.width / 2f
+            ) {
+
+                (
+                    currentPlayer.currentPosition -
+                        amount
+                    ).coerceAtLeast(0L)
+
+            } else {
+
+                (
+                    currentPlayer.currentPosition +
+                        amount
+                    ).coerceAtMost(duration)
+            }
+
+        currentPlayer.seekTo(
+            newPosition
+        )
+
+        val message =
+            if (
+                x < playerView.width / 2f
+            ) {
+                getString(
+                    R.string.seek_backward
+                )
+            } else {
+                getString(
+                    R.string.seek_forward
+                )
+            }
+
+        showTemporaryMessage(message)
     }
 
     private fun handleSeek(
@@ -891,7 +946,8 @@ class PlayerActivity : ComponentActivity() {
             attributes
 
         val percent =
-            (newBrightness * 100).toInt()
+            (newBrightness * 100)
+                .toInt()
 
         showGestureInfo(
             getString(
@@ -909,6 +965,20 @@ class PlayerActivity : ComponentActivity() {
 
         gestureInfo.visibility =
             View.VISIBLE
+    }
+
+    private fun showTemporaryMessage(
+        text: String
+    ) {
+
+        showGestureInfo(text)
+
+        gestureInfo.postDelayed(
+            {
+                hideGestureInfo()
+            },
+            1200L
+        )
     }
 
     private fun hideGestureInfo() {
@@ -1045,14 +1115,14 @@ class PlayerActivity : ComponentActivity() {
 
         val subtitle =
             MediaItem.SubtitleConfiguration
-                .Builder(
-                    subtitleUri
-                )
+                .Builder(subtitleUri)
                 .setMimeType(
                     subtitleMimeType
                 )
                 .setLanguage("fa")
-                .setSelectionFlags(1)
+                .setSelectionFlags(
+                    1
+                )
                 .build()
 
         val mediaItem =
@@ -1063,9 +1133,7 @@ class PlayerActivity : ComponentActivity() {
                 )
                 .build()
 
-        createPlayer(
-            mediaItem
-        )
+        createPlayer(mediaItem)
     }
 
     private fun createPlayer(
@@ -1082,9 +1150,11 @@ class PlayerActivity : ComponentActivity() {
                 ?: return
 
         val savedPosition =
-            getSavedPosition(
-                videoUriString
-            )
+            PlaybackHistoryManager
+                .getPosition(
+                    this,
+                    Uri.parse(videoUriString)
+                )
 
         player?.release()
 
@@ -1109,9 +1179,7 @@ class PlayerActivity : ComponentActivity() {
 
                     exoPlayer.prepare()
 
-                    if (
-                        savedPosition > 0L
-                    ) {
+                    if (savedPosition > 0L) {
                         exoPlayer.seekTo(
                             savedPosition
                         )
@@ -1155,13 +1223,15 @@ class PlayerActivity : ComponentActivity() {
                 Build.VERSION_CODES.Q
             ) {
 
-                MediaStore.Video.Media.getContentUri(
-                    MediaStore.VOLUME_EXTERNAL
-                )
+                MediaStore.Video.Media
+                    .getContentUri(
+                        MediaStore.VOLUME_EXTERNAL
+                    )
 
             } else {
 
-                MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+                MediaStore.Video.Media
+                    .EXTERNAL_CONTENT_URI
             }
 
         contentResolver.query(
@@ -1201,8 +1271,11 @@ class PlayerActivity : ComponentActivity() {
             Build.VERSION.SDK_INT >=
             Build.VERSION_CODES.TIRAMISU
         ) {
+
             Manifest.permission.READ_MEDIA_VIDEO
+
         } else {
+
             Manifest.permission.READ_EXTERNAL_STORAGE
         }
     }
@@ -1223,8 +1296,7 @@ class PlayerActivity : ComponentActivity() {
 
         val currentIndex =
             videos.indexOfFirst {
-                it.toString() ==
-                    currentUri
+                it.toString() == currentUri
             }
 
         val previousIndex =
@@ -1255,8 +1327,7 @@ class PlayerActivity : ComponentActivity() {
 
         val currentIndex =
             videos.indexOfFirst {
-                it.toString() ==
-                    currentUri
+                it.toString() == currentUri
             }
 
         val nextIndex =
@@ -1310,11 +1381,14 @@ class PlayerActivity : ComponentActivity() {
         )?.use { cursor ->
 
             if (cursor.moveToFirst()) {
+
                 cursor.getString(0)
                     ?: getString(
                         R.string.unknown_video
                     )
+
             } else {
+
                 getString(
                     R.string.unknown_video
                 )
@@ -1322,19 +1396,6 @@ class PlayerActivity : ComponentActivity() {
 
         } ?: getString(
             R.string.unknown_video
-        )
-    }
-
-    private fun getSavedPosition(
-        uri: String
-    ): Long {
-
-        return getSharedPreferences(
-            PREFS_NAME,
-            MODE_PRIVATE
-        ).getLong(
-            uri,
-            0L
         )
     }
 
@@ -1351,20 +1412,161 @@ class PlayerActivity : ComponentActivity() {
         val position =
             currentPlayer.currentPosition
 
+        val duration =
+            currentPlayer.duration
+
         if (position <= 0L) {
             return
         }
 
-        getSharedPreferences(
-            PREFS_NAME,
-            MODE_PRIVATE
+        PlaybackHistoryManager.save(
+            this,
+            Uri.parse(uriString),
+            position,
+            duration
         )
-            .edit()
-            .putLong(
-                uriString,
-                position
+    }
+
+    private fun shareCurrentVideo() {
+
+        val uriString =
+            intent.getStringExtra(
+                EXTRA_VIDEO_URI
+            ) ?: return
+
+        VideoShareManager.share(
+            this,
+            Uri.parse(uriString)
+        )
+    }
+
+    private fun deleteCurrentVideo() {
+
+        val uriString =
+            intent.getStringExtra(
+                EXTRA_VIDEO_URI
+            ) ?: return
+
+        val uri =
+            Uri.parse(uriString)
+
+        AlertDialog.Builder(this)
+            .setTitle(
+                R.string.delete_video_title
             )
-            .apply()
+            .setMessage(
+                R.string.delete_video_message
+            )
+            .setNegativeButton(
+                R.string.cancel,
+                null
+            )
+            .setPositiveButton(
+                R.string.delete
+            ) { _, _ ->
+
+                deleteVideo(uri)
+            }
+            .show()
+    }
+
+    private fun deleteVideo(
+        uri: Uri
+    ) {
+
+        try {
+
+            if (
+                Build.VERSION.SDK_INT >=
+                Build.VERSION_CODES.R
+            ) {
+
+                val pendingIntent =
+                    MediaStore.createDeleteRequest(
+                        contentResolver,
+                        listOf(uri)
+                    )
+
+                startIntentSenderForResult(
+                    pendingIntent.intentSender,
+                    DELETE_REQUEST_CODE,
+                    null,
+                    0,
+                    0,
+                    0,
+                    null
+                )
+
+            } else {
+
+                val deleted =
+                    contentResolver.delete(
+                        uri,
+                        null,
+                        null
+                    )
+
+                if (deleted > 0) {
+
+                    PlaybackHistoryManager.clear(
+                        this,
+                        uri
+                    )
+
+                    showTemporaryMessage(
+                        getString(
+                            R.string.video_deleted
+                        )
+                    )
+
+                    finish()
+                }
+            }
+
+        } catch (_: Exception) {
+
+            showTemporaryMessage(
+                getString(
+                    R.string.delete_video
+                )
+            )
+        }
+    }
+
+    override fun onActivityResult(
+        requestCode: Int,
+        resultCode: Int,
+        data: Intent?
+    ) {
+
+        super.onActivityResult(
+            requestCode,
+            resultCode,
+            data
+        )
+
+        if (
+            requestCode ==
+            DELETE_REQUEST_CODE &&
+            resultCode ==
+            RESULT_OK
+        ) {
+
+            val uriString =
+                intent.getStringExtra(
+                    EXTRA_VIDEO_URI
+                )
+
+            if (uriString != null) {
+
+                PlaybackHistoryManager.clear(
+                    this,
+                    Uri.parse(uriString)
+                )
+            }
+
+            finish()
+        }
     }
 
     private fun enterPictureInPictureModeIfPossible() {
@@ -1376,19 +1578,14 @@ class PlayerActivity : ComponentActivity() {
             return
         }
 
-        if (
-            isInPictureInPictureMode
-        ) {
+        if (isInPictureInPictureMode) {
             return
         }
 
         val params =
             PictureInPictureParams.Builder()
                 .setAspectRatio(
-                    Rational(
-                        16,
-                        9
-                    )
+                    Rational(16, 9)
                 )
                 .build()
 
@@ -1417,9 +1614,7 @@ class PlayerActivity : ComponentActivity() {
             isInPictureInPictureMode
         )
 
-        if (
-            isInPictureInPictureMode
-        ) {
+        if (isInPictureInPictureMode) {
 
             previousButton.visibility =
                 View.GONE
@@ -1531,7 +1726,7 @@ class PlayerActivity : ComponentActivity() {
         const val EXTRA_VIDEO_NAME =
             "com.vidora.player.EXTRA_VIDEO_NAME"
 
-        private const val PREFS_NAME =
-            "vidora_player_positions"
+        private const val DELETE_REQUEST_CODE =
+            5001
     }
 }
