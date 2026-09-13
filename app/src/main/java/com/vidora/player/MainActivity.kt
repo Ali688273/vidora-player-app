@@ -146,6 +146,9 @@ class MainActivity : ComponentActivity() {
                         SortMode.SIZE
 
                     SortMode.SIZE ->
+                        SortMode.FAVORITES
+
+                    SortMode.FAVORITES ->
                         SortMode.LAST_ACCESS
                 }
 
@@ -176,6 +179,11 @@ class MainActivity : ComponentActivity() {
                 SortMode.SIZE ->
                     getString(
                         R.string.sort_size
+                    )
+
+                SortMode.FAVORITES ->
+                    getString(
+                        R.string.sort_favorites
                     )
             }
     }
@@ -375,7 +383,7 @@ class MainActivity : ComponentActivity() {
                     Locale.getDefault()
                 )
 
-        val filtered =
+        var filtered =
 
             if (
                 normalizedQuery.isEmpty()
@@ -403,6 +411,20 @@ class MainActivity : ComponentActivity() {
                             )
                 }
             }
+
+        if (
+            sortMode ==
+            SortMode.FAVORITES
+        ) {
+
+            filtered =
+                filtered.filter {
+                    FavoriteManager.isFavorite(
+                        this,
+                        it.uri
+                    )
+                }
+        }
 
         val sorted =
             when (sortMode) {
@@ -443,6 +465,15 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                     )
+
+                SortMode.FAVORITES ->
+                    filtered.sortedWith(
+                        compareBy<VideoItem> {
+                            it.name.lowercase(
+                                Locale.getDefault()
+                            )
+                        }
+                    )
             }
 
         displayVideos(
@@ -462,9 +493,18 @@ class MainActivity : ComponentActivity() {
         if (videos.isEmpty()) {
 
             showMessage(
-                getString(
-                    R.string.no_videos
-                )
+                if (
+                    sortMode ==
+                    SortMode.FAVORITES
+                ) {
+                    getString(
+                        R.string.no_favorites
+                    )
+                } else {
+                    getString(
+                        R.string.no_videos
+                    )
+                }
             )
 
             return
@@ -562,6 +602,18 @@ class MainActivity : ComponentActivity() {
         nameText.text =
             video.name
 
+        val favoriteMark =
+            if (
+                FavoriteManager.isFavorite(
+                    this,
+                    video.uri
+                )
+            ) {
+                "  ⭐"
+            } else {
+                ""
+            }
+
         infoText.text =
             buildString {
 
@@ -579,6 +631,10 @@ class MainActivity : ComponentActivity() {
                     formatSize(
                         video.size
                     )
+                )
+
+                append(
+                    favoriteMark
                 )
             }
 
@@ -614,8 +670,45 @@ class MainActivity : ComponentActivity() {
             )
         }
 
+        view.setOnLongClickListener {
+
+            toggleFavoriteFromLibrary(
+                video
+            )
+
+            true
+        }
+
         videoContainer.addView(
             view
+        )
+    }
+
+    private fun toggleFavoriteFromLibrary(
+        video: VideoItem
+    ) {
+
+        val favorite =
+            FavoriteManager.toggle(
+                this,
+                video.uri
+            )
+
+        showMessage(
+            if (favorite) {
+                getString(
+                    R.string.added_to_favorites
+                )
+            } else {
+                getString(
+                    R.string.removed_from_favorites
+                )
+            }
+        )
+
+        filterVideos(
+            searchInput.text
+                .toString()
         )
     }
 
@@ -815,15 +908,13 @@ class MainActivity : ComponentActivity() {
     enum class SortMode {
         LAST_ACCESS,
         NAME,
-        SIZE
+        SIZE,
+        FAVORITES
     }
 
     companion object {
 
         private const val PREFS_NAME =
             "vidora_library_preferences"
-
-        private const val TAG =
-            "VidoraMainActivity"
     }
 }
