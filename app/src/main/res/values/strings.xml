@@ -16,4 +16,8 @@
         برای نمایش ویدئوهای گوشی، اجازه دسترسی به ویدئوها لازم است.
     </string>
 
+    <string name="enhance_on">✨ بهبود روشن</string>
+
+    <string name="enhance_off">✨ بهبود کیفیت</string>
+
 </resources>
