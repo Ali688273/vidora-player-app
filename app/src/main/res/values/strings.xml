@@ -8,16 +8,22 @@
 
     <string name="no_videos">هیچ ویدئویی پیدا نشد</string>
 
-    <string name="permission_denied">
-        دسترسی به ویدئوهای گوشی داده نشد.
-    </string>
+    <string name="permission_denied">دسترسی به ویدئوهای گوشی داده نشد.</string>
 
-    <string name="permission_required">
-        برای نمایش ویدئوهای گوشی، اجازه دسترسی به ویدئوها لازم است.
-    </string>
+    <string name="permission_required">برای نمایش ویدئوهای گوشی، اجازه دسترسی به ویدئوها لازم است.</string>
 
     <string name="enhance_on">✨ بهبود روشن</string>
 
     <string name="enhance_off">✨ بهبود کیفیت</string>
+
+    <string name="search_videos">جستجوی ویدئو...</string>
+
+    <string name="sort_newest">جدیدترین</string>
+
+    <string name="sort_name">نام</string>
+
+    <string name="sort_size">حجم</string>
+
+    <string name="video_thumbnail">تصویر بندانگشتی ویدئو</string>
 
 </resources>
