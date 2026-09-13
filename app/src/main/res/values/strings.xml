@@ -18,6 +18,15 @@
 
     <string name="subtitle">زیرنویس</string>
 
+    <string name="sleep_timer">تایمر خواب</string>
+    <string name="sleep_timer_title">تایمر خواب</string>
+    <string name="sleep_timer_hint">تعداد دقیقه را وارد کنید</string>
+    <string name="sleep_timer_start">شروع</string>
+    <string name="sleep_timer_cancel">لغو تایمر</string>
+    <string name="sleep_timer_active">تایمر: %1$d دقیقه</string>
+    <string name="sleep_timer_invalid">یک عدد بزرگ‌تر از صفر وارد کنید</string>
+    <string name="cancel">انصراف</string>
+
     <string name="lock">🔒 قفل</string>
     <string name="unlock">🔓 بازکردن</string>
     <string name="fullscreen">⛶</string>
