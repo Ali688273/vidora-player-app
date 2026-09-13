@@ -24,18 +24,18 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.OptIn
 import androidx.core.content.ContextCompat
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import androidx.media3.ui.TrackSelectionDialogBuilder
-import androidx.annotation.OptIn
-import androidx.media3.common.util.UnstableApi
 import kotlin.math.abs
 
 @OptIn(UnstableApi::class)
@@ -47,7 +47,7 @@ class PlayerActivity : ComponentActivity() {
     private lateinit var nextButton: Button
     private lateinit var repeatButton: Button
     private lateinit var audioButton: Button
-    private lateinit var favoriteButton
+    private lateinit var favoriteButton: Button
     private lateinit var speedMinusButton: Button
     private lateinit var speedButton: Button
     private lateinit var speedPlusButton: Button
@@ -133,13 +133,23 @@ class PlayerActivity : ComponentActivity() {
 
         setContentView(R.layout.activity_player)
 
-        playerView = findViewById(R.id.playerView)
+        playerView =
+            findViewById(R.id.playerView)
 
-        previousButton = findViewById(R.id.previousButton)
-        nextButton = findViewById(R.id.nextButton)
-        repeatButton = findViewById(R.id.repeatButton)
-        audioButton = findViewById(R.id.audioButton)
-        favoriteButton = findViewById(R.id.favoriteButton)
+        previousButton =
+            findViewById(R.id.previousButton)
+
+        nextButton =
+            findViewById(R.id.nextButton)
+
+        repeatButton =
+            findViewById(R.id.repeatButton)
+
+        audioButton =
+            findViewById(R.id.audioButton)
+
+        favoriteButton =
+            findViewById(R.id.favoriteButton)
 
         speedMinusButton =
             findViewById(R.id.speedMinusButton)
@@ -173,7 +183,7 @@ class PlayerActivity : ComponentActivity() {
 
         audioManager =
             getSystemService(Context.AUDIO_SERVICE)
-                    as AudioManager
+                as AudioManager
 
         setupButtons()
         setupGestures()
@@ -286,8 +296,9 @@ class PlayerActivity : ComponentActivity() {
     private fun toggleFavorite() {
 
         val uriString =
-            intent.getStringExtra(EXTRA_VIDEO_URI)
-                ?: return
+            intent.getStringExtra(
+                EXTRA_VIDEO_URI
+            ) ?: return
 
         val uri =
             Uri.parse(uriString)
@@ -317,8 +328,9 @@ class PlayerActivity : ComponentActivity() {
     private fun updateFavoriteButton() {
 
         val uriString =
-            intent.getStringExtra(EXTRA_VIDEO_URI)
-                ?: return
+            intent.getStringExtra(
+                EXTRA_VIDEO_URI
+            ) ?: return
 
         val favorite =
             FavoriteManager.isFavorite(
@@ -328,9 +340,13 @@ class PlayerActivity : ComponentActivity() {
 
         favoriteButton.text =
             if (favorite) {
-                getString(R.string.favorite_on)
+                getString(
+                    R.string.favorite_on
+                )
             } else {
-                getString(R.string.favorite_off)
+                getString(
+                    R.string.favorite_off
+                )
             }
     }
 
@@ -348,8 +364,12 @@ class PlayerActivity : ComponentActivity() {
         if (audioGroups.isEmpty()) {
 
             AlertDialog.Builder(this)
-                .setTitle(R.string.audio_track)
-                .setMessage(R.string.no_audio_tracks)
+                .setTitle(
+                    R.string.audio_track
+                )
+                .setMessage(
+                    R.string.no_audio_tracks
+                )
                 .setPositiveButton(
                     R.string.ok,
                     null
@@ -361,7 +381,9 @@ class PlayerActivity : ComponentActivity() {
 
         TrackSelectionDialogBuilder(
             this,
-            getString(R.string.audio_track),
+            getString(
+                R.string.audio_track
+            ),
             currentPlayer,
             C.TRACK_TYPE_AUDIO
         )
@@ -389,9 +411,13 @@ class PlayerActivity : ComponentActivity() {
 
         repeatButton.text =
             if (repeatEnabled) {
-                getString(R.string.repeat_on)
+                getString(
+                    R.string.repeat_on
+                )
             } else {
-                getString(R.string.repeat_off)
+                getString(
+                    R.string.repeat_off
+                )
             }
     }
 
@@ -616,7 +642,8 @@ class PlayerActivity : ComponentActivity() {
                     downY = event.y
 
                     startPosition =
-                        player?.currentPosition ?: 0L
+                        player?.currentPosition
+                            ?: 0L
 
                     startVolume =
                         audioManager.getStreamVolume(
@@ -625,7 +652,9 @@ class PlayerActivity : ComponentActivity() {
 
                     startBrightness =
                         window.attributes.screenBrightness
-                            .takeIf { it >= 0f }
+                            .takeIf {
+                                it >= 0f
+                            }
                             ?: 0.5f
 
                     gestureMode =
@@ -657,7 +686,8 @@ class PlayerActivity : ComponentActivity() {
 
                         if (
                             abs(deltaX) > 30 &&
-                            abs(deltaX) > abs(deltaY)
+                            abs(deltaX) >
+                            abs(deltaY)
                         ) {
 
                             gestureMode =
@@ -665,7 +695,8 @@ class PlayerActivity : ComponentActivity() {
 
                         } else if (
                             abs(deltaY) > 30 &&
-                            abs(deltaY) > abs(deltaX)
+                            abs(deltaY) >
+                            abs(deltaX)
                         ) {
 
                             gestureMode =
@@ -725,8 +756,14 @@ class PlayerActivity : ComponentActivity() {
 
                         val doubleTap =
                             now - lastTapTime < 350L &&
-                                abs(event.x - lastTapX) < 80f &&
-                                abs(event.y - lastTapY) < 80f
+                                abs(
+                                    event.x -
+                                        lastTapX
+                                ) < 80f &&
+                                abs(
+                                    event.y -
+                                        lastTapY
+                                ) < 80f
 
                         if (doubleTap) {
 
@@ -788,7 +825,8 @@ class PlayerActivity : ComponentActivity() {
 
         val newPosition =
             if (
-                x < playerView.width / 2f
+                x <
+                playerView.width / 2f
             ) {
 
                 (
@@ -801,7 +839,9 @@ class PlayerActivity : ComponentActivity() {
                 (
                     currentPlayer.currentPosition +
                         amount
-                    ).coerceAtMost(duration)
+                    ).coerceAtMost(
+                        duration
+                    )
             }
 
         currentPlayer.seekTo(
@@ -810,7 +850,8 @@ class PlayerActivity : ComponentActivity() {
 
         val message =
             if (
-                x < playerView.width / 2f
+                x <
+                playerView.width / 2f
             ) {
                 getString(
                     R.string.seek_backward
