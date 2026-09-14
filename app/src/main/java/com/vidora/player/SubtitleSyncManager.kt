@@ -9,7 +9,7 @@ object SubtitleSyncManager {
         "vidora_subtitle_sync"
 
     private fun key(uri: Uri) =
-        "subtitle_${uri}"
+        "offset_${uri}"
 
     fun getOffset(
         context: Context,
@@ -30,7 +30,7 @@ object SubtitleSyncManager {
     fun setOffset(
         context: Context,
         uri: Uri,
-        milliseconds: Long
+        offset: Long
     ) {
 
         context
@@ -41,7 +41,7 @@ object SubtitleSyncManager {
             .edit()
             .putLong(
                 key(uri),
-                milliseconds
+                offset
             )
             .apply()
     }
@@ -53,10 +53,8 @@ object SubtitleSyncManager {
     ): Long {
 
         val value =
-            getOffset(
-                context,
-                uri
-            ) + amount
+            getOffset(context, uri) +
+                amount
 
         setOffset(
             context,
@@ -72,10 +70,13 @@ object SubtitleSyncManager {
         uri: Uri
     ) {
 
-        setOffset(
-            context,
-            uri,
-            0L
-        )
+        context
+            .getSharedPreferences(
+                PREFS,
+                Context.MODE_PRIVATE
+            )
+            .edit()
+            .remove(key(uri))
+            .apply()
     }
 }
