@@ -55,7 +55,6 @@ object AdsManager {
             Log.d(TAG, "Adivery initialized")
 
         } catch (e: Exception) {
-
             Log.e(
                 TAG,
                 "Adivery initialization error",
@@ -229,58 +228,38 @@ object AdsManager {
                     activity,
                     responseId,
                     TapsellAdShowListener(
-                        object :
-                            TapsellAdShowListener.Callback {
+                        {
+                            Log.d(
+                                TAG,
+                                "Tapsell interstitial opened"
+                            )
+                        },
+                        {
+                            tapsellInterstitialResponseId = null
 
-                            override fun onOpened(
-                                adModel: TapsellPlusAdModel
-                            ) {
+                            prepareInterstitial(
+                                activity
+                            )
 
-                                Log.d(
-                                    TAG,
-                                    "Tapsell interstitial opened"
-                                )
-                            }
+                            Log.d(
+                                TAG,
+                                "Tapsell interstitial closed"
+                            )
+                        },
+                        {
+                            // Interstitial has no reward.
+                        },
+                        {
+                            tapsellInterstitialResponseId = null
 
-                            override fun onClosed(
-                                adModel: TapsellPlusAdModel
-                            ) {
+                            Log.e(
+                                TAG,
+                                "Tapsell interstitial show error"
+                            )
 
-                                tapsellInterstitialResponseId =
-                                    null
-
-                                prepareInterstitial(
-                                    activity
-                                )
-
-                                Log.d(
-                                    TAG,
-                                    "Tapsell interstitial closed"
-                                )
-                            }
-
-                            override fun onRewarded(
-                                adModel: TapsellPlusAdModel
-                            ) {
-                                // Not used for interstitial ads.
-                            }
-
-                            override fun onError(
-                                error: TapsellPlusErrorModel
-                            ) {
-
-                                tapsellInterstitialResponseId =
-                                    null
-
-                                Log.e(
-                                    TAG,
-                                    "Tapsell interstitial show error: $error"
-                                )
-
-                                showAdiveryInterstitial(
-                                    activity
-                                )
-                            }
+                            showAdiveryInterstitial(
+                                activity
+                            )
                         }
                     )
                 )
@@ -289,8 +268,7 @@ object AdsManager {
 
             } catch (e: Exception) {
 
-                tapsellInterstitialResponseId =
-                    null
+                tapsellInterstitialResponseId = null
 
                 Log.e(
                     TAG,
@@ -321,65 +299,44 @@ object AdsManager {
                     activity,
                     responseId,
                     TapsellAdShowListener(
-                        object :
-                            TapsellAdShowListener.Callback {
+                        {
+                            Log.d(
+                                TAG,
+                                "Tapsell rewarded opened"
+                            )
+                        },
+                        {
+                            tapsellRewardedResponseId = null
 
-                            override fun onOpened(
-                                adModel: TapsellPlusAdModel
-                            ) {
+                            prepareRewarded(
+                                activity
+                            )
 
-                                Log.d(
-                                    TAG,
-                                    "Tapsell rewarded opened"
-                                )
-                            }
+                            Log.d(
+                                TAG,
+                                "Tapsell rewarded closed"
+                            )
+                        },
+                        {
+                            Log.d(
+                                TAG,
+                                "Tapsell rewarded completed"
+                            )
 
-                            override fun onClosed(
-                                adModel: TapsellPlusAdModel
-                            ) {
+                            onRewarded()
+                        },
+                        {
+                            tapsellRewardedResponseId = null
 
-                                tapsellRewardedResponseId =
-                                    null
+                            Log.e(
+                                TAG,
+                                "Tapsell rewarded show error"
+                            )
 
-                                prepareRewarded(
-                                    activity
-                                )
-
-                                Log.d(
-                                    TAG,
-                                    "Tapsell rewarded closed"
-                                )
-                            }
-
-                            override fun onRewarded(
-                                adModel: TapsellPlusAdModel
-                            ) {
-
-                                Log.d(
-                                    TAG,
-                                    "Tapsell rewarded completed"
-                                )
-
-                                onRewarded()
-                            }
-
-                            override fun onError(
-                                error: TapsellPlusErrorModel
-                            ) {
-
-                                tapsellRewardedResponseId =
-                                    null
-
-                                Log.e(
-                                    TAG,
-                                    "Tapsell rewarded show error: $error"
-                                )
-
-                                showAdiveryRewarded(
-                                    activity,
-                                    onRewarded
-                                )
-                            }
+                            showAdiveryRewarded(
+                                activity,
+                                onRewarded
+                            )
                         }
                     )
                 )
@@ -388,8 +345,7 @@ object AdsManager {
 
             } catch (e: Exception) {
 
-                tapsellRewardedResponseId =
-                    null
+                tapsellRewardedResponseId = null
 
                 Log.e(
                     TAG,
