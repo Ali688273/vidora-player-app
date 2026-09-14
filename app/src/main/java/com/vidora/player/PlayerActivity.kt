@@ -111,7 +111,9 @@ class PlayerActivity : ComponentActivity() {
             ActivityResultContracts.OpenDocument()
         ) { uri ->
 
-            if (uri == null) return@registerForActivityResult
+            if (uri == null) {
+                return@registerForActivityResult
+            }
 
             try {
                 contentResolver.takePersistableUriPermission(
@@ -315,15 +317,49 @@ class PlayerActivity : ComponentActivity() {
         updateFavoriteButton()
     }
 
-    private fun toggleFavorite() {
+    private fun getIncomingVideoUri(): Uri? {
+
+        val action =
+            intent.action
+
+        if (
+            action == Intent.ACTION_VIEW
+        ) {
+            return intent.data
+        }
 
         val uriString =
             intent.getStringExtra(
                 EXTRA_VIDEO_URI
-            ) ?: return
+            )
+
+        if (uriString.isNullOrBlank()) {
+            return null
+        }
+
+        return Uri.parse(uriString)
+    }
+
+    private fun isExternalVideo(): Boolean {
+
+        return intent.action ==
+            Intent.ACTION_VIEW
+    }
+
+    private fun toggleFavorite() {
 
         val uri =
-            Uri.parse(uriString)
+            getIncomingVideoUri()
+                ?: return
+
+        if (isExternalVideo()) {
+
+            showTemporaryMessage(
+                "برای ویدئوی خارجی قابل استفاده نیست"
+            )
+
+            return
+        }
 
         val favorite =
             FavoriteManager.toggle(
@@ -349,15 +385,25 @@ class PlayerActivity : ComponentActivity() {
 
     private fun updateFavoriteButton() {
 
-        val uriString =
-            intent.getStringExtra(
-                EXTRA_VIDEO_URI
-            ) ?: return
+        val uri =
+            getIncomingVideoUri()
+                ?: return
+
+        if (isExternalVideo()) {
+
+            favoriteButton.visibility =
+                View.GONE
+
+            return
+        }
+
+        favoriteButton.visibility =
+            View.VISIBLE
 
         val favorite =
             FavoriteManager.isFavorite(
                 this,
-                Uri.parse(uriString)
+                uri
             )
 
         favoriteButton.text =
@@ -380,7 +426,8 @@ class PlayerActivity : ComponentActivity() {
         val audioGroups =
             currentPlayer.currentTracks.groups
                 .filter {
-                    it.type == C.TRACK_TYPE_AUDIO
+                    it.type ==
+                        C.TRACK_TYPE_AUDIO
                 }
 
         if (audioGroups.isEmpty()) {
@@ -1141,15 +1188,24 @@ class PlayerActivity : ComponentActivity() {
 
     private fun initializePlayer() {
 
-        val uriString =
-            intent.getStringExtra(
-                EXTRA_VIDEO_URI
-            ) ?: return
+        val uri =
+            getIncomingVideoUri()
+                ?: return
+
+        if (isExternalVideo()) {
+
+            intent.putExtra(
+                EXTRA_VIDEO_URI,
+                uri.toString()
+            )
+
+            deleteButton.visibility =
+                View.GONE
+
+        }
 
         createPlayer(
-            MediaItem.fromUri(
-                Uri.parse(uriString)
-            )
+            MediaItem.fromUri(uri)
         )
     }
 
@@ -1157,13 +1213,9 @@ class PlayerActivity : ComponentActivity() {
         subtitleUri: Uri
     ) {
 
-        val videoUriString =
-            intent.getStringExtra(
-                EXTRA_VIDEO_URI
-            ) ?: return
-
         val videoUri =
-            Uri.parse(videoUriString)
+            getIncomingVideoUri()
+                ?: return
 
         val subtitleMimeType =
             when (
@@ -1189,9 +1241,7 @@ class PlayerActivity : ComponentActivity() {
                     subtitleMimeType
                 )
                 .setLanguage("fa")
-                .setSelectionFlags(
-                    1
-                )
+                .setSelectionFlags(1)
                 .build()
 
         val mediaItem =
@@ -1213,17 +1263,18 @@ class PlayerActivity : ComponentActivity() {
             mediaItem.localConfiguration
                 ?.uri
                 ?.toString()
-                ?: intent.getStringExtra(
-                    EXTRA_VIDEO_URI
-                )
                 ?: return
 
         val savedPosition =
-            PlaybackHistoryManager
-                .getPosition(
-                    this,
-                    Uri.parse(videoUriString)
-                )
+            if (isExternalVideo()) {
+                0L
+            } else {
+                PlaybackHistoryManager
+                    .getPosition(
+                        this,
+                        Uri.parse(videoUriString)
+                    )
+            }
 
         player?.release()
 
@@ -1249,6 +1300,7 @@ class PlayerActivity : ComponentActivity() {
                     exoPlayer.prepare()
 
                     if (savedPosition > 0L) {
+
                         exoPlayer.seekTo(
                             savedPosition
                         )
@@ -1351,6 +1403,10 @@ class PlayerActivity : ComponentActivity() {
 
     private fun playPreviousVideo() {
 
+        if (isExternalVideo()) {
+            return
+        }
+
         val videos =
             getVideoUris()
 
@@ -1381,6 +1437,10 @@ class PlayerActivity : ComponentActivity() {
     }
 
     private fun playNextVideo() {
+
+        if (isExternalVideo()) {
+            return
+        }
 
         val videos =
             getVideoUris()
@@ -1420,6 +1480,12 @@ class PlayerActivity : ComponentActivity() {
 
         savePosition()
 
+        intent.action =
+            Intent.ACTION_MAIN
+
+        intent.data =
+            null
+
         intent.putExtra(
             EXTRA_VIDEO_URI,
             uri.toString()
@@ -1429,6 +1495,12 @@ class PlayerActivity : ComponentActivity() {
             EXTRA_VIDEO_NAME,
             getVideoName(uri)
         )
+
+        deleteButton.visibility =
+            View.VISIBLE
+
+        favoriteButton.visibility =
+            View.VISIBLE
 
         createPlayer(
             MediaItem.fromUri(uri)
@@ -1470,6 +1542,10 @@ class PlayerActivity : ComponentActivity() {
 
     private fun savePosition() {
 
+        if (isExternalVideo()) {
+            return
+        }
+
         val uriString =
             intent.getStringExtra(
                 EXTRA_VIDEO_URI
@@ -1498,18 +1574,21 @@ class PlayerActivity : ComponentActivity() {
 
     private fun shareCurrentVideo() {
 
-        val uriString =
-            intent.getStringExtra(
-                EXTRA_VIDEO_URI
-            ) ?: return
+        val uri =
+            getIncomingVideoUri()
+                ?: return
 
         VideoShareManager.share(
             this,
-            Uri.parse(uriString)
+            uri
         )
     }
 
     private fun deleteCurrentVideo() {
+
+        if (isExternalVideo()) {
+            return
+        }
 
         val uriString =
             intent.getStringExtra(
