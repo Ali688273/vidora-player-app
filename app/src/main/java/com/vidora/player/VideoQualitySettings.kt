@@ -25,7 +25,7 @@ object VideoQualitySettings {
             Context.MODE_PRIVATE
         )
 
-    fun isEnabled(
+    fun enhancementEnabled(
         context: Context
     ): Boolean {
 
@@ -36,7 +36,7 @@ object VideoQualitySettings {
             )
     }
 
-    fun setEnabled(
+    fun setEnhancementEnabled(
         context: Context,
         enabled: Boolean
     ) {
