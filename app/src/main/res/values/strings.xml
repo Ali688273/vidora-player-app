@@ -2,65 +2,88 @@
 
 <resources>
 
+    <!-- نام برنامه -->
     <string name="app_name">Vidora Player</string>
 
-    <string name="search_videos">جستجوی ویدئو...</string>
-
-    <string name="sort_last_access">آخرین ورود</string>
-    <string name="sort_newest">جدیدترین</string>
-    <string name="sort_name">الفبا</string>
-    <string name="sort_size">حجم</string>
-    <string name="sort_favorites">⭐ علاقه‌مندی‌ها</string>
-
-    <string name="folder_title">📁 %1$s</string>
-    <string name="unknown_folder">سایر ویدئوها</string>
-    <string name="unknown_video">ویدئو</string>
-
-    <string name="video_thumbnail">تصویر بندانگشتی ویدئو</string>
-
-    <string name="enhance_on">✨ بهبود روشن</string>
-    <string name="enhance_off">✨ بهبود کیفیت</string>
-
-    <string name="speed_default">1.0×</string>
-    <string name="speed_format">%1$.1f×</string>
-
-    <string name="previous_video">‹</string>
-    <string name="next_video">›</string>
+    <!-- کنترل ویدئو -->
+    <string name="previous_video">قبلی</string>
+    <string name="next_video">بعدی</string>
 
     <string name="repeat_off">تکرار</string>
-    <string name="repeat_on">تکرار روشن</string>
+    <string name="repeat_on">تکرار فعال</string>
 
     <string name="audio_track">صدا</string>
-    <string name="no_audio_tracks">این ویدئو ترک صوتی دیگری ندارد.</string>
-    <string name="ok">باشه</string>
+    <string name="no_audio_tracks">ترک صوتی دیگری وجود ندارد.</string>
 
     <string name="favorite_off">☆</string>
-    <string name="favorite_on">⭐</string>
-    <string name="added_to_favorites">به علاقه‌مندی‌ها اضافه شد</string>
-    <string name="removed_from_favorites">از علاقه‌مندی‌ها حذف شد</string>
-    <string name="no_favorites">هنوز ویدئویی به علاقه‌مندی‌ها اضافه نشده است</string>
+    <string name="favorite_on">★</string>
+    <string name="added_to_favorites">به علاقه‌مندی‌ها اضافه شد.</string>
+    <string name="removed_from_favorites">از علاقه‌مندی‌ها حذف شد.</string>
+
+    <string name="speed_default">1.0×</string>
 
     <string name="subtitle">زیرنویس</string>
 
-    <string name="sleep_timer">تایمر خواب</string>
+    <string name="sleep_timer">تایمر</string>
+    <string name="sleep_timer_hint">دقیقه</string>
     <string name="sleep_timer_title">تایمر خواب</string>
-    <string name="sleep_timer_hint">تعداد دقیقه را وارد کنید</string>
     <string name="sleep_timer_start">شروع</string>
     <string name="sleep_timer_cancel">لغو تایمر</string>
-    <string name="sleep_timer_active">تایمر: %1$d دقیقه</string>
-    <string name="sleep_timer_invalid">یک عدد بزرگ‌تر از صفر وارد کنید</string>
-    <string name="cancel">انصراف</string>
+    <string name="sleep_timer_invalid">مقدار نامعتبر است</string>
+    <string name="sleep_timer_active">تایمر %1$d دقیقه</string>
 
-    <string name="lock">🔒 قفل</string>
-    <string name="unlock">🔓 بازکردن</string>
+    <string name="share_video">اشتراک</string>
+
+    <string name="delete_video">حذف</string>
+    <string name="delete_video_title">حذف ویدئو</string>
+    <string name="delete_video_message">آیا از حذف این ویدئو مطمئن هستید؟</string>
+    <string name="video_deleted">ویدئو حذف شد.</string>
+
+    <!-- قفل و صفحه -->
+    <string name="lock">قفل</string>
+    <string name="unlock">بازکردن</string>
     <string name="fullscreen">⛶</string>
-
     <string name="screen_locked">صفحه قفل است</string>
 
-    <string name="volume_percent">صدا %1$d%%</string>
+    <!-- ژست‌های لمسی -->
+    <string name="seek_backward">۱۰ ثانیه عقب</string>
+    <string name="seek_forward">۱۰ ثانیه جلو</string>
+    <string name="volume_percent">صدا %1$d</string>
     <string name="brightness_percent">روشنایی %1$d%%</string>
 
-    <string name="permission_denied">دسترسی به ویدئوها داده نشد</string>
-    <string name="no_videos">هیچ ویدئویی پیدا نشد</string>
+    <!-- عمومی -->
+    <string name="cancel">لغو</string>
+    <string name="ok">باشه</string>
+    <string name="unknown_video">ویدئوی ناشناس</string>
+
+    <!-- تنظیمات -->
+    <string name="settings">تنظیمات</string>
+    <string name="settings_title">تنظیمات Vidora Player</string>
+    <string name="dark_mode">حالت تاریک</string>
+    <string name="resume_playback">ادامه پخش از آخرین موقعیت</string>
+    <string name="show_hidden_videos">نمایش ویدئوهای مخفی</string>
+    <string name="language">زبان برنامه</string>
+    <string name="english">English</string>
+    <string name="playlist_management">مدیریت پلی‌لیست‌ها</string>
+    <string name="playlists">پلی‌لیست‌ها</string>
+    <string name="no_playlists">هنوز پلی‌لیستی ساخته نشده است.</string>
+
+    <!-- مدیریت ویدئو -->
+    <string name="hide_video">مخفی کردن</string>
+    <string name="unhide_video">نمایش ویدئو</string>
+    <string name="rename_video">تغییر نام</string>
+    <string name="add_to_playlist">افزودن به پلی‌لیست</string>
+
+    <!-- جستجو و مرتب‌سازی -->
+    <string name="search_videos">جستجوی ویدئو</string>
+    <string name="sort">مرتب‌سازی</string>
+    <string name="sort_latest">آخرین دسترسی</string>
+    <string name="sort_name">نام</string>
+    <string name="sort_size">حجم</string>
+
+    <!-- پیام‌های عمومی -->
+    <string name="video_not_found">ویدئو پیدا نشد.</string>
+    <string name="permission_required">برای نمایش ویدئوها اجازه دسترسی لازم است.</string>
+    <string name="no_videos">ویدئویی پیدا نشد.</string>
 
 </resources>
