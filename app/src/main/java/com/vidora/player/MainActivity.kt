@@ -1,6 +1,7 @@
 package com.vidora.player
 
 import android.Manifest
+import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
@@ -9,14 +10,13 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
-import android.text.Editable
-import android.text.TextWatcher
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.PopupMenu
 import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
@@ -45,9 +45,7 @@ class MainActivity : ComponentActivity() {
                 loadVideos()
             } else {
                 showMessage(
-                    getString(
-                        R.string.permission_denied
-                    )
+                    "برای نمایش ویدئوها، اجازه دسترسی به ویدئوها لازم است."
                 )
             }
         }
@@ -55,7 +53,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(
         savedInstanceState: Bundle?
     ) {
-        super.onCreate(savedInstanceState)
+        super.onCreate(
+            savedInstanceState
+        )
 
         setContentView(
             R.layout.activity_main
@@ -83,11 +83,13 @@ class MainActivity : ComponentActivity() {
 
         setupSearch()
         setupSortButton()
+        setupExtraMenu()
 
         checkPermissionAndLoad()
     }
 
     override fun onResume() {
+
         super.onResume()
 
         if (
@@ -101,7 +103,8 @@ class MainActivity : ComponentActivity() {
     private fun setupSearch() {
 
         searchInput.addTextChangedListener(
-            object : TextWatcher {
+            object :
+                android.text.TextWatcher {
 
                 override fun beforeTextChanged(
                     s: CharSequence?,
@@ -117,13 +120,14 @@ class MainActivity : ComponentActivity() {
                     before: Int,
                     count: Int
                 ) {
+
                     filterVideos(
                         s?.toString().orEmpty()
                     )
                 }
 
                 override fun afterTextChanged(
-                    s: Editable?
+                    s: android.text.Editable?
                 ) {
                 }
             }
@@ -155,10 +159,229 @@ class MainActivity : ComponentActivity() {
             updateSortButtonText()
 
             filterVideos(
-                searchInput.text
-                    .toString()
+                searchInput.text.toString()
             )
         }
+    }
+
+    private fun setupExtraMenu() {
+
+        sortButton.setOnLongClickListener {
+
+            showMainMenu()
+
+            true
+        }
+    }
+
+    private fun showMainMenu() {
+
+        val popup =
+            PopupMenu(
+                this,
+                sortButton
+            )
+
+        popup.menu.add(
+            "تنظیمات"
+        )
+
+        popup.menu.add(
+            "پلی‌لیست‌ها"
+        )
+
+        popup.menu.add(
+            "نمایش ویدئوهای مخفی"
+        )
+
+        popup.menu.add(
+            "ساخت پلی‌لیست جدید"
+        )
+
+        popup.setOnMenuItemClickListener { item ->
+
+            when (item.title.toString()) {
+
+                "تنظیمات" -> {
+
+                    startActivity(
+                        Intent(
+                            this,
+                            SettingsActivity::class.java
+                        )
+                    )
+                }
+
+                "پلی‌لیست‌ها" -> {
+
+                    showPlaylists()
+                }
+
+                "نمایش ویدئوهای مخفی" -> {
+
+                    VidoraSettings.setShowHidden(
+                        this,
+                        !VidoraSettings.showHidden(
+                            this
+                        )
+                    )
+
+                    loadVideos()
+                }
+
+                "ساخت پلی‌لیست جدید" -> {
+
+                    createPlaylist()
+                }
+            }
+
+            true
+        }
+
+        popup.show()
+    }
+
+    private fun createPlaylist() {
+
+        val input =
+            EditText(this).apply {
+
+                hint =
+                    "نام پلی‌لیست"
+            }
+
+        AlertDialog.Builder(this)
+            .setTitle(
+                "پلی‌لیست جدید"
+            )
+            .setView(input)
+            .setNegativeButton(
+                "لغو",
+                null
+            )
+            .setPositiveButton(
+                "ساختن"
+            ) { _, _ ->
+
+                val success =
+                    PlaylistManager.create(
+                        this,
+                        input.text.toString()
+                    )
+
+                showMessage(
+                    if (success) {
+                        "پلی‌لیست ساخته شد."
+                    } else {
+                        "این نام قبلاً استفاده شده یا نام خالی است."
+                    }
+                )
+            }
+            .show()
+    }
+
+    private fun showPlaylists() {
+
+        val playlists =
+            PlaylistManager.getPlaylists(
+                this
+            )
+
+        if (playlists.isEmpty()) {
+
+            AlertDialog.Builder(this)
+                .setTitle(
+                    "پلی‌لیست‌ها"
+                )
+                .setMessage(
+                    "هنوز پلی‌لیستی ساخته نشده است."
+                )
+                .setPositiveButton(
+                    "ساخت پلی‌لیست"
+                ) { _, _ ->
+                    createPlaylist()
+                }
+                .setNegativeButton(
+                    "بستن",
+                    null
+                )
+                .show()
+
+            return
+        }
+
+        val names =
+            playlists.map {
+                "${it.name} (${it.videos.size})"
+            }.toTypedArray()
+
+        AlertDialog.Builder(this)
+            .setTitle(
+                "پلی‌لیست‌ها"
+            )
+            .setItems(
+                names
+            ) { _, which ->
+
+                val playlist =
+                    playlists[which]
+
+                showPlaylistOptions(
+                    playlist.name
+                )
+            }
+            .setPositiveButton(
+                "بستن",
+                null
+            )
+            .show()
+    }
+
+    private fun showPlaylistOptions(
+        playlistName: String
+    ) {
+
+        AlertDialog.Builder(this)
+            .setTitle(
+                playlistName
+            )
+            .setItems(
+                arrayOf(
+                    "حذف پلی‌لیست"
+                )
+            ) { _, _ ->
+
+                AlertDialog.Builder(this)
+                    .setTitle(
+                        "حذف پلی‌لیست"
+                    )
+                    .setMessage(
+                        "آیا این پلی‌لیست حذف شود؟"
+                    )
+                    .setNegativeButton(
+                        "لغو",
+                        null
+                    )
+                    .setPositiveButton(
+                        "حذف"
+                    ) { _, _ ->
+
+                        PlaylistManager.delete(
+                            this,
+                            playlistName
+                        )
+
+                        showMessage(
+                            "پلی‌لیست حذف شد."
+                        )
+                    }
+                    .show()
+            }
+            .setNegativeButton(
+                "بستن",
+                null
+            )
+            .show()
     }
 
     private fun updateSortButtonText() {
@@ -167,24 +390,16 @@ class MainActivity : ComponentActivity() {
             when (sortMode) {
 
                 SortMode.LAST_ACCESS ->
-                    getString(
-                        R.string.sort_last_access
-                    )
+                    "آخرین دسترسی"
 
                 SortMode.NAME ->
-                    getString(
-                        R.string.sort_name
-                    )
+                    "نام"
 
                 SortMode.SIZE ->
-                    getString(
-                        R.string.sort_size
-                    )
+                    "حجم"
 
                 SortMode.FAVORITES ->
-                    getString(
-                        R.string.sort_favorites
-                    )
+                    "علاقه‌مندی‌ها"
             }
     }
 
@@ -243,6 +458,7 @@ class MainActivity : ComponentActivity() {
             Build.VERSION.SDK_INT >=
             Build.VERSION_CODES.Q
         ) {
+
             projection.add(
                 MediaStore.Video.Media.BUCKET_DISPLAY_NAME
             )
@@ -311,9 +527,7 @@ class MainActivity : ComponentActivity() {
                 val name =
                     cursor.getString(
                         nameColumn
-                    ) ?: getString(
-                        R.string.unknown_video
-                    )
+                    ) ?: "ویدئوی ناشناس"
 
                 val duration =
                     cursor.getLong(
@@ -337,15 +551,11 @@ class MainActivity : ComponentActivity() {
                             bucketColumn
                         )?.takeIf {
                             it.isNotBlank()
-                        } ?: getString(
-                            R.string.unknown_folder
-                        )
+                        } ?: "پوشه ناشناس"
 
                     } else {
 
-                        getString(
-                            R.string.unknown_folder
-                        )
+                        "پوشه ناشناس"
                     }
 
                 val uri =
@@ -354,22 +564,32 @@ class MainActivity : ComponentActivity() {
                         id.toString()
                     )
 
-                allVideos.add(
-                    VideoItem(
-                        uri = uri,
-                        name = name,
-                        duration = duration,
-                        size = size,
-                        dateAdded = dateAdded,
-                        folderName = folderName
+                if (
+                    !HiddenVideoManager.isHidden(
+                        this,
+                        uri
+                    ) ||
+                    VidoraSettings.showHidden(
+                        this
                     )
-                )
+                ) {
+
+                    allVideos.add(
+                        VideoItem(
+                            uri = uri,
+                            name = name,
+                            duration = duration,
+                            size = size,
+                            dateAdded = dateAdded,
+                            folderName = folderName
+                        )
+                    )
+                }
             }
         }
 
         filterVideos(
-            searchInput.text
-                .toString()
+            searchInput.text.toString()
         )
     }
 
@@ -419,6 +639,7 @@ class MainActivity : ComponentActivity() {
 
             filtered =
                 filtered.filter {
+
                     FavoriteManager.isFavorite(
                         this,
                         it.uri
@@ -497,20 +718,17 @@ class MainActivity : ComponentActivity() {
                     sortMode ==
                     SortMode.FAVORITES
                 ) {
-                    getString(
-                        R.string.no_favorites
-                    )
+                    "هنوز ویدئوی مورد علاقه‌ای وجود ندارد."
                 } else {
-                    getString(
-                        R.string.no_videos
-                    )
+                    "ویدئویی پیدا نشد."
                 }
             )
 
             return
         }
 
-        var currentFolder: String? = null
+        var currentFolder: String? =
+            null
 
         videos.forEach { video ->
 
@@ -541,12 +759,10 @@ class MainActivity : ComponentActivity() {
             TextView(this).apply {
 
                 text =
-                    getString(
-                        R.string.folder_title,
-                        folderName
-                    )
+                    "📁 $folderName"
 
-                textSize = 17f
+                textSize =
+                    17f
 
                 setTextColor(
                     ContextCompat.getColor(
@@ -672,7 +888,7 @@ class MainActivity : ComponentActivity() {
 
         view.setOnLongClickListener {
 
-            toggleFavoriteFromLibrary(
+            showVideoMenu(
                 video
             )
 
@@ -682,6 +898,322 @@ class MainActivity : ComponentActivity() {
         videoContainer.addView(
             view
         )
+    }
+
+    private fun showVideoMenu(
+        video: VideoItem
+    ) {
+
+        val options =
+            arrayOf(
+                "پخش ویدئو",
+                "⭐ تغییر علاقه‌مندی",
+                "🙈 مخفی کردن",
+                "📋 افزودن به پلی‌لیست",
+                "✏️ تغییر نام",
+                "📤 اشتراک‌گذاری",
+                "🗑 حذف"
+            )
+
+        AlertDialog.Builder(this)
+            .setTitle(
+                video.name
+            )
+            .setItems(
+                options
+            ) { _, which ->
+
+                when (which) {
+
+                    0 -> openVideo(
+                        video
+                    )
+
+                    1 -> toggleFavoriteFromLibrary(
+                        video
+                    )
+
+                    2 -> hideVideo(
+                        video
+                    )
+
+                    3 -> addToPlaylist(
+                        video
+                    )
+
+                    4 -> renameVideo(
+                        video
+                    )
+
+                    5 -> shareVideo(
+                        video
+                    )
+
+                    6 -> deleteVideo(
+                        video
+                    )
+                }
+            }
+            .show()
+    }
+
+    private fun openVideo(
+        video: VideoItem
+    ) {
+
+        saveLastAccess(
+            video.uri
+        )
+
+        startActivity(
+            Intent(
+                this,
+                PlayerActivity::class.java
+            ).apply {
+
+                putExtra(
+                    PlayerActivity.EXTRA_VIDEO_URI,
+                    video.uri.toString()
+                )
+
+                putExtra(
+                    PlayerActivity.EXTRA_VIDEO_NAME,
+                    video.name
+                )
+            }
+        )
+    }
+
+    private fun hideVideo(
+        video: VideoItem
+    ) {
+
+        HiddenVideoManager.hide(
+            this,
+            video.uri
+        )
+
+        showMessage(
+            "ویدئو مخفی شد."
+        )
+
+        loadVideos()
+    }
+
+    private fun addToPlaylist(
+        video: VideoItem
+    ) {
+
+        val playlists =
+            PlaylistManager.getPlaylists(
+                this
+            )
+
+        if (playlists.isEmpty()) {
+
+            createPlaylist()
+
+            return
+        }
+
+        val names =
+            playlists.map {
+                it.name
+            }.toTypedArray()
+
+        AlertDialog.Builder(this)
+            .setTitle(
+                "افزودن به پلی‌لیست"
+            )
+            .setItems(
+                names
+            ) { _, which ->
+
+                val success =
+                    PlaylistManager.addVideo(
+                        this,
+                        playlists[which].name,
+                        video.uri
+                    )
+
+                showMessage(
+                    if (success) {
+                        "به پلی‌لیست اضافه شد."
+                    } else {
+                        "این ویدئو قبلاً در پلی‌لیست وجود دارد."
+                    }
+                )
+            }
+            .show()
+    }
+
+    private fun renameVideo(
+        video: VideoItem
+    ) {
+
+        val input =
+            EditText(this).apply {
+
+                setText(
+                    video.name
+                )
+
+                selectAll()
+            }
+
+        AlertDialog.Builder(this)
+            .setTitle(
+                "تغییر نام ویدئو"
+            )
+            .setView(input)
+            .setNegativeButton(
+                "لغو",
+                null
+            )
+            .setPositiveButton(
+                "ذخیره"
+            ) { _, _ ->
+
+                val newName =
+                    input.text
+                        .toString()
+                        .trim()
+
+                if (
+                    newName.isBlank()
+                ) {
+                    showMessage(
+                        "نام نمی‌تواند خالی باشد."
+                    )
+
+                    return@setPositiveButton
+                }
+
+                try {
+
+                    val values =
+                        android.content.ContentValues()
+                            .apply {
+                                put(
+                                    MediaStore.Video.Media.DISPLAY_NAME,
+                                    newName
+                                )
+                            }
+
+                    val changed =
+                        contentResolver.update(
+                            video.uri,
+                            values,
+                            null,
+                            null
+                        )
+
+                    if (changed > 0) {
+
+                        showMessage(
+                            "نام ویدئو تغییر کرد."
+                        )
+
+                        loadVideos()
+
+                    } else {
+
+                        showMessage(
+                            "تغییر نام انجام نشد."
+                        )
+                    }
+
+                } catch (_: Exception) {
+
+                    showMessage(
+                        "تغییر نام این فایل امکان‌پذیر نیست."
+                    )
+                }
+            }
+            .show()
+    }
+
+    private fun shareVideo(
+        video: VideoItem
+    ) {
+
+        val intent =
+            Intent(
+                Intent.ACTION_SEND
+            ).apply {
+
+                type =
+                    "video/*"
+
+                putExtra(
+                    Intent.EXTRA_STREAM,
+                    video.uri
+                )
+
+                addFlags(
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            }
+
+        startActivity(
+            Intent.createChooser(
+                intent,
+                "اشتراک‌گذاری ویدئو"
+            )
+        )
+    }
+
+    private fun deleteVideo(
+        video: VideoItem
+    ) {
+
+        AlertDialog.Builder(this)
+            .setTitle(
+                "حذف ویدئو"
+            )
+            .setMessage(
+                "آیا مطمئن هستید که این ویدئو حذف شود؟"
+            )
+            .setNegativeButton(
+                "لغو",
+                null
+            )
+            .setPositiveButton(
+                "حذف"
+            ) { _, _ ->
+
+                try {
+
+                    val deleted =
+                        contentResolver.delete(
+                            video.uri,
+                            null,
+                            null
+                        )
+
+                    if (deleted > 0) {
+
+                        showMessage(
+                            "ویدئو حذف شد."
+                        )
+
+                        loadVideos()
+
+                    } else {
+
+                        showMessage(
+                            "حذف انجام نشد."
+                        )
+                    }
+
+                } catch (_: Exception) {
+
+                    showMessage(
+                        "امکان حذف این ویدئو وجود ندارد."
+                    )
+                }
+            }
+            .show()
     }
 
     private fun toggleFavoriteFromLibrary(
@@ -696,19 +1228,14 @@ class MainActivity : ComponentActivity() {
 
         showMessage(
             if (favorite) {
-                getString(
-                    R.string.added_to_favorites
-                )
+                "به علاقه‌مندی‌ها اضافه شد."
             } else {
-                getString(
-                    R.string.removed_from_favorites
-                )
+                "از علاقه‌مندی‌ها حذف شد."
             }
         )
 
         filterVideos(
-            searchInput.text
-                .toString()
+            searchInput.text.toString()
         )
     }
 
@@ -717,10 +1244,10 @@ class MainActivity : ComponentActivity() {
     ): Long {
 
         return getSharedPreferences(
-            PREFS_NAME,
+            "vidora_library_preferences",
             MODE_PRIVATE
         ).getLong(
-            accessKey(uri),
+            "access_${uri}",
             0L
         )
     }
@@ -730,22 +1257,15 @@ class MainActivity : ComponentActivity() {
     ) {
 
         getSharedPreferences(
-            PREFS_NAME,
+            "vidora_library_preferences",
             MODE_PRIVATE
         )
             .edit()
             .putLong(
-                accessKey(uri),
+                "access_${uri}",
                 System.currentTimeMillis()
             )
             .apply()
-    }
-
-    private fun accessKey(
-        uri: Uri
-    ): String {
-
-        return "access_${uri}"
     }
 
     private fun loadThumbnail(
@@ -766,8 +1286,7 @@ class MainActivity : ComponentActivity() {
             val bitmap: Bitmap? =
                 retriever.getFrameAtTime(
                     1_000_000L,
-                    MediaMetadataRetriever
-                        .OPTION_CLOSEST_SYNC
+                    MediaMetadataRetriever.OPTION_CLOSEST_SYNC
                 )
 
             retriever.release()
@@ -791,37 +1310,13 @@ class MainActivity : ComponentActivity() {
         message: String
     ) {
 
-        videoContainer.removeAllViews()
-
-        val text =
-            TextView(this).apply {
-
-                this.text =
-                    message
-
-                textSize = 16f
-
-                gravity =
-                    Gravity.CENTER
-
-                setTextColor(
-                    ContextCompat.getColor(
-                        this@MainActivity,
-                        R.color.vidora_text_secondary
-                    )
-                )
-
-                setPadding(
-                    32,
-                    80,
-                    32,
-                    80
-                )
-            }
-
-        videoContainer.addView(
-            text
-        )
+        android.widget.Toast
+            .makeText(
+                this,
+                message,
+                android.widget.Toast.LENGTH_SHORT
+            )
+            .show()
     }
 
     private fun formatDuration(
@@ -910,11 +1405,5 @@ class MainActivity : ComponentActivity() {
         NAME,
         SIZE,
         FAVORITES
-    }
-
-    companion object {
-
-        private const val PREFS_NAME =
-            "vidora_library_preferences"
     }
 }
