@@ -1,0 +1,115 @@
+name: Inspect Tapsell API
+
+on:
+  workflow_dispatch:
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.13"
+
+      - name: Resolve Android dependencies
+        run: |
+          gradle :app:dependencies \
+            --configuration debugCompileClasspath \
+            --no-daemon
+
+      - name: Inspect Tapsell AAR
+        shell: bash
+        run: |
+          set -e
+
+          echo "=========================================="
+          echo "Searching for Tapsell Plus AAR..."
+          echo "=========================================="
+
+          AAR_PATH=$(find ~/.gradle/caches \
+            -type f \
+            -name "tapsell-plus-sdk-android-2.3.3.aar" \
+            | head -n 1)
+
+          if [ -z "$AAR_PATH" ]; then
+            echo "ERROR: Tapsell Plus AAR was not found."
+            exit 1
+          fi
+
+          echo "AAR:"
+          echo "$AAR_PATH"
+
+          echo
+          echo "=========================================="
+          echo "Extracting classes.jar..."
+          echo "=========================================="
+
+          rm -rf /tmp/tapsell-api
+          mkdir -p /tmp/tapsell-api
+
+          unzip -p "$AAR_PATH" classes.jar > /tmp/tapsell-api/classes.jar
+
+          echo
+          echo "=========================================="
+          echo "Finding AdShowListener..."
+          echo "=========================================="
+
+          jar tf /tmp/tapsell-api/classes.jar \
+            | grep -i "AdShowListener.class" \
+            || true
+
+          LISTENER_CLASS=$(jar tf /tmp/tapsell-api/classes.jar \
+            | grep -i "AdShowListener.class" \
+            | head -n 1 \
+            | sed 's#/#.#g' \
+            | sed 's/\.class$//')
+
+          if [ -z "$LISTENER_CLASS" ]; then
+            echo "ERROR: AdShowListener class was not found."
+            exit 1
+          fi
+
+          echo
+          echo "AdShowListener class:"
+          echo "$LISTENER_CLASS"
+
+          echo
+          echo "=========================================="
+          echo "AdShowListener constructor + methods"
+          echo "=========================================="
+
+          javap \
+            -classpath /tmp/tapsell-api/classes.jar \
+            -p \
+            -s \
+            "$LISTENER_CLASS"
+
+          echo
+          echo "=========================================="
+          echo "TapsellPlus show methods"
+          echo "=========================================="
+
+          javap \
+            -classpath /tmp/tapsell-api/classes.jar \
+            -p \
+            -s \
+            ir.tapsell.plus.TapsellPlus \
+            | grep -A 8 -B 2 \
+            -E "showInterstitialAd|showRewardedVideoAd" \
+            || true
+
+          echo
+          echo "=========================================="
+          echo "Inspection completed."
+          echo "=========================================="
