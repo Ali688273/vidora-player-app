@@ -12,7 +12,6 @@ import ir.tapsell.plus.TapsellPlus
 import ir.tapsell.plus.model.AdNetworkError
 import ir.tapsell.plus.model.AdNetworks
 import ir.tapsell.plus.model.TapsellPlusAdModel
-import ir.tapsell.plus.model.TapsellPlusErrorModel
 
 object AdsManager {
 
@@ -32,9 +31,12 @@ object AdsManager {
         initializeTapsell(application)
     }
 
-    private fun initializeAdivery(application: Application) {
+    private fun initializeAdivery(
+        application: Application
+    ) {
 
         try {
+
             Adivery.setLoggingEnabled(false)
 
             Adivery.configure(
@@ -52,9 +54,13 @@ object AdsManager {
                 BuildConfig.ADIVERY_REWARDED
             )
 
-            Log.d(TAG, "Adivery initialized")
+            Log.d(
+                TAG,
+                "Adivery initialized"
+            )
 
         } catch (e: Exception) {
+
             Log.e(
                 TAG,
                 "Adivery initialization error",
@@ -224,44 +230,42 @@ object AdsManager {
 
             try {
 
-                TapsellPlus.showInterstitialAd(
+                TapsellAdShowListener.showInterstitial(
                     activity,
                     responseId,
-                    TapsellAdShowListener(
-                        {
-                            Log.d(
-                                TAG,
-                                "Tapsell interstitial opened"
-                            )
-                        },
-                        {
-                            tapsellInterstitialResponseId = null
 
-                            prepareInterstitial(
-                                activity
-                            )
+                    {
+                        Log.d(
+                            TAG,
+                            "Tapsell interstitial opened"
+                        )
+                    },
 
-                            Log.d(
-                                TAG,
-                                "Tapsell interstitial closed"
-                            )
-                        },
-                        {
-                            // Interstitial has no reward.
-                        },
-                        {
-                            tapsellInterstitialResponseId = null
+                    {
+                        tapsellInterstitialResponseId = null
 
-                            Log.e(
-                                TAG,
-                                "Tapsell interstitial show error"
-                            )
+                        prepareInterstitial(
+                            activity
+                        )
 
-                            showAdiveryInterstitial(
-                                activity
-                            )
-                        }
-                    )
+                        Log.d(
+                            TAG,
+                            "Tapsell interstitial closed"
+                        )
+                    },
+
+                    {
+                        tapsellInterstitialResponseId = null
+
+                        Log.e(
+                            TAG,
+                            "Tapsell interstitial show error"
+                        )
+
+                        showAdiveryInterstitial(
+                            activity
+                        )
+                    }
                 )
 
                 return
@@ -295,50 +299,52 @@ object AdsManager {
 
             try {
 
-                TapsellPlus.showRewardedVideoAd(
+                TapsellAdShowListener.showRewarded(
                     activity,
                     responseId,
-                    TapsellAdShowListener(
-                        {
-                            Log.d(
-                                TAG,
-                                "Tapsell rewarded opened"
-                            )
-                        },
-                        {
-                            tapsellRewardedResponseId = null
 
-                            prepareRewarded(
-                                activity
-                            )
+                    {
+                        Log.d(
+                            TAG,
+                            "Tapsell rewarded opened"
+                        )
+                    },
 
-                            Log.d(
-                                TAG,
-                                "Tapsell rewarded closed"
-                            )
-                        },
-                        {
-                            Log.d(
-                                TAG,
-                                "Tapsell rewarded completed"
-                            )
+                    {
+                        tapsellRewardedResponseId = null
 
-                            onRewarded()
-                        },
-                        {
-                            tapsellRewardedResponseId = null
+                        prepareRewarded(
+                            activity
+                        )
 
-                            Log.e(
-                                TAG,
-                                "Tapsell rewarded show error"
-                            )
+                        Log.d(
+                            TAG,
+                            "Tapsell rewarded closed"
+                        )
+                    },
 
-                            showAdiveryRewarded(
-                                activity,
-                                onRewarded
-                            )
-                        }
-                    )
+                    {
+                        Log.d(
+                            TAG,
+                            "Tapsell rewarded completed"
+                        )
+
+                        onRewarded()
+                    },
+
+                    {
+                        tapsellRewardedResponseId = null
+
+                        Log.e(
+                            TAG,
+                            "Tapsell rewarded show error"
+                        )
+
+                        showAdiveryRewarded(
+                            activity,
+                            onRewarded
+                        )
+                    }
                 )
 
                 return
