@@ -30,13 +30,8 @@ object AdsManager {
         val application =
             context.applicationContext as Application
 
-        initializeAdivery(
-            application
-        )
-
-        initializeTapsell(
-            application
-        )
+        initializeAdivery(application)
+        initializeTapsell(application)
     }
 
     private fun initializeAdivery(
@@ -211,7 +206,6 @@ object AdsManager {
                     override fun onOpened(
                         adModel: TapsellPlusAdModel
                     ) {
-
                         Log.d(
                             TAG,
                             "Tapsell interstitial opened"
@@ -236,7 +230,7 @@ object AdsManager {
 
                         Log.e(
                             TAG,
-                            "Tapsell interstitial show error: $error"
+                            "Tapsell interstitial error: $error"
                         )
 
                         tapsellInterstitialResponseId =
@@ -273,7 +267,6 @@ object AdsManager {
                     override fun onOpened(
                         adModel: TapsellPlusAdModel
                     ) {
-
                         Log.d(
                             TAG,
                             "Tapsell rewarded opened"
@@ -305,7 +298,7 @@ object AdsManager {
 
                         Log.e(
                             TAG,
-                            "Tapsell rewarded show error: $error"
+                            "Tapsell rewarded error: $error"
                         )
 
                         tapsellRewardedResponseId =
@@ -340,13 +333,18 @@ object AdsManager {
                     BuildConfig.ADIVERY_INTERSTITIAL
                 )
 
-                return
-            }
+                Log.d(
+                    TAG,
+                    "Adivery interstitial shown"
+                )
 
-            Log.d(
-                TAG,
-                "Adivery interstitial is not ready"
-            )
+            } else {
+
+                Log.d(
+                    TAG,
+                    "No interstitial ad available"
+                )
+            }
 
         } catch (e: Exception) {
 
@@ -379,15 +377,13 @@ object AdsManager {
                     "Adivery rewarded shown"
                 )
 
-                onRewarded()
+            } else {
 
-                return
+                Log.d(
+                    TAG,
+                    "No rewarded ad available"
+                )
             }
-
-            Log.d(
-                TAG,
-                "Adivery rewarded is not ready"
-            )
 
         } catch (e: Exception) {
 
