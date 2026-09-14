@@ -6,14 +6,9 @@ import org.json.JSONArray
 
 object PlaybackQueueManager {
 
-    private const val PREFS =
-        "vidora_playback_queue"
-
-    private const val KEY_QUEUE =
-        "queue"
-
-    private const val KEY_INDEX =
-        "current_index"
+    private const val PREFS = "vidora_playback_queue"
+    private const val KEY_QUEUE = "queue"
+    private const val KEY_INDEX = "current_index"
 
     private fun prefs(context: Context) =
         context.getSharedPreferences(
@@ -21,40 +16,27 @@ object PlaybackQueueManager {
             Context.MODE_PRIVATE
         )
 
-    fun getQueue(
-        context: Context
-    ): List<Uri> {
+    fun getQueue(context: Context): List<Uri> {
 
-        val raw =
+        val json =
             prefs(context)
-                .getString(
-                    KEY_QUEUE,
-                    "[]"
-                )
-                ?: "[]"
+                .getString(KEY_QUEUE, null)
+                ?: return emptyList()
 
         return try {
+            val array = JSONArray(json)
+            val result = mutableListOf<Uri>()
 
-            val array =
-                JSONArray(raw)
+            for (index in 0 until array.length()) {
+                val value = array.optString(index)
 
-            buildList {
-
-                for (
-                    index in
-                    0 until array.length()
-                ) {
-
-                    add(
-                        Uri.parse(
-                            array.getString(index)
-                        )
-                    )
+                if (value.isNotBlank()) {
+                    result.add(Uri.parse(value))
                 }
             }
 
+            result
         } catch (_: Exception) {
-
             emptyList()
         }
     }
@@ -64,14 +46,12 @@ object PlaybackQueueManager {
         queue: List<Uri>
     ) {
 
-        val array =
-            JSONArray()
+        val array = JSONArray()
 
-        queue.forEach {
-            array.put(
-                it.toString()
-            )
-        }
+        queue.distinctBy { it.toString() }
+            .forEach {
+                array.put(it.toString())
+            }
 
         prefs(context)
             .edit()
@@ -80,6 +60,19 @@ object PlaybackQueueManager {
                 array.toString()
             )
             .apply()
+
+        val maxIndex =
+            (queue.size - 1)
+                .coerceAtLeast(0)
+
+        val currentIndex =
+            getCurrentIndex(context)
+                .coerceIn(0, maxIndex)
+
+        setCurrentIndex(
+            context,
+            currentIndex
+        )
     }
 
     fun add(
@@ -92,15 +85,14 @@ object PlaybackQueueManager {
                 .toMutableList()
 
         if (
-            !queue.contains(uri)
+            queue.none {
+                it.toString() ==
+                    uri.toString()
+            }
         ) {
             queue.add(uri)
+            setQueue(context, queue)
         }
-
-        setQueue(
-            context,
-            queue
-        )
     }
 
     fun remove(
@@ -110,29 +102,29 @@ object PlaybackQueueManager {
 
         val queue =
             getQueue(context)
-                .filterNot {
-                    it == uri
+                .filter {
+                    it.toString() !=
+                        uri.toString()
                 }
 
-        setQueue(
-            context,
-            queue
-        )
+        setQueue(context, queue)
     }
 
-    fun clear(
+    fun clear(context: Context) {
+
+        prefs(context)
+            .edit()
+            .remove(KEY_QUEUE)
+            .putInt(KEY_INDEX, 0)
+            .apply()
+    }
+
+    fun getCurrentIndex(
         context: Context
-    ) {
+    ): Int {
 
-        setQueue(
-            context,
-            emptyList()
-        )
-
-        setCurrentIndex(
-            context,
-            0
-        )
+        return prefs(context)
+            .getInt(KEY_INDEX, 0)
     }
 
     fun setCurrentIndex(
@@ -144,20 +136,9 @@ object PlaybackQueueManager {
             .edit()
             .putInt(
                 KEY_INDEX,
-                index
+                index.coerceAtLeast(0)
             )
             .apply()
-    }
-
-    fun getCurrentIndex(
-        context: Context
-    ): Int {
-
-        return prefs(context)
-            .getInt(
-                KEY_INDEX,
-                0
-            )
     }
 
     fun next(
@@ -174,9 +155,7 @@ object PlaybackQueueManager {
         val nextIndex =
             getCurrentIndex(context) + 1
 
-        if (
-            nextIndex >= queue.size
-        ) {
+        if (nextIndex >= queue.size) {
             return null
         }
 
@@ -202,9 +181,7 @@ object PlaybackQueueManager {
         val previousIndex =
             getCurrentIndex(context) - 1
 
-        if (
-            previousIndex < 0
-        ) {
+        if (previousIndex < 0) {
             return null
         }
 
