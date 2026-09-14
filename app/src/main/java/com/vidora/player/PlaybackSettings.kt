@@ -28,10 +28,15 @@ object PlaybackSettings {
     fun getDefaultSpeed(
         context: Context
     ): Float {
+
         return prefs(context)
             .getFloat(
                 KEY_SPEED,
                 1.0f
+            )
+            .coerceIn(
+                0.1f,
+                5.0f
             )
     }
 
@@ -39,6 +44,7 @@ object PlaybackSettings {
         context: Context,
         value: Float
     ) {
+
         prefs(context)
             .edit()
             .putFloat(
@@ -54,6 +60,7 @@ object PlaybackSettings {
     fun getDefaultAspect(
         context: Context
     ): Int {
+
         return prefs(context)
             .getInt(
                 KEY_ASPECT,
@@ -65,6 +72,7 @@ object PlaybackSettings {
         context: Context,
         value: Int
     ) {
+
         prefs(context)
             .edit()
             .putInt(
@@ -77,6 +85,7 @@ object PlaybackSettings {
     fun autoPlayNext(
         context: Context
     ): Boolean {
+
         return prefs(context)
             .getBoolean(
                 KEY_AUTO_PLAY,
@@ -88,6 +97,7 @@ object PlaybackSettings {
         context: Context,
         value: Boolean
     ) {
+
         prefs(context)
             .edit()
             .putBoolean(
@@ -100,6 +110,7 @@ object PlaybackSettings {
     fun resumePlayback(
         context: Context
     ): Boolean {
+
         return prefs(context)
             .getBoolean(
                 KEY_RESUME,
@@ -111,6 +122,7 @@ object PlaybackSettings {
         context: Context,
         value: Boolean
     ) {
+
         prefs(context)
             .edit()
             .putBoolean(
