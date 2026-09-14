@@ -16,6 +16,42 @@ android {
 
         versionCode = 1
         versionName = "1.0"
+
+        buildConfigField(
+            "String",
+            "TAPSELL_KEY",
+            "\"hbnepqhlndllgpkhnsegfhinnarknqkcktcetkcejtesdoigpagnbbhegffsahpqtkgaqn\""
+        )
+
+        buildConfigField(
+            "String",
+            "TAPSELL_INTERSTITIAL",
+            "\"6aa818c2cd33cd4ed6e4327e\""
+        )
+
+        buildConfigField(
+            "String",
+            "TAPSELL_REWARDED",
+            "\"6aa81945cd33cd4ed6e4327f\""
+        )
+
+        buildConfigField(
+            "String",
+            "ADIVERY_APP_ID",
+            "\"6a191640-20fa-4e99-b75b-454972c897e3\""
+        )
+
+        buildConfigField(
+            "String",
+            "ADIVERY_INTERSTITIAL",
+            "\"af93d446-1ef9-4e4c-b175-9938060ea971\""
+        )
+
+        buildConfigField(
+            "String",
+            "ADIVERY_REWARDED",
+            "\"5fe5acbc-01b6-4988-a841-c626a0bdb08b\""
+        )
     }
 
     buildTypes {
@@ -43,6 +79,10 @@ android {
 
     kotlin {
         jvmToolchain(17)
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 }
 
@@ -74,5 +114,21 @@ dependencies {
 
     implementation(
         "androidx.media3:media3-exoplayer-dash:1.11.0"
+    )
+
+    implementation(
+        "ir.tapsell.plus:tapsell-plus-sdk-android:2.3.3"
+    )
+
+    implementation(
+        "com.adivery:sdk:4.9.0"
+    )
+
+    implementation(
+        "com.google.android.gms:play-services-base:18.5.0"
+    )
+
+    implementation(
+        "com.google.android.gms:play-services-ads-identifier:18.1.0"
     )
 }
