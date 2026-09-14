@@ -6,6 +6,7 @@ import android.content.Context
 import android.util.Log
 import com.adivery.sdk.Adivery
 import ir.tapsell.plus.AdRequestCallback
+import ir.tapsell.plus.AdShowListener
 import ir.tapsell.plus.TapsellPlus
 import ir.tapsell.plus.TapsellPlusInitListener
 import ir.tapsell.plus.model.AdNetworkError
@@ -21,9 +22,7 @@ object AdsManager {
     private var tapsellInterstitialResponseId: String? = null
     private var tapsellRewardedResponseId: String? = null
 
-    fun initialize(
-        context: Context
-    ) {
+    fun initialize(context: Context) {
 
         val application =
             context.applicationContext as Application
@@ -32,18 +31,15 @@ object AdsManager {
         initializeTapsell(application)
     }
 
-    private fun initializeAdivery(
-        application: Application
-    ) {
+    private fun initializeAdivery(application: Application) {
 
         try {
+            Adivery.setLoggingEnabled(false)
 
             Adivery.configure(
                 application,
                 BuildConfig.ADIVERY_APP_ID
             )
-
-            Adivery.setLoggingEnabled(false)
 
             Adivery.prepareInterstitialAd(
                 application,
@@ -55,13 +51,9 @@ object AdsManager {
                 BuildConfig.ADIVERY_REWARDED
             )
 
-            Log.d(
-                TAG,
-                "Adivery initialized"
-            )
+            Log.d(TAG, "Adivery initialized")
 
         } catch (e: Exception) {
-
             Log.e(
                 TAG,
                 "Adivery initialization error",
@@ -70,144 +62,213 @@ object AdsManager {
         }
     }
 
-    private fun initializeTapsell(
-        application: Application
-    ) {
+    private fun initializeTapsell(application: Application) {
 
         if (tapsellInitialized) {
             return
         }
 
-        TapsellPlus.initialize(
-            application,
-            BuildConfig.TAPSELL_KEY,
-            object : TapsellPlusInitListener {
+        try {
 
-                override fun onInitializeSuccess(
-                    adNetworks: AdNetworks
-                ) {
+            TapsellPlus.initialize(
+                application,
+                BuildConfig.TAPSELL_KEY,
+                object : TapsellPlusInitListener {
 
-                    tapsellInitialized = true
+                    override fun onInitializeSuccess(
+                        adNetworks: AdNetworks
+                    ) {
 
-                    Log.d(
-                        TAG,
-                        "Tapsell initialized: ${adNetworks.name}"
-                    )
+                        tapsellInitialized = true
+
+                        Log.d(
+                            TAG,
+                            "Tapsell initialized: ${adNetworks.name}"
+                        )
+                    }
+
+                    override fun onInitializeFailed(
+                        adNetworks: AdNetworks,
+                        error: AdNetworkError
+                    ) {
+
+                        Log.e(
+                            TAG,
+                            "Tapsell initialization failed: ${error.errorMessage}"
+                        )
+                    }
                 }
+            )
 
-                override fun onInitializeFailed(
-                    adNetworks: AdNetworks,
-                    error: AdNetworkError
-                ) {
+        } catch (e: Exception) {
 
-                    Log.e(
-                        TAG,
-                        "Tapsell initialization failed: ${error.errorMessage}"
-                    )
-                }
-            }
-        )
+            Log.e(
+                TAG,
+                "Tapsell initialization error",
+                e
+            )
+        }
     }
 
-    fun prepareInterstitial(
-        activity: Activity
-    ) {
+    fun prepareInterstitial(activity: Activity) {
 
         if (!tapsellInitialized) {
             return
         }
 
-        TapsellPlus.requestInterstitialAd(
-            activity,
-            BuildConfig.TAPSELL_INTERSTITIAL,
-            object : AdRequestCallback {
+        try {
 
-                override fun response(
-                    adModel: TapsellPlusAdModel
-                ) {
+            TapsellPlus.requestInterstitialAd(
+                activity,
+                BuildConfig.TAPSELL_INTERSTITIAL,
+                object : AdRequestCallback {
 
-                    tapsellInterstitialResponseId =
-                        adModel.responseId
+                    override fun response(
+                        adModel: TapsellPlusAdModel
+                    ) {
 
-                    Log.d(
-                        TAG,
-                        "Tapsell interstitial ready"
-                    )
+                        tapsellInterstitialResponseId =
+                            adModel.responseId
+
+                        Log.d(
+                            TAG,
+                            "Tapsell interstitial ready"
+                        )
+                    }
+
+                    override fun error(
+                        message: String
+                    ) {
+
+                        Log.e(
+                            TAG,
+                            "Tapsell interstitial error: $message"
+                        )
+                    }
                 }
+            )
 
-                override fun error(
-                    message: String
-                ) {
+        } catch (e: Exception) {
 
-                    Log.e(
-                        TAG,
-                        "Tapsell interstitial error: $message"
-                    )
-                }
-            }
-        )
+            Log.e(
+                TAG,
+                "Tapsell interstitial request error",
+                e
+            )
+        }
     }
 
-    fun prepareRewarded(
-        activity: Activity
-    ) {
+    fun prepareRewarded(activity: Activity) {
 
         if (!tapsellInitialized) {
             return
         }
 
-        TapsellPlus.requestRewardedVideoAd(
-            activity,
-            BuildConfig.TAPSELL_REWARDED,
-            object : AdRequestCallback {
+        try {
 
-                override fun response(
-                    adModel: TapsellPlusAdModel
-                ) {
+            TapsellPlus.requestRewardedVideoAd(
+                activity,
+                BuildConfig.TAPSELL_REWARDED,
+                object : AdRequestCallback {
 
-                    tapsellRewardedResponseId =
-                        adModel.responseId
+                    override fun response(
+                        adModel: TapsellPlusAdModel
+                    ) {
 
-                    Log.d(
-                        TAG,
-                        "Tapsell rewarded ready"
-                    )
+                        tapsellRewardedResponseId =
+                            adModel.responseId
+
+                        Log.d(
+                            TAG,
+                            "Tapsell rewarded ready"
+                        )
+                    }
+
+                    override fun error(
+                        message: String
+                    ) {
+
+                        Log.e(
+                            TAG,
+                            "Tapsell rewarded error: $message"
+                        )
+                    }
                 }
+            )
 
-                override fun error(
-                    message: String
-                ) {
+        } catch (e: Exception) {
 
-                    Log.e(
-                        TAG,
-                        "Tapsell rewarded error: $message"
-                    )
-                }
-            }
-        )
+            Log.e(
+                TAG,
+                "Tapsell rewarded request error",
+                e
+            )
+        }
     }
 
-    fun showInterstitial(
-        activity: Activity
-    ) {
+    fun showInterstitial(activity: Activity) {
 
         val tapsellId =
             tapsellInterstitialResponseId
 
         if (!tapsellId.isNullOrBlank()) {
 
-            TapsellPlus.showInterstitialAd(
-                activity,
-                tapsellId
-            )
+            try {
 
-            tapsellInterstitialResponseId = null
+                TapsellPlus.showInterstitialAd(
+                    activity,
+                    tapsellId,
+                    object : AdShowListener() {
 
-            prepareInterstitial(
-                activity
-            )
+                        override fun onOpened() {
+                            Log.d(
+                                TAG,
+                                "Tapsell interstitial opened"
+                            )
+                        }
 
-            return
+                        override fun onClosed() {
+
+                            tapsellInterstitialResponseId =
+                                null
+
+                            prepareInterstitial(activity)
+
+                            Log.d(
+                                TAG,
+                                "Tapsell interstitial closed"
+                            )
+                        }
+
+                        override fun onError(
+                            message: String
+                        ) {
+
+                            tapsellInterstitialResponseId =
+                                null
+
+                            Log.e(
+                                TAG,
+                                "Tapsell interstitial show error: $message"
+                            )
+
+                            showAdiveryInterstitial()
+                        }
+                    }
+                )
+
+                return
+
+            } catch (e: Exception) {
+
+                Log.e(
+                    TAG,
+                    "Tapsell interstitial exception",
+                    e
+                )
+
+                tapsellInterstitialResponseId = null
+            }
         }
 
         showAdiveryInterstitial()
@@ -223,18 +284,74 @@ object AdsManager {
 
         if (!tapsellId.isNullOrBlank()) {
 
-            TapsellPlus.showRewardedVideoAd(
-                activity,
-                tapsellId
-            )
+            try {
 
-            tapsellRewardedResponseId = null
+                TapsellPlus.showRewardedVideoAd(
+                    activity,
+                    tapsellId,
+                    object : AdShowListener() {
 
-            prepareRewarded(
-                activity
-            )
+                        override fun onOpened() {
+                            Log.d(
+                                TAG,
+                                "Tapsell rewarded opened"
+                            )
+                        }
 
-            return
+                        override fun onClosed() {
+
+                            tapsellRewardedResponseId =
+                                null
+
+                            prepareRewarded(activity)
+
+                            Log.d(
+                                TAG,
+                                "Tapsell rewarded closed"
+                            )
+                        }
+
+                        override fun onRewarded() {
+
+                            Log.d(
+                                TAG,
+                                "Tapsell rewarded completed"
+                            )
+
+                            onRewarded()
+                        }
+
+                        override fun onError(
+                            message: String
+                        ) {
+
+                            tapsellRewardedResponseId =
+                                null
+
+                            Log.e(
+                                TAG,
+                                "Tapsell rewarded show error: $message"
+                            )
+
+                            showAdiveryRewarded(
+                                onRewarded
+                            )
+                        }
+                    }
+                )
+
+                return
+
+            } catch (e: Exception) {
+
+                Log.e(
+                    TAG,
+                    "Tapsell rewarded exception",
+                    e
+                )
+
+                tapsellRewardedResponseId = null
+            }
         }
 
         showAdiveryRewarded(
