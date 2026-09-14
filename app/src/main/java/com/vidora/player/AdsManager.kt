@@ -27,35 +27,38 @@ object AdsManager {
         context: Context
     ) {
 
+        val application =
+            context.applicationContext as Application
+
         initializeAdivery(
-            context.applicationContext
+            application
         )
 
         initializeTapsell(
-            context.applicationContext
+            application
         )
     }
 
     private fun initializeAdivery(
-        context: Context
+        application: Application
     ) {
 
         try {
 
             Adivery.configure(
-                context.applicationContext,
+                application,
                 BuildConfig.ADIVERY_APP_ID
             )
 
             Adivery.setLoggingEnabled(false)
 
             Adivery.prepareInterstitialAd(
-                context.applicationContext,
+                application,
                 BuildConfig.ADIVERY_INTERSTITIAL
             )
 
             Adivery.prepareRewardedAd(
-                context.applicationContext,
+                application,
                 BuildConfig.ADIVERY_REWARDED
             )
 
@@ -75,16 +78,12 @@ object AdsManager {
     }
 
     private fun initializeTapsell(
-        context: Context
+        application: Application
     ) {
 
         if (tapsellInitialized) {
             return
         }
-
-        val application =
-            context.applicationContext as? Application
-                ?: return
 
         TapsellPlus.initialize(
             application,
@@ -207,7 +206,7 @@ object AdsManager {
             TapsellPlus.showInterstitialAd(
                 activity,
                 responseId,
-                object : AdShowListener {
+                object : AdShowListener() {
 
                     override fun onOpened(
                         adModel: TapsellPlusAdModel
@@ -269,7 +268,7 @@ object AdsManager {
             TapsellPlus.showRewardedVideoAd(
                 activity,
                 responseId,
-                object : AdShowListener {
+                object : AdShowListener() {
 
                     override fun onOpened(
                         adModel: TapsellPlusAdModel
