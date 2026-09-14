@@ -78,8 +78,12 @@
     <string name="search_videos">جستجوی ویدئو</string>
     <string name="sort">مرتب‌سازی</string>
     <string name="sort_latest">آخرین دسترسی</string>
+    <string name="sort_newest">جدیدترین</string>
     <string name="sort_name">نام</string>
     <string name="sort_size">حجم</string>
+
+    <!-- تصاویر ویدئو -->
+    <string name="video_thumbnail">تصویر بندانگشتی ویدئو</string>
 
     <!-- پیام‌های عمومی -->
     <string name="video_not_found">ویدئو پیدا نشد.</string>
