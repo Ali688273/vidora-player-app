@@ -121,6 +121,13 @@
                 android:textSize="10sp" />
 
             <Button
+                android:id="@+id/moreButton"
+                android:layout_width="62dp"
+                android:layout_height="44dp"
+                android:text="بیشتر"
+                android:textSize="10sp" />
+
+            <Button
                 android:id="@+id/lockButton"
                 android:layout_width="56dp"
                 android:layout_height="44dp"
