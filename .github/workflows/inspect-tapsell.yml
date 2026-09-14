@@ -22,94 +22,83 @@ jobs:
         with:
           gradle-version: "8.13"
 
-      - name: Resolve Android dependencies
+      - name: Resolve dependencies
         run: |
           gradle :app:dependencies \
             --configuration debugCompileClasspath \
             --no-daemon
 
-      - name: Inspect Tapsell AAR
+      - name: Find Tapsell AAR
         shell: bash
         run: |
           set -e
 
-          echo "=========================================="
-          echo "Searching for Tapsell Plus AAR..."
-          echo "=========================================="
+          echo "=== Searching Tapsell Plus AAR ==="
 
-          AAR_PATH=$(find ~/.gradle/caches \
+          AAR=$(find "$HOME/.gradle/caches" \
             -type f \
             -name "tapsell-plus-sdk-android-2.3.3.aar" \
             | head -n 1)
 
-          if [ -z "$AAR_PATH" ]; then
-            echo "ERROR: Tapsell Plus AAR was not found."
+          if [ -z "$AAR" ]; then
+            echo "ERROR: Tapsell AAR not found."
             exit 1
           fi
 
-          echo "AAR:"
-          echo "$AAR_PATH"
+          echo "FOUND:"
+          echo "$AAR"
+
+          mkdir -p /tmp/tapsell
+
+          unzip -p "$AAR" classes.jar > /tmp/tapsell/classes.jar
 
           echo
-          echo "=========================================="
-          echo "Extracting classes.jar..."
-          echo "=========================================="
+          echo "=== AdShowListener class ==="
 
-          rm -rf /tmp/tapsell-api
-          mkdir -p /tmp/tapsell-api
-
-          unzip -p "$AAR_PATH" classes.jar > /tmp/tapsell-api/classes.jar
-
-          echo
-          echo "=========================================="
-          echo "Finding AdShowListener..."
-          echo "=========================================="
-
-          jar tf /tmp/tapsell-api/classes.jar \
-            | grep -i "AdShowListener.class" \
+          jar tf /tmp/tapsell/classes.jar \
+            | grep "AdShowListener.class" \
             || true
 
-          LISTENER_CLASS=$(jar tf /tmp/tapsell-api/classes.jar \
-            | grep -i "AdShowListener.class" \
+          CLASS=$(jar tf /tmp/tapsell/classes.jar \
+            | grep "AdShowListener.class" \
             | head -n 1 \
             | sed 's#/#.#g' \
             | sed 's/\.class$//')
 
-          if [ -z "$LISTENER_CLASS" ]; then
-            echo "ERROR: AdShowListener class was not found."
+          if [ -z "$CLASS" ]; then
+            echo "ERROR: AdShowListener was not found."
             exit 1
           fi
 
           echo
-          echo "AdShowListener class:"
-          echo "$LISTENER_CLASS"
+          echo "CLASS:"
+          echo "$CLASS"
 
           echo
-          echo "=========================================="
-          echo "AdShowListener constructor + methods"
-          echo "=========================================="
+          echo "========================================"
+          echo "AdShowListener EXACT API"
+          echo "========================================"
 
           javap \
-            -classpath /tmp/tapsell-api/classes.jar \
+            -classpath /tmp/tapsell/classes.jar \
             -p \
             -s \
-            "$LISTENER_CLASS"
+            "$CLASS"
 
           echo
-          echo "=========================================="
-          echo "TapsellPlus show methods"
-          echo "=========================================="
+          echo "========================================"
+          echo "TapsellPlus SHOW METHODS"
+          echo "========================================"
 
           javap \
-            -classpath /tmp/tapsell-api/classes.jar \
+            -classpath /tmp/tapsell/classes.jar \
             -p \
             -s \
             ir.tapsell.plus.TapsellPlus \
-            | grep -A 8 -B 2 \
-            -E "showInterstitialAd|showRewardedVideoAd" \
-            || true
+            | grep -A 12 -B 3 \
+            -E "showInterstitialAd|showRewardedVideoAd"
 
           echo
-          echo "=========================================="
-          echo "Inspection completed."
-          echo "=========================================="
+          echo "========================================"
+          echo "Tapsell API inspection finished"
+          echo "========================================"
