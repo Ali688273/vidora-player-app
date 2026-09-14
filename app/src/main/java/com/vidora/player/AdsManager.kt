@@ -3,12 +3,15 @@ package com.vidora.player
 import android.app.Activity
 import android.content.Context
 import android.util.Log
+import com.adivery.sdk.Adivery
 import ir.tapsell.plus.AdRequestCallback
 import ir.tapsell.plus.AdShowListener
 import ir.tapsell.plus.TapsellPlus
+import ir.tapsell.plus.TapsellPlusInitListener
+import ir.tapsell.plus.model.AdNetworkError
+import ir.tapsell.plus.model.AdNetworks
 import ir.tapsell.plus.model.TapsellPlusAdModel
 import ir.tapsell.plus.model.TapsellPlusErrorModel
-import com.adivery.sdk.Adivery
 
 object AdsManager {
 
@@ -21,16 +24,24 @@ object AdsManager {
 
     fun initialize(context: Context) {
 
+        val applicationContext =
+            context.applicationContext
+
+        initializeAdivery(
+            applicationContext
+        )
+
         if (!tapsellInitialized) {
 
             TapsellPlus.initialize(
-                context,
+                applicationContext,
                 BuildConfig.TAPSELL_KEY,
-                object : ir.tapsell.plus.TapsellPlusInitListener {
+                object : TapsellPlusInitListener {
 
                     override fun onInitializeSuccess(
-                        adNetworks: ir.tapsell.plus.model.AdNetworks
+                        adNetworks: AdNetworks
                     ) {
+
                         tapsellInitialized = true
 
                         Log.d(
@@ -38,14 +49,20 @@ object AdsManager {
                             "Tapsell initialized: ${adNetworks.name()}"
                         )
 
-                        requestTapsellInterstitial(context)
-                        requestTapsellRewarded(context)
+                        requestTapsellInterstitial(
+                            applicationContext
+                        )
+
+                        requestTapsellRewarded(
+                            applicationContext
+                        )
                     }
 
                     override fun onInitializeFailed(
-                        adNetworks: ir.tapsell.plus.model.AdNetworks,
-                        error: ir.tapsell.plus.model.AdNetworkError
+                        adNetworks: AdNetworks,
+                        error: AdNetworkError
                     ) {
+
                         Log.e(
                             TAG,
                             "Tapsell initialization failed: ${error.errorMessage}"
@@ -54,8 +71,6 @@ object AdsManager {
                 }
             )
         }
-
-        initializeAdivery(context)
     }
 
     private fun initializeAdivery(
@@ -170,20 +185,19 @@ object AdsManager {
         activity: Activity
     ) {
 
-        val tapsellResponse =
+        val responseId =
             tapsellInterstitialResponseId
 
-        if (!tapsellResponse.isNullOrBlank()) {
+        if (!responseId.isNullOrBlank()) {
 
             TapsellPlus.showInterstitialAd(
                 activity,
-                tapsellResponse,
+                responseId,
                 object : AdShowListener {
 
                     override fun onOpened(
                         adModel: TapsellPlusAdModel
                     ) {
-
                         Log.d(
                             TAG,
                             "Tapsell interstitial opened"
@@ -194,7 +208,8 @@ object AdsManager {
                         adModel: TapsellPlusAdModel
                     ) {
 
-                        tapsellInterstitialResponseId = null
+                        tapsellInterstitialResponseId =
+                            null
 
                         requestTapsellInterstitial(
                             activity.applicationContext
@@ -210,13 +225,12 @@ object AdsManager {
                             "Tapsell interstitial show error: $error"
                         )
 
-                        tapsellInterstitialResponseId = null
+                        tapsellInterstitialResponseId =
+                            null
 
                         requestTapsellInterstitial(
                             activity.applicationContext
                         )
-
-                        showAdiveryInterstitial()
                     }
                 }
             )
@@ -232,20 +246,19 @@ object AdsManager {
         onRewarded: () -> Unit
     ) {
 
-        val tapsellResponse =
+        val responseId =
             tapsellRewardedResponseId
 
-        if (!tapsellResponse.isNullOrBlank()) {
+        if (!responseId.isNullOrBlank()) {
 
             TapsellPlus.showRewardedVideoAd(
                 activity,
-                tapsellResponse,
+                responseId,
                 object : AdShowListener {
 
                     override fun onOpened(
                         adModel: TapsellPlusAdModel
                     ) {
-
                         Log.d(
                             TAG,
                             "Tapsell rewarded opened"
@@ -256,7 +269,8 @@ object AdsManager {
                         adModel: TapsellPlusAdModel
                     ) {
 
-                        tapsellRewardedResponseId = null
+                        tapsellRewardedResponseId =
+                            null
 
                         requestTapsellRewarded(
                             activity.applicationContext
@@ -276,10 +290,11 @@ object AdsManager {
 
                         Log.e(
                             TAG,
-                            "Tapsell rewarded error: $error"
+                            "Tapsell rewarded show error: $error"
                         )
 
-                        tapsellRewardedResponseId = null
+                        tapsellRewardedResponseId =
+                            null
 
                         requestTapsellRewarded(
                             activity.applicationContext
@@ -292,7 +307,6 @@ object AdsManager {
         }
 
         showAdiveryRewarded(
-            activity,
             onRewarded
         )
     }
@@ -314,9 +328,9 @@ object AdsManager {
                 return
             }
 
-            Adivery.prepareInterstitialAd(
-                null,
-                BuildConfig.ADIVERY_INTERSTITIAL
+            Log.d(
+                TAG,
+                "Adivery interstitial not ready"
             )
 
         } catch (e: Exception) {
@@ -330,7 +344,6 @@ object AdsManager {
     }
 
     private fun showAdiveryRewarded(
-        activity: Activity,
         onRewarded: () -> Unit
     ) {
 
@@ -351,9 +364,9 @@ object AdsManager {
                 return
             }
 
-            Adivery.prepareRewardedAd(
-                activity.applicationContext,
-                BuildConfig.ADIVERY_REWARDED
+            Log.d(
+                TAG,
+                "Adivery rewarded not ready"
             )
 
         } catch (e: Exception) {
