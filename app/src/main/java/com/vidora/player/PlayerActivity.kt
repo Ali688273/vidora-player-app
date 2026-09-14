@@ -6,7 +6,6 @@ import android.app.PictureInPictureParams
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.media.AudioManager
 import android.net.Uri
@@ -24,10 +23,12 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
+
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.OptIn
 import androidx.core.content.ContextCompat
+
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
@@ -38,7 +39,9 @@ import androidx.media3.session.SessionToken
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import androidx.media3.ui.TrackSelectionDialogBuilder
+
 import com.google.common.util.concurrent.ListenableFuture
+
 import kotlin.math.abs
 
 @OptIn(androidx.media3.common.util.UnstableApi::class)
@@ -61,6 +64,8 @@ class PlayerActivity : ComponentActivity() {
     private lateinit var deleteButton: Button
     private lateinit var lockButton: Button
     private lateinit var fullscreenButton: Button
+    private lateinit var moreButton
+        : Button
     private lateinit var gestureInfo: TextView
     private lateinit var lockedOverlay: TextView
 
@@ -107,7 +112,8 @@ class PlayerActivity : ComponentActivity() {
     private val sleepHandler =
         Handler(Looper.getMainLooper())
 
-    private var sleepTimerRunnable: Runnable? = null
+    private var sleepTimerRunnable: Runnable? =
+        null
 
     private var lastTapTime = 0L
     private var lastTapX = 0f
@@ -194,6 +200,9 @@ class PlayerActivity : ComponentActivity() {
         fullscreenButton =
             findViewById(R.id.fullscreenButton)
 
+        moreButton =
+            findViewById(R.id.moreButton)
+
         gestureInfo =
             findViewById(R.id.gestureInfo)
 
@@ -239,8 +248,7 @@ class PlayerActivity : ComponentActivity() {
                         controllerFuture?.get()
                             ?: return@addListener
 
-                    player =
-                        controller
+                    player = controller
 
                     playerView.player =
                         controller
@@ -248,6 +256,7 @@ class PlayerActivity : ComponentActivity() {
                     initializePlayer()
 
                 } catch (_: Exception) {
+
                     showTemporaryMessage(
                         "خطا در اتصال پخش‌کننده"
                     )
@@ -262,56 +271,48 @@ class PlayerActivity : ComponentActivity() {
     private fun setupButtons() {
 
         previousButton.setOnClickListener {
-
             if (!isLocked) {
                 playPreviousVideo()
             }
         }
 
         nextButton.setOnClickListener {
-
             if (!isLocked) {
                 playNextVideo()
             }
         }
 
         repeatButton.setOnClickListener {
-
             if (!isLocked) {
                 toggleRepeat()
             }
         }
 
         audioButton.setOnClickListener {
-
             if (!isLocked) {
                 showAudioTrackDialog()
             }
         }
 
         favoriteButton.setOnClickListener {
-
             if (!isLocked) {
                 toggleFavorite()
             }
         }
 
         speedMinusButton.setOnClickListener {
-
             if (!isLocked) {
                 changeSpeed(-0.1f)
             }
         }
 
         speedPlusButton.setOnClickListener {
-
             if (!isLocked) {
                 changeSpeed(0.1f)
             }
         }
 
         speedButton.setOnClickListener {
-
             if (!isLocked) {
                 resetSpeed()
             }
@@ -325,7 +326,10 @@ class PlayerActivity : ComponentActivity() {
 
             aspectIndex++
 
-            if (aspectIndex >= aspectModes.size) {
+            if (
+                aspectIndex >=
+                aspectModes.size
+            ) {
                 aspectIndex = 0
             }
 
@@ -379,9 +383,389 @@ class PlayerActivity : ComponentActivity() {
             enterFullscreen()
         }
 
+        moreButton.setOnClickListener {
+
+            if (!isLocked) {
+                showMoreMenu()
+            }
+        }
+
+        currentSpeed =
+            PlaybackSettings.getDefaultSpeed(
+                this
+            )
+
         updateSpeedText()
         updateRepeatButton()
         updateFavoriteButton()
+    }
+
+    private fun showMoreMenu() {
+
+        val options =
+            arrayOf(
+                "تنظیمات سرعت و پخش",
+                "همگام‌سازی صدا",
+                "همگام‌سازی زیرنویس",
+                "تنظیمات تصویر",
+                "افزودن به صف پخش",
+                "نمایش صف پخش",
+                "پاک کردن صف پخش"
+            )
+
+        AlertDialog.Builder(this)
+            .setTitle(
+                "امکانات بیشتر"
+            )
+            .setItems(
+                options
+            ) { _, which ->
+
+                when (which) {
+
+                    0 ->
+                        showPlaybackSettings()
+
+                    1 ->
+                        showAudioSyncDialog()
+
+                    2 ->
+                        showSubtitleSyncDialog()
+
+                    3 ->
+                        showVideoQualityDialog()
+
+                    4 ->
+                        addCurrentToQueue()
+
+                    5 ->
+                        showQueue()
+
+                    6 ->
+                        PlaybackQueueManager.clear(
+                            this
+                        )
+                }
+            }
+            .show()
+    }
+
+    private fun showPlaybackSettings() {
+
+        val current =
+            PlaybackSettings.autoPlayNext(
+                this
+            )
+
+        AlertDialog.Builder(this)
+            .setTitle(
+                "تنظیمات پخش"
+            )
+            .setMultiChoiceItems(
+                arrayOf(
+                    "پخش خودکار ویدئوی بعدی"
+                ),
+                booleanArrayOf(current)
+            ) { _, _, checked ->
+
+                PlaybackSettings.setAutoPlayNext(
+                    this,
+                    checked
+                )
+            }
+            .setPositiveButton(
+                "باشه",
+                null
+            )
+            .show()
+    }
+
+    private fun showAudioSyncDialog() {
+
+        val uri =
+            getIncomingVideoUri()
+                ?: return
+
+        val current =
+            AudioSyncManager.getOffset(
+                this,
+                uri
+            )
+
+        val input =
+            EditText(this).apply {
+
+                inputType =
+                    InputType.TYPE_CLASS_NUMBER or
+                        InputType.TYPE_NUMBER_FLAG_SIGNED
+
+                setText(
+                    current.toString()
+                )
+
+                hint =
+                    "میلی‌ثانیه"
+            }
+
+        AlertDialog.Builder(this)
+            .setTitle(
+                "همگام‌سازی صدا"
+            )
+            .setMessage(
+                "مقدار مثبت یعنی صدا جلوتر تنظیم شود."
+            )
+            .setView(input)
+            .setNegativeButton(
+                "لغو",
+                null
+            )
+            .setNeutralButton(
+                "صفر"
+            ) { _, _ ->
+
+                AudioSyncManager.reset(
+                    this,
+                    uri
+                )
+            }
+            .setPositiveButton(
+                "ذخیره"
+            ) { _, _ ->
+
+                val value =
+                    input.text
+                        .toString()
+                        .toLongOrNull()
+                        ?: 0L
+
+                AudioSyncManager.setOffset(
+                    this,
+                    uri,
+                    value
+                )
+
+                showTemporaryMessage(
+                    "تنظیم همگام‌سازی ذخیره شد."
+                )
+            }
+            .show()
+    }
+
+    private fun showSubtitleSyncDialog() {
+
+        val uri =
+            getIncomingVideoUri()
+                ?: return
+
+        val current =
+            SubtitleSyncManager.getOffset(
+                this,
+                uri
+            )
+
+        val input =
+            EditText(this).apply {
+
+                inputType =
+                    InputType.TYPE_CLASS_NUMBER or
+                        InputType.TYPE_NUMBER_FLAG_SIGNED
+
+                setText(
+                    current.toString()
+                )
+
+                hint =
+                    "میلی‌ثانیه"
+            }
+
+        AlertDialog.Builder(this)
+            .setTitle(
+                "همگام‌سازی زیرنویس"
+            )
+            .setMessage(
+                "مقدار مثبت یعنی زیرنویس دیرتر نمایش داده شود."
+            )
+            .setView(input)
+            .setNegativeButton(
+                "لغو",
+                null
+            )
+            .setNeutralButton(
+                "صفر"
+            ) { _, _ ->
+
+                SubtitleSyncManager.reset(
+                    this,
+                    uri
+                )
+            }
+            .setPositiveButton(
+                "ذخیره"
+            ) { _, _ ->
+
+                val value =
+                    input.text
+                        .toString()
+                        .toLongOrNull()
+                        ?: 0L
+
+                SubtitleSyncManager.setOffset(
+                    this,
+                    uri,
+                    value
+                )
+
+                showTemporaryMessage(
+                    "تنظیم زیرنویس ذخیره شد."
+                )
+            }
+            .show()
+    }
+
+    private fun showVideoQualityDialog() {
+
+        val enabled =
+            VideoQualitySettings.enhancementEnabled(
+                this
+            )
+
+        val options =
+            arrayOf(
+                "بهبود تصویر ادراکی",
+                "شارپنس",
+                "کنتراست"
+            )
+
+        AlertDialog.Builder(this)
+            .setTitle(
+                "کیفیت تصویر"
+            )
+            .setMultiChoiceItems(
+                options,
+                booleanArrayOf(
+                    enabled,
+                    VideoQualitySettings.getSharpness(
+                        this
+                    ) > 0f,
+                    VideoQualitySettings.getContrast(
+                        this
+                    ) > 1f
+                )
+            ) { _, which, checked ->
+
+                when (which) {
+
+                    0 ->
+                        VideoQualitySettings
+                            .setEnhancementEnabled(
+                                this,
+                                checked
+                            )
+
+                    1 ->
+                        VideoQualitySettings
+                            .setSharpness(
+                                this,
+                                if (checked) {
+                                    0.5f
+                                } else {
+                                    0f
+                                }
+                            )
+
+                    2 ->
+                        VideoQualitySettings
+                            .setContrast(
+                                this,
+                                if (checked) {
+                                    1.15f
+                                } else {
+                                    1f
+                                }
+                            )
+                }
+            }
+            .setPositiveButton(
+                "ذخیره",
+                null
+            )
+            .show()
+    }
+
+    private fun addCurrentToQueue() {
+
+        val uri =
+            getIncomingVideoUri()
+                ?: return
+
+        PlaybackQueueManager.add(
+            this,
+            uri
+        )
+
+        val queue =
+            PlaybackQueueManager.getQueue(
+                this
+            )
+
+        PlaybackQueueManager.setCurrentIndex(
+            this,
+            queue.indexOf(uri)
+                .coerceAtLeast(0)
+        )
+
+        showTemporaryMessage(
+            "ویدئو به صف پخش اضافه شد."
+        )
+    }
+
+    private fun showQueue() {
+
+        val queue =
+            PlaybackQueueManager.getQueue(
+                this
+            )
+
+        if (queue.isEmpty()) {
+
+            AlertDialog.Builder(this)
+                .setTitle(
+                    "صف پخش"
+                )
+                .setMessage(
+                    "صف پخش خالی است."
+                )
+                .setPositiveButton(
+                    "باشه",
+                    null
+                )
+                .show()
+
+            return
+        }
+
+        val names =
+            queue.mapIndexed { index, uri ->
+
+                "${index + 1}. ${
+                    getVideoName(uri)
+                }"
+
+            }.toTypedArray()
+
+        AlertDialog.Builder(this)
+            .setTitle(
+                "صف پخش"
+            )
+            .setItems(
+                names,
+                null
+            )
+            .setPositiveButton(
+                "باشه",
+                null
+            )
+            .show()
     }
 
     private fun getIncomingVideoUri(): Uri? {
@@ -406,6 +790,7 @@ class PlayerActivity : ComponentActivity() {
     }
 
     private fun isExternalVideo(): Boolean {
+
         return intent.action ==
             Intent.ACTION_VIEW
     }
@@ -433,7 +818,7 @@ class PlayerActivity : ComponentActivity() {
 
         updateFavoriteButton()
 
-        val message =
+        showTemporaryMessage(
             if (favorite) {
                 getString(
                     R.string.added_to_favorites
@@ -443,8 +828,7 @@ class PlayerActivity : ComponentActivity() {
                     R.string.removed_from_favorites
                 )
             }
-
-        showTemporaryMessage(message)
+        )
     }
 
     private fun updateFavoriteButton() {
@@ -573,6 +957,11 @@ class PlayerActivity : ComponentActivity() {
                 currentSpeed
             ).toFloat()
 
+        PlaybackSettings.setDefaultSpeed(
+            this,
+            currentSpeed
+        )
+
         player?.playbackParameters =
             PlaybackParameters(
                 currentSpeed
@@ -584,6 +973,11 @@ class PlayerActivity : ComponentActivity() {
     private fun resetSpeed() {
 
         currentSpeed = 1.0f
+
+        PlaybackSettings.setDefaultSpeed(
+            this,
+            currentSpeed
+        )
 
         player?.playbackParameters =
             PlaybackParameters(
@@ -638,11 +1032,7 @@ class PlayerActivity : ComponentActivity() {
         )
 
         container.addView(
-            input,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
+            input
         )
 
         val dialog =
@@ -690,7 +1080,9 @@ class PlayerActivity : ComponentActivity() {
                     return@setOnClickListener
                 }
 
-                startSleepTimer(minutes)
+                startSleepTimer(
+                    minutes
+                )
 
                 dialog.dismiss()
             }
@@ -983,7 +1375,7 @@ class PlayerActivity : ComponentActivity() {
             newPosition
         )
 
-        val message =
+        showTemporaryMessage(
             if (
                 x <
                 playerView.width / 2f
@@ -996,8 +1388,7 @@ class PlayerActivity : ComponentActivity() {
                     R.string.seek_forward
                 )
             }
-
-        showTemporaryMessage(message)
+        )
     }
 
     private fun handleSeek(
@@ -1037,11 +1428,7 @@ class PlayerActivity : ComponentActivity() {
             seekAmount.toLong() / 1000
 
         val sign =
-            if (seconds >= 0) {
-                "+"
-            } else {
-                ""
-            }
+            if (seconds >= 0) "+" else ""
 
         showGestureInfo(
             "$sign${seconds}s"
@@ -1081,8 +1468,7 @@ class PlayerActivity : ComponentActivity() {
 
         val percent =
             if (maxVolume > 0) {
-                newVolume * 100 /
-                    maxVolume
+                newVolume * 100 / maxVolume
             } else {
                 0
             }
@@ -1121,14 +1507,10 @@ class PlayerActivity : ComponentActivity() {
         window.attributes =
             attributes
 
-        val percent =
-            (newBrightness * 100)
-                .toInt()
-
         showGestureInfo(
             getString(
                 R.string.brightness_percent,
-                percent
+                (newBrightness * 100).toInt()
             )
         )
     }
@@ -1138,7 +1520,6 @@ class PlayerActivity : ComponentActivity() {
     ) {
 
         gestureInfo.text = text
-
         gestureInfo.visibility =
             View.VISIBLE
     }
@@ -1250,6 +1631,9 @@ class PlayerActivity : ComponentActivity() {
 
         fullscreenButton.visibility =
             visibility
+
+        moreButton.visibility =
+            visibility
     }
 
     private fun initializePlayer() {
@@ -1259,12 +1643,6 @@ class PlayerActivity : ComponentActivity() {
                 ?: return
 
         if (isExternalVideo()) {
-
-            intent.putExtra(
-                EXTRA_VIDEO_URI,
-                uri.toString()
-            )
-
             deleteButton.visibility =
                 View.GONE
         }
@@ -1329,10 +1707,9 @@ class PlayerActivity : ComponentActivity() {
         val currentPlayer =
             player ?: return
 
-        val videoUriString =
+        val videoUri =
             mediaItem.localConfiguration
                 ?.uri
-                ?.toString()
                 ?: return
 
         val savedPosition =
@@ -1342,9 +1719,7 @@ class PlayerActivity : ComponentActivity() {
                 PlaybackHistoryManager
                     .getPosition(
                         this,
-                        Uri.parse(
-                            videoUriString
-                        )
+                        videoUri
                     )
             }
 
@@ -1377,7 +1752,7 @@ class PlayerActivity : ComponentActivity() {
 
         intent.putExtra(
             EXTRA_VIDEO_URI,
-            videoUriString
+            videoUri.toString()
         )
 
         updateFavoriteButton()
@@ -1452,11 +1827,8 @@ class PlayerActivity : ComponentActivity() {
             Build.VERSION.SDK_INT >=
             Build.VERSION_CODES.TIRAMISU
         ) {
-
             Manifest.permission.READ_MEDIA_VIDEO
-
         } else {
-
             Manifest.permission.READ_EXTERNAL_STORAGE
         }
     }
@@ -1543,8 +1915,7 @@ class PlayerActivity : ComponentActivity() {
         intent.action =
             Intent.ACTION_MAIN
 
-        intent.data =
-            null
+        intent.data = null
 
         intent.putExtra(
             EXTRA_VIDEO_URI,
@@ -1555,12 +1926,6 @@ class PlayerActivity : ComponentActivity() {
             EXTRA_VIDEO_NAME,
             getVideoName(uri)
         )
-
-        deleteButton.visibility =
-            View.VISIBLE
-
-        favoriteButton.visibility =
-            View.VISIBLE
 
         createPlayer(
             MediaItem.fromUri(uri)
@@ -1582,14 +1947,11 @@ class PlayerActivity : ComponentActivity() {
         )?.use { cursor ->
 
             if (cursor.moveToFirst()) {
-
                 cursor.getString(0)
                     ?: getString(
                         R.string.unknown_video
                     )
-
             } else {
-
                 getString(
                     R.string.unknown_video
                 )
@@ -1609,10 +1971,12 @@ class PlayerActivity : ComponentActivity() {
         val uriString =
             intent.getStringExtra(
                 EXTRA_VIDEO_URI
-            ) ?: return
+            )
+            ?: return
 
         val currentPlayer =
-            player ?: return
+            player
+                ?: return
 
         val position =
             currentPlayer.currentPosition
@@ -1653,7 +2017,8 @@ class PlayerActivity : ComponentActivity() {
         val uriString =
             intent.getStringExtra(
                 EXTRA_VIDEO_URI
-            ) ?: return
+            )
+            ?: return
 
         val uri =
             Uri.parse(uriString)
@@ -1672,7 +2037,6 @@ class PlayerActivity : ComponentActivity() {
             .setPositiveButton(
                 R.string.delete_video
             ) { _, _ ->
-
                 deleteVideo(uri)
             }
             .show()
@@ -1734,9 +2098,7 @@ class PlayerActivity : ComponentActivity() {
         } catch (_: Exception) {
 
             showTemporaryMessage(
-                getString(
-                    R.string.delete_video
-                )
+                "حذف ویدئو انجام نشد."
             )
         }
     }
@@ -1824,49 +2186,11 @@ class PlayerActivity : ComponentActivity() {
 
         if (isInPictureInPictureMode) {
 
-            previousButton.visibility =
-                View.GONE
-
-            nextButton.visibility =
-                View.GONE
-
-            repeatButton.visibility =
-                View.GONE
-
-            audioButton.visibility =
-                View.GONE
-
-            favoriteButton.visibility =
-                View.GONE
-
-            speedMinusButton.visibility =
-                View.GONE
-
-            speedButton.visibility =
-                View.GONE
-
-            speedPlusButton.visibility =
-                View.GONE
-
-            aspectButton.visibility =
-                View.GONE
-
-            subtitleButton.visibility =
-                View.GONE
-
-            sleepTimerButton.visibility =
-                View.GONE
-
-            shareButton.visibility =
-                View.GONE
-
-            deleteButton.visibility =
-                View.GONE
+            setPlayerControlsVisibility(
+                false
+            )
 
             lockButton.visibility =
-                View.GONE
-
-            fullscreenButton.visibility =
                 View.GONE
 
             gestureInfo.visibility =
@@ -1900,16 +2224,6 @@ class PlayerActivity : ComponentActivity() {
     }
 
     override fun onStop() {
-
-        /*
-         * مهم:
-         *
-         * اینجا دیگر Player را Pause نمی‌کنیم.
-         *
-         * Player داخل PlaybackService قرار دارد
-         * و باید بتواند بعد از خروج Activity
-         * همچنان پخش کند.
-         */
 
         savePosition()
 
