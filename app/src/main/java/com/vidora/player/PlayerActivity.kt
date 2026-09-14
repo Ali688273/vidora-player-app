@@ -3,8 +3,10 @@ package com.vidora.player
 import android.Manifest
 import android.app.AlertDialog
 import android.app.PictureInPictureParams
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.media.AudioManager
 import android.net.Uri
@@ -31,14 +33,15 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
-import androidx.media3.common.util.UnstableApi
-import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.session.MediaController
+import androidx.media3.session.SessionToken
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import androidx.media3.ui.TrackSelectionDialogBuilder
+import com.google.common.util.concurrent.ListenableFuture
 import kotlin.math.abs
 
-@OptIn(UnstableApi::class)
+@OptIn(androidx.media3.common.util.UnstableApi::class)
 class PlayerActivity : ComponentActivity() {
 
     private lateinit var playerView: PlayerView
@@ -61,7 +64,10 @@ class PlayerActivity : ComponentActivity() {
     private lateinit var gestureInfo: TextView
     private lateinit var lockedOverlay: TextView
 
-    private var player: ExoPlayer? = null
+    private var player: Player? = null
+
+    private var controllerFuture:
+        ListenableFuture<MediaController>? = null
 
     private var isLocked = false
     private var currentSpeed = 1.0f
@@ -86,7 +92,8 @@ class PlayerActivity : ComponentActivity() {
     private var startVolume = 0
     private var startBrightness = 0.5f
 
-    private var gestureMode = GestureMode.NONE
+    private var gestureMode =
+        GestureMode.NONE
 
     private enum class GestureMode {
         NONE,
@@ -135,7 +142,9 @@ class PlayerActivity : ComponentActivity() {
             WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
         )
 
-        setContentView(R.layout.activity_player)
+        setContentView(
+            R.layout.activity_player
+        )
 
         playerView =
             findViewById(R.id.playerView)
@@ -192,60 +201,117 @@ class PlayerActivity : ComponentActivity() {
             findViewById(R.id.lockedOverlay)
 
         audioManager =
-            getSystemService(Context.AUDIO_SERVICE)
-                as AudioManager
+            getSystemService(
+                Context.AUDIO_SERVICE
+            ) as AudioManager
 
         setupButtons()
         setupGestures()
-        initializePlayer()
+
+        connectToPlaybackService()
+
         enterFullscreen()
+    }
+
+    private fun connectToPlaybackService() {
+
+        val sessionToken =
+            SessionToken(
+                this,
+                ComponentName(
+                    this,
+                    PlaybackService::class.java
+                )
+            )
+
+        controllerFuture =
+            MediaController.Builder(
+                this,
+                sessionToken
+            )
+                .buildAsync()
+
+        controllerFuture?.addListener(
+            {
+                try {
+
+                    val controller =
+                        controllerFuture?.get()
+                            ?: return@addListener
+
+                    player =
+                        controller
+
+                    playerView.player =
+                        controller
+
+                    initializePlayer()
+
+                } catch (_: Exception) {
+                    showTemporaryMessage(
+                        "خطا در اتصال پخش‌کننده"
+                    )
+                }
+            },
+            ContextCompat.getMainExecutor(
+                this
+            )
+        )
     }
 
     private fun setupButtons() {
 
         previousButton.setOnClickListener {
+
             if (!isLocked) {
                 playPreviousVideo()
             }
         }
 
         nextButton.setOnClickListener {
+
             if (!isLocked) {
                 playNextVideo()
             }
         }
 
         repeatButton.setOnClickListener {
+
             if (!isLocked) {
                 toggleRepeat()
             }
         }
 
         audioButton.setOnClickListener {
+
             if (!isLocked) {
                 showAudioTrackDialog()
             }
         }
 
         favoriteButton.setOnClickListener {
+
             if (!isLocked) {
                 toggleFavorite()
             }
         }
 
         speedMinusButton.setOnClickListener {
+
             if (!isLocked) {
                 changeSpeed(-0.1f)
             }
         }
 
         speedPlusButton.setOnClickListener {
+
             if (!isLocked) {
                 changeSpeed(0.1f)
             }
         }
 
         speedButton.setOnClickListener {
+
             if (!isLocked) {
                 resetSpeed()
             }
@@ -273,6 +339,7 @@ class PlayerActivity : ComponentActivity() {
         subtitleButton.setOnClickListener {
 
             if (!isLocked) {
+
                 subtitlePicker.launch(
                     arrayOf(
                         "text/*",
@@ -319,11 +386,9 @@ class PlayerActivity : ComponentActivity() {
 
     private fun getIncomingVideoUri(): Uri? {
 
-        val action =
-            intent.action
-
         if (
-            action == Intent.ACTION_VIEW
+            intent.action ==
+            Intent.ACTION_VIEW
         ) {
             return intent.data
         }
@@ -341,7 +406,6 @@ class PlayerActivity : ComponentActivity() {
     }
 
     private fun isExternalVideo(): Boolean {
-
         return intent.action ==
             Intent.ACTION_VIEW
     }
@@ -495,11 +559,12 @@ class PlayerActivity : ComponentActivity() {
     ) {
 
         currentSpeed =
-            (currentSpeed + amount)
-                .coerceIn(
-                    0.1f,
-                    5.0f
-                )
+            (
+                currentSpeed + amount
+            ).coerceIn(
+                0.1f,
+                5.0f
+            )
 
         currentSpeed =
             String.format(
@@ -692,6 +757,7 @@ class PlayerActivity : ComponentActivity() {
         if (
             ::sleepTimerButton.isInitialized
         ) {
+
             sleepTimerButton.text =
                 getString(
                     R.string.sleep_timer
@@ -1201,7 +1267,6 @@ class PlayerActivity : ComponentActivity() {
 
             deleteButton.visibility =
                 View.GONE
-
         }
 
         createPlayer(
@@ -1241,7 +1306,9 @@ class PlayerActivity : ComponentActivity() {
                     subtitleMimeType
                 )
                 .setLanguage("fa")
-                .setSelectionFlags(1)
+                .setSelectionFlags(
+                    C.SELECTION_FLAG_DEFAULT
+                )
                 .build()
 
         val mediaItem =
@@ -1259,6 +1326,9 @@ class PlayerActivity : ComponentActivity() {
         mediaItem: MediaItem
     ) {
 
+        val currentPlayer =
+            player ?: return
+
         val videoUriString =
             mediaItem.localConfiguration
                 ?.uri
@@ -1272,48 +1342,38 @@ class PlayerActivity : ComponentActivity() {
                 PlaybackHistoryManager
                     .getPosition(
                         this,
-                        Uri.parse(videoUriString)
+                        Uri.parse(
+                            videoUriString
+                        )
                     )
             }
 
-        player?.release()
+        currentPlayer.setMediaItem(
+            mediaItem
+        )
 
-        player =
-            ExoPlayer.Builder(this)
-                .build()
-                .also { exoPlayer ->
+        currentPlayer.repeatMode =
+            if (repeatEnabled) {
+                Player.REPEAT_MODE_ONE
+            } else {
+                Player.REPEAT_MODE_OFF
+            }
 
-                    playerView.player =
-                        exoPlayer
+        currentPlayer.prepare()
 
-                    exoPlayer.setMediaItem(
-                        mediaItem
-                    )
+        if (savedPosition > 0L) {
 
-                    exoPlayer.repeatMode =
-                        if (repeatEnabled) {
-                            Player.REPEAT_MODE_ONE
-                        } else {
-                            Player.REPEAT_MODE_OFF
-                        }
+            currentPlayer.seekTo(
+                savedPosition
+            )
+        }
 
-                    exoPlayer.prepare()
+        currentPlayer.playbackParameters =
+            PlaybackParameters(
+                currentSpeed
+            )
 
-                    if (savedPosition > 0L) {
-
-                        exoPlayer.seekTo(
-                            savedPosition
-                        )
-                    }
-
-                    exoPlayer.playWhenReady =
-                        true
-
-                    exoPlayer.playbackParameters =
-                        PlaybackParameters(
-                            currentSpeed
-                        )
-                }
+        currentPlayer.play()
 
         intent.putExtra(
             EXTRA_VIDEO_URI,
@@ -1841,14 +1901,17 @@ class PlayerActivity : ComponentActivity() {
 
     override fun onStop() {
 
-        if (
-            !isInPictureInPictureMode
-        ) {
+        /*
+         * مهم:
+         *
+         * اینجا دیگر Player را Pause نمی‌کنیم.
+         *
+         * Player داخل PlaybackService قرار دارد
+         * و باید بتواند بعد از خروج Activity
+         * همچنان پخش کند.
+         */
 
-            savePosition()
-
-            player?.pause()
-        }
+        savePosition()
 
         super.onStop()
     }
@@ -1865,8 +1928,11 @@ class PlayerActivity : ComponentActivity() {
 
         playerView.player = null
 
-        player?.release()
+        controllerFuture?.let {
+            MediaController.releaseFuture(it)
+        }
 
+        controllerFuture = null
         player = null
 
         super.onDestroy()
