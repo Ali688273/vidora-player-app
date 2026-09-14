@@ -7,8 +7,8 @@ object VideoQualitySettings {
     private const val PREFS =
         "vidora_video_quality"
 
-    private const val KEY_ENHANCEMENT =
-        "enhancement"
+    private const val KEY_ENABLED =
+        "enhancement_enabled"
 
     private const val KEY_SHARPNESS =
         "sharpness"
@@ -25,24 +25,26 @@ object VideoQualitySettings {
             Context.MODE_PRIVATE
         )
 
-    fun enhancementEnabled(
+    fun isEnabled(
         context: Context
     ): Boolean {
+
         return prefs(context)
             .getBoolean(
-                KEY_ENHANCEMENT,
+                KEY_ENABLED,
                 false
             )
     }
 
-    fun setEnhancementEnabled(
+    fun setEnabled(
         context: Context,
         enabled: Boolean
     ) {
+
         prefs(context)
             .edit()
             .putBoolean(
-                KEY_ENHANCEMENT,
+                KEY_ENABLED,
                 enabled
             )
             .apply()
@@ -51,6 +53,7 @@ object VideoQualitySettings {
     fun getSharpness(
         context: Context
     ): Float {
+
         return prefs(context)
             .getFloat(
                 KEY_SHARPNESS,
@@ -62,12 +65,13 @@ object VideoQualitySettings {
         context: Context,
         value: Float
     ) {
+
         prefs(context)
             .edit()
             .putFloat(
                 KEY_SHARPNESS,
                 value.coerceIn(
-                    0f,
+                    -1f,
                     1f
                 )
             )
@@ -77,6 +81,7 @@ object VideoQualitySettings {
     fun getContrast(
         context: Context
     ): Float {
+
         return prefs(context)
             .getFloat(
                 KEY_CONTRAST,
@@ -88,6 +93,7 @@ object VideoQualitySettings {
         context: Context,
         value: Float
     ) {
+
         prefs(context)
             .edit()
             .putFloat(
@@ -103,6 +109,7 @@ object VideoQualitySettings {
     fun getBrightness(
         context: Context
     ): Float {
+
         return prefs(context)
             .getFloat(
                 KEY_BRIGHTNESS,
@@ -114,13 +121,14 @@ object VideoQualitySettings {
         context: Context,
         value: Float
     ) {
+
         prefs(context)
             .edit()
             .putFloat(
                 KEY_BRIGHTNESS,
                 value.coerceIn(
-                    -0.5f,
-                    0.5f
+                    -1f,
+                    1f
                 )
             )
             .apply()
