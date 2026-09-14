@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest
+    xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- دسترسی خواندن ویدئوهای دستگاه -->
     <uses-permission
         android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
@@ -10,11 +10,9 @@
     <uses-permission
         android:name="android.permission.READ_MEDIA_VIDEO" />
 
-    <!-- دسترسی اینترنت برای پخش ویدئوهای آنلاین -->
     <uses-permission
         android:name="android.permission.INTERNET" />
 
-    <!-- سرویس پخش در پس‌زمینه -->
     <uses-permission
         android:name="android.permission.FOREGROUND_SERVICE" />
 
@@ -30,33 +28,25 @@
         android:theme="@style/Theme.Vidora"
         android:usesCleartextTraffic="true">
 
-        <!--
-            سرویس اصلی پخش.
-            امکان ادامه پخش هنگام خاموش شدن صفحه
-            و کنترل از اعلان/هدست/سیستم را فراهم می‌کند.
-        -->
         <service
             android:name=".PlaybackService"
             android:foregroundServiceType="mediaPlayback"
             android:exported="true">
 
             <intent-filter>
-
                 <action
                     android:name="androidx.media3.session.MediaSessionService" />
 
                 <action
                     android:name="android.media.browse.MediaBrowserService" />
-
             </intent-filter>
 
         </service>
 
-        <!--
-            پخش‌کننده اصلی.
-            می‌تواند ویدئوهای محلی و لینک‌های مستقیم
-            HTTP / HTTPS را دریافت کند.
-        -->
+        <activity
+            android:name=".SettingsActivity"
+            android:exported="false" />
+
         <activity
             android:name=".PlayerActivity"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize"
@@ -64,7 +54,6 @@
             android:supportsPictureInPicture="true"
             android:exported="true">
 
-            <!-- باز کردن فایل‌های ویدئویی از برنامه‌های دیگر -->
             <intent-filter>
 
                 <action
@@ -81,7 +70,6 @@
 
             </intent-filter>
 
-            <!-- دریافت لینک مستقیم HTTPS -->
             <intent-filter>
 
                 <action
@@ -98,7 +86,6 @@
 
             </intent-filter>
 
-            <!-- دریافت لینک مستقیم HTTP -->
             <intent-filter>
 
                 <action
@@ -117,7 +104,6 @@
 
         </activity>
 
-        <!-- صفحه اصلی برنامه -->
         <activity
             android:name=".MainActivity"
             android:exported="true">
