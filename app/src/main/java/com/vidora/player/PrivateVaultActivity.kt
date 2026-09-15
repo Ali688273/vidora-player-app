@@ -13,13 +13,11 @@ import java.io.File
 class PrivateVaultActivity :
     ComponentActivity() {
 
-    private lateinit var folder:
-        File
+    private lateinit var folder: File
 
     override fun onCreate(
         savedInstanceState: Bundle?
     ) {
-
         super.onCreate(
             savedInstanceState
         )
@@ -82,9 +80,7 @@ class PrivateVaultActivity :
                     "یک رمز برای پوشه خصوصی انتخاب کنید."
                 }
             )
-            .setView(
-                input
-            )
+            .setView(input)
             .setNegativeButton(
                 "لغو",
                 null
@@ -131,10 +127,7 @@ class PrivateVaultActivity :
                                 ""
                             )
 
-                    if (
-                        saved ==
-                        password
-                    ) {
+                    if (saved == password) {
 
                         openVault()
 
@@ -165,6 +158,9 @@ class PrivateVaultActivity :
                     Gravity.CENTER_HORIZONTAL
 
                 setPadding(
+                    24,
+                    24,
+                    24,
                     24
                 )
 
@@ -198,9 +194,7 @@ class PrivateVaultActivity :
                 )
             }
 
-        root.addView(
-            title
-        )
+        root.addView(title)
 
         val add =
             Button(this).apply {
@@ -230,9 +224,7 @@ class PrivateVaultActivity :
                 }
             }
 
-        root.addView(
-            add
-        )
+        root.addView(add)
 
         val files =
             folder.listFiles()
@@ -256,9 +248,7 @@ class PrivateVaultActivity :
 
                         val uri =
                             android.net.Uri
-                                .fromFile(
-                                    file
-                                )
+                                .fromFile(file)
 
                         startActivity(
                             Intent(
@@ -303,14 +293,10 @@ class PrivateVaultActivity :
                     }
                 }
 
-            root.addView(
-                button
-            )
+            root.addView(button)
         }
 
-        setContentView(
-            root
-        )
+        setContentView(root)
     }
 
     override fun onActivityResult(
@@ -339,9 +325,7 @@ class PrivateVaultActivity :
             try {
 
                 contentResolver
-                    .openInputStream(
-                        uri
-                    )
+                    .openInputStream(uri)
                     ?.use { input ->
 
                         val name =
