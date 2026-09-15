@@ -6,6 +6,7 @@ import android.provider.Settings
 import android.view.Gravity
 import android.widget.Button
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.SeekBar
 import android.widget.Switch
 import android.widget.TextView
@@ -14,13 +15,11 @@ import androidx.core.view.setPadding
 
 class SettingsActivity : ComponentActivity() {
 
-    private lateinit var root:
-        LinearLayout
+    private lateinit var root: LinearLayout
 
     override fun onCreate(
         savedInstanceState: Bundle?
     ) {
-
         super.onCreate(
             savedInstanceState
         )
@@ -46,9 +45,7 @@ class SettingsActivity : ComponentActivity() {
             }
 
         val scroll =
-            android.widget.ScrollView(
-                this
-            )
+            ScrollView(this)
 
         scroll.addView(
             root
@@ -101,6 +98,11 @@ class SettingsActivity : ComponentActivity() {
                 this,
                 checked
             )
+
+            PlaybackSettings.setResumePlayback(
+                this,
+                checked
+            )
         }
 
         addSwitch(
@@ -114,7 +116,46 @@ class SettingsActivity : ComponentActivity() {
             )
         }
 
+        addSwitch(
+            "پخش در پس‌زمینه",
+            PlaybackSettings.backgroundPlayback(this)
+        ) { checked ->
+
+            PlaybackSettings.setBackgroundPlayback(
+                this,
+                checked
+            )
+        }
+
+        addSwitch(
+            "روشن ماندن صفحه هنگام پخش",
+            PlaybackSettings.keepScreenOn(this)
+        ) { checked ->
+
+            PlaybackSettings.setKeepScreenOn(
+                this,
+                checked
+            )
+        }
+
+        addSwitch(
+            "کنترل‌های حرکتی",
+            PlaybackSettings.gestureControls(this)
+        ) { checked ->
+
+            PlaybackSettings.setGestureControls(
+                this,
+                checked
+            )
+        }
+
         addDefaultSpeed()
+
+        addSection(
+            "نسبت تصویر"
+        )
+
+        addAspectOptions()
 
         addSection(
             "زیرنویس"
@@ -124,8 +165,15 @@ class SettingsActivity : ComponentActivity() {
 
         addSwitch(
             "نادیده گرفتن اندازه داخلی زیرنویس",
-            true
+            getSharedPreferences(
+                "vidora_player_preferences",
+                MODE_PRIVATE
+            ).getBoolean(
+                "subtitle_ignore_embedded",
+                true
+            )
         ) {
+
             getSharedPreferences(
                 "vidora_player_preferences",
                 MODE_PRIVATE
@@ -137,6 +185,30 @@ class SettingsActivity : ComponentActivity() {
                 )
                 .apply()
         }
+
+        addSwitch(
+            "پس‌زمینه زیرنویس",
+            SubtitleSettings.useBackground(this)
+        ) { checked ->
+
+            SubtitleSettings.setUseBackground(
+                this,
+                checked
+            )
+        }
+
+        addSwitch(
+            "زیرنویس ضخیم",
+            SubtitleSettings.bold(this)
+        ) { checked ->
+
+            SubtitleSettings.setBold(
+                this,
+                checked
+            )
+        }
+
+        addSubtitleDelay()
 
         addSection(
             "زبان"
@@ -180,6 +252,7 @@ class SettingsActivity : ComponentActivity() {
                 Intent(
                     Intent.ACTION_OPEN_DOCUMENT_TREE
                 ).apply {
+
                     addFlags(
                         Intent.FLAG_GRANT_READ_URI_PERMISSION or
                             Intent.FLAG_GRANT_WRITE_URI_PERMISSION or
@@ -198,14 +271,25 @@ class SettingsActivity : ComponentActivity() {
         addButton(
             "⚙️ تنظیمات دسترسی سیستم"
         ) {
+
             try {
+
                 startActivity(
                     Intent(
                         Settings.ACTION_ACCESSIBILITY_SETTINGS
                     )
                 )
-            } catch (_: Exception) {
+
+            } catch (
+                _: Exception
+            ) {
             }
+        }
+
+        addButton(
+            "🔄 بازگردانی تنظیمات"
+        ) {
+            resetSettings()
         }
     }
 
@@ -221,6 +305,9 @@ class SettingsActivity : ComponentActivity() {
 
                 textSize =
                     25f
+
+                gravity =
+                    Gravity.RIGHT
 
                 setTextColor(
                     getColor(
@@ -253,6 +340,9 @@ class SettingsActivity : ComponentActivity() {
 
                 textSize =
                     19f
+
+                gravity =
+                    Gravity.RIGHT
 
                 setTextColor(
                     getColor(
@@ -307,6 +397,7 @@ class SettingsActivity : ComponentActivity() {
                 setOnCheckedChangeListener {
                         _,
                         value ->
+
                     listener(
                         value
                     )
@@ -340,22 +431,53 @@ class SettingsActivity : ComponentActivity() {
             label
         )
 
+        val valueText =
+            TextView(this).apply {
+
+                textSize =
+                    15f
+
+                gravity =
+                    Gravity.CENTER
+
+                setTextColor(
+                    getColor(
+                        R.color.vidora_text
+                    )
+                )
+            }
+
+        root.addView(
+            valueText
+        )
+
         val seek =
             SeekBar(this).apply {
 
                 max =
-                    40
+                    19
+
+                val current =
+                    PlaybackSettings
+                        .getDefaultSpeed(
+                            this@SettingsActivity
+                        )
 
                 progress =
                     (
-                        PlaybackSettings
-                            .getDefaultSpeed(
-                                this@SettingsActivity
-                            ) * 10f
-                        ).toInt()
-                        .coerceIn(
-                            5,
-                            50
+                        (current - 0.25f) /
+                            0.25f
+                        )
+                            .toInt()
+                            .coerceIn(
+                                0,
+                                19
+                            )
+
+                valueText.text =
+                    "سرعت: %.2fx"
+                        .format(
+                            current
                         )
 
                 setOnSeekBarChangeListener(
@@ -374,18 +496,26 @@ class SettingsActivity : ComponentActivity() {
 
                             val speed =
                                 (
-                                    progress
-                                        .coerceIn(
-                                            5,
-                                            40
-                                        )
-                                    ) / 10f
+                                    0.25f +
+                                        progress *
+                                        0.25f
+                                    )
+                                    .coerceIn(
+                                        0.25f,
+                                        5.0f
+                                    )
 
                             PlaybackSettings
                                 .setDefaultSpeed(
                                     this@SettingsActivity,
                                     speed
                                 )
+
+                            valueText.text =
+                                "سرعت: %.2fx"
+                                    .format(
+                                        speed
+                                    )
                         }
 
                         override fun onStartTrackingTouch(
@@ -404,6 +534,102 @@ class SettingsActivity : ComponentActivity() {
         root.addView(
             seek
         )
+    }
+
+    private fun addAspectOptions() {
+
+        val container =
+            LinearLayout(this).apply {
+
+                orientation =
+                    LinearLayout.HORIZONTAL
+
+                gravity =
+                    Gravity.CENTER
+            }
+
+        val aspects =
+            listOf(
+                "تطبیق" to 0,
+                "کامل" to 1,
+                "16:9" to 2,
+                "4:3" to 3
+            )
+
+        aspects.forEach { item ->
+
+            val button =
+                Button(this).apply {
+
+                    text =
+                        item.first
+
+                    isAllCaps =
+                        false
+
+                    setOnClickListener {
+
+                        PlaybackSettings
+                            .setDefaultAspect(
+                                this@SettingsActivity,
+                                item.second
+                            )
+
+                        updateAspectButtons(
+                            container
+                        )
+                    }
+                }
+
+            container.addView(
+                button,
+                LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1f
+                )
+            )
+        }
+
+        root.addView(
+            container
+        )
+
+        updateAspectButtons(
+            container
+        )
+    }
+
+    private fun updateAspectButtons(
+        container: LinearLayout
+    ) {
+
+        val selected =
+            PlaybackSettings
+                .getDefaultAspect(
+                    this
+                )
+
+        for (
+            index in
+            0 until container.childCount
+        ) {
+
+            val button =
+                container.getChildAt(
+                    index
+                ) as? Button
+                    ?: continue
+
+            button.alpha =
+                if (
+                    index == selected
+                ) {
+                    1f
+                } else {
+                    0.65f
+                }
+        }
     }
 
     private fun addSubtitleSize() {
@@ -428,26 +654,56 @@ class SettingsActivity : ComponentActivity() {
             label
         )
 
+        val valueText =
+            TextView(this).apply {
+
+                textSize =
+                    15f
+
+                gravity =
+                    Gravity.CENTER
+
+                setTextColor(
+                    getColor(
+                        R.color.vidora_text
+                    )
+                )
+            }
+
+        root.addView(
+            valueText
+        )
+
         val seek =
             SeekBar(this).apply {
 
                 max =
-                    80
+                    19
+
+                val current =
+                    SubtitleSettings
+                        .getSize(
+                            this@SettingsActivity
+                        )
 
                 progress =
                     (
-                        getSharedPreferences(
-                            "vidora_player_preferences",
-                            MODE_PRIVATE
+                        (
+                            current -
+                                0.025f
+                            ) /
+                            0.005f
                         )
-                            .getFloat(
-                                "subtitle_size",
-                                0.0533f
-                            ) * 1000f
-                        ).toInt()
-                        .coerceIn(
-                            20,
-                            100
+                            .toInt()
+                            .coerceIn(
+                                0,
+                                19
+                            )
+
+                valueText.text =
+                    "اندازه: %.1f%%"
+                        .format(
+                            current * 100f
                         )
 
                 setOnSeekBarChangeListener(
@@ -466,13 +722,26 @@ class SettingsActivity : ComponentActivity() {
 
                             val value =
                                 (
-                                    progress
-                                        .coerceIn(
-                                            20,
-                                            100
-                                        )
-                                    / 1000f
+                                    0.025f +
+                                        progress *
+                                        0.005f
                                     )
+                                    .coerceIn(
+                                        0.025f,
+                                        0.12f
+                                    )
+
+                            SubtitleSettings
+                                .setSize(
+                                    this@SettingsActivity,
+                                    value
+                                )
+
+                            PlaybackSettings
+                                .setSubtitleSize(
+                                    this@SettingsActivity,
+                                    value
+                                )
 
                             getSharedPreferences(
                                 "vidora_player_preferences",
@@ -484,6 +753,12 @@ class SettingsActivity : ComponentActivity() {
                                     value
                                 )
                                 .apply()
+
+                            valueText.text =
+                                "اندازه: %.1f%%"
+                                    .format(
+                                        value * 100f
+                                    )
                         }
 
                         override fun onStartTrackingTouch(
@@ -501,6 +776,56 @@ class SettingsActivity : ComponentActivity() {
 
         root.addView(
             seek
+        )
+    }
+
+    private fun addSubtitleDelay() {
+
+        val label =
+            TextView(this).apply {
+
+                text =
+                    "تأخیر زیرنویس برای ویدئوی فعلی"
+
+                textSize =
+                    16f
+
+                setTextColor(
+                    getColor(
+                        R.color.vidora_text
+                    )
+                )
+            }
+
+        root.addView(
+            label
+        )
+
+        val value =
+            TextView(this).apply {
+
+                text =
+                    "برای تغییر تأخیر، از کنترل زیرنویس داخل پخش‌کننده استفاده کنید."
+
+                textSize =
+                    14f
+
+                setTextColor(
+                    getColor(
+                        R.color.vidora_text
+                    )
+                )
+
+                setPadding(
+                    0,
+                    8,
+                    0,
+                    8
+                )
+            }
+
+        root.addView(
+            value
         )
     }
 
@@ -584,7 +909,9 @@ class SettingsActivity : ComponentActivity() {
             )
 
         val message =
-            if (playlists.isEmpty()) {
+            if (
+                playlists.isEmpty()
+            ) {
 
                 "هنوز پلی‌لیستی ساخته نشده است."
 
@@ -612,5 +939,91 @@ class SettingsActivity : ComponentActivity() {
                 null
             )
             .show()
+    }
+
+    private fun resetSettings() {
+
+        PlaybackSettings
+            .setDefaultSpeed(
+                this,
+                1.0f
+            )
+
+        PlaybackSettings
+            .setDefaultAspect(
+                this,
+                0
+            )
+
+        PlaybackSettings
+            .setAutoPlayNext(
+                this,
+                true
+            )
+
+        PlaybackSettings
+            .setResumePlayback(
+                this,
+                true
+            )
+
+        PlaybackSettings
+            .setBackgroundPlayback(
+                this,
+                true
+            )
+
+        PlaybackSettings
+            .setKeepScreenOn(
+                this,
+                true
+            )
+
+        PlaybackSettings
+            .setGestureControls(
+                this,
+                true
+            )
+
+        PlaybackSettings
+            .setSubtitleSize(
+                this,
+                0.0533f
+            )
+
+        SubtitleSettings
+            .setSize(
+                this,
+                0.0533f
+            )
+
+        SubtitleSettings
+            .setUseBackground(
+                this,
+                true
+            )
+
+        SubtitleSettings
+            .setBold(
+                this,
+                false
+            )
+
+        getSharedPreferences(
+            "vidora_player_preferences",
+            MODE_PRIVATE
+        )
+            .edit()
+            .putFloat(
+                "subtitle_size",
+                0.0533f
+            )
+            .putBoolean(
+                "subtitle_ignore_embedded",
+                true
+            )
+            .apply()
+
+        recreate()
     }
 }
