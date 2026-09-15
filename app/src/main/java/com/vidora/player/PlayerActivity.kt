@@ -642,72 +642,63 @@ class PlayerActivity : FragmentActivity() {
 
     private fun showVideoQualityDialog() {
 
-        val enabled =
-            VideoQualitySettings.enhancementEnabled(
-                this
+        val currentPlayer =
+            player
+
+        if (currentPlayer == null) {
+
+            showTemporaryMessage(
+                "پخش‌کننده هنوز آماده نیست."
             )
 
-        val options =
-            arrayOf(
-                "بهبود تصویر ادراکی",
-                "شارپنس",
-                "کنتراست"
-            )
+            return
+        }
 
-        AlertDialog.Builder(this)
-            .setTitle(
-                "کیفیت تصویر"
-            )
-            .setMultiChoiceItems(
-                options,
-                booleanArrayOf(
-                    enabled,
-                    VideoQualitySettings.getSharpness(
-                        this
-                    ) > 0f,
-                    VideoQualitySettings.getContrast(
-                        this
-                    ) > 1f
-                )
-            ) { _, which, checked ->
-
-                when (which) {
-
-                    0 ->
-                        VideoQualitySettings
-                            .setEnhancementEnabled(
-                                this,
-                                checked
-                            )
-
-                    1 ->
-                        VideoQualitySettings
-                            .setSharpness(
-                                this,
-                                if (checked) {
-                                    0.5f
-                                } else {
-                                    0f
-                                }
-                            )
-
-                    2 ->
-                        VideoQualitySettings
-                            .setContrast(
-                                this,
-                                if (checked) {
-                                    1.15f
-                                } else {
-                                    1f
-                                }
-                            )
+        val videoGroups =
+            currentPlayer.currentTracks.groups
+                .filter {
+                    it.type ==
+                        C.TRACK_TYPE_VIDEO
                 }
-            }
-            .setPositiveButton(
-                "ذخیره",
-                null
+
+        if (videoGroups.isEmpty()) {
+
+            AlertDialog.Builder(this)
+                .setTitle(
+                    "کیفیت تصویر"
+                )
+                .setMessage(
+                    "برای این ویدئو کیفیت‌های جداگانه قابل انتخاب نیست."
+                )
+                .setPositiveButton(
+                    "باشه",
+                    null
+                )
+                .show()
+
+            return
+        }
+
+        try {
+
+            TrackSelectionDialogBuilder(
+                this,
+                "انتخاب کیفیت ویدئو",
+                currentPlayer,
+                C.TRACK_TYPE_VIDEO
             )
-            .show()
+                .setAllowAdaptiveSelections(true)
+                .setShowDisableOption(false)
+                .setIsDisabledAllowed(false)
+                .build()
+                .show()
+
+        } catch (_: Exception) {
+
+            showTemporaryMessage(
+                "انتخاب کیفیت برای این ویدئو در دسترس نیست."
+            )
+        }
     }
 
     private fun addCurrentToQueue() {
