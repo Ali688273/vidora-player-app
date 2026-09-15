@@ -2,8 +2,11 @@ package com.vidora.player
 
 import android.content.Intent
 import android.os.Bundle
+import android.provider.Settings
 import android.view.Gravity
+import android.widget.Button
 import android.widget.LinearLayout
+import android.widget.SeekBar
 import android.widget.Switch
 import android.widget.TextView
 import androidx.activity.ComponentActivity
@@ -11,20 +14,29 @@ import androidx.core.view.setPadding
 
 class SettingsActivity : ComponentActivity() {
 
+    private lateinit var root:
+        LinearLayout
+
     override fun onCreate(
         savedInstanceState: Bundle?
     ) {
+
         super.onCreate(
             savedInstanceState
         )
 
-        val root =
+        buildUi()
+    }
+
+    private fun buildUi() {
+
+        root =
             LinearLayout(this).apply {
 
                 orientation =
                     LinearLayout.VERTICAL
 
-                setPadding(32)
+                setPadding(28)
 
                 setBackgroundColor(
                     getColor(
@@ -33,13 +45,182 @@ class SettingsActivity : ComponentActivity() {
                 )
             }
 
+        val scroll =
+            android.widget.ScrollView(
+                this
+            )
+
+        scroll.addView(
+            root
+        )
+
+        setContentView(
+            scroll
+        )
+
+        addTitle(
+            "تنظیمات Vidora Player"
+        )
+
+        addSection(
+            "ظاهر"
+        )
+
+        addSwitch(
+            "حالت تاریک",
+            VidoraSettings.isDarkMode(this)
+        ) { checked ->
+
+            VidoraSettings.setDarkMode(
+                this,
+                checked
+            )
+        }
+
+        addSwitch(
+            "نمایش ویدئوهای مخفی",
+            VidoraSettings.showHidden(this)
+        ) { checked ->
+
+            VidoraSettings.setShowHidden(
+                this,
+                checked
+            )
+        }
+
+        addSection(
+            "پخش"
+        )
+
+        addSwitch(
+            "ادامه پخش از آخرین موقعیت",
+            VidoraSettings.autoResume(this)
+        ) { checked ->
+
+            VidoraSettings.setAutoResume(
+                this,
+                checked
+            )
+        }
+
+        addSwitch(
+            "پخش خودکار ویدئوی بعدی",
+            PlaybackSettings.autoPlayNext(this)
+        ) { checked ->
+
+            PlaybackSettings.setAutoPlayNext(
+                this,
+                checked
+            )
+        }
+
+        addDefaultSpeed()
+
+        addSection(
+            "زیرنویس"
+        )
+
+        addSubtitleSize()
+
+        addSwitch(
+            "نادیده گرفتن اندازه داخلی زیرنویس",
+            true
+        ) {
+            getSharedPreferences(
+                "vidora_player_preferences",
+                MODE_PRIVATE
+            )
+                .edit()
+                .putBoolean(
+                    "subtitle_ignore_embedded",
+                    it
+                )
+                .apply()
+        }
+
+        addSection(
+            "زبان"
+        )
+
+        addLanguageSwitch()
+
+        addSection(
+            "امکانات"
+        )
+
+        addButton(
+            "🌐 پخش ویدئوی آنلاین"
+        ) {
+
+            startActivity(
+                Intent(
+                    this,
+                    OnlineVideoActivity::class.java
+                )
+            )
+        }
+
+        addButton(
+            "🔒 پوشه خصوصی"
+        ) {
+
+            startActivity(
+                Intent(
+                    this,
+                    PrivateVaultActivity::class.java
+                )
+            )
+        }
+
+        addButton(
+            "📂 انتخاب پوشه رسانه"
+        ) {
+
+            startActivity(
+                Intent(
+                    Intent.ACTION_OPEN_DOCUMENT_TREE
+                ).apply {
+                    addFlags(
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                            Intent.FLAG_GRANT_WRITE_URI_PERMISSION or
+                            Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
+                    )
+                }
+            )
+        }
+
+        addButton(
+            "📋 مدیریت پلی‌لیست‌ها"
+        ) {
+            showPlaylists()
+        }
+
+        addButton(
+            "⚙️ تنظیمات دسترسی سیستم"
+        ) {
+            try {
+                startActivity(
+                    Intent(
+                        Settings.ACTION_ACCESSIBILITY_SETTINGS
+                    )
+                )
+            } catch (_: Exception) {
+            }
+        }
+    }
+
+    private fun addTitle(
+        text: String
+    ) {
+
         val title =
             TextView(this).apply {
 
-                text =
-                    "تنظیمات Vidora Player"
+                this.text =
+                    text
 
-                textSize = 25f
+                textSize =
+                    25f
 
                 setTextColor(
                     getColor(
@@ -51,142 +232,279 @@ class SettingsActivity : ComponentActivity() {
                     0,
                     20,
                     0,
-                    30
+                    28
                 )
-            }
-
-        root.addView(title)
-
-        val darkMode =
-            Switch(this).apply {
-
-                text =
-                    "حالت تاریک"
-
-                textSize = 17f
-
-                isChecked =
-                    VidoraSettings.isDarkMode(
-                        this@SettingsActivity
-                    )
-
-                setTextColor(
-                    getColor(
-                        R.color.vidora_text
-                    )
-                )
-
-                setOnCheckedChangeListener {
-                        _,
-                        checked ->
-
-                    VidoraSettings.setDarkMode(
-                        this@SettingsActivity,
-                        checked
-                    )
-                }
             }
 
         root.addView(
-            darkMode
+            title
         )
+    }
 
-        val resume =
-            Switch(this).apply {
+    private fun addSection(
+        text: String
+    ) {
 
-                text =
-                    "ادامه پخش از آخرین موقعیت"
-
-                textSize = 17f
-
-                isChecked =
-                    VidoraSettings.autoResume(
-                        this@SettingsActivity
-                    )
-
-                setTextColor(
-                    getColor(
-                        R.color.vidora_text
-                    )
-                )
-
-                setOnCheckedChangeListener {
-                        _,
-                        checked ->
-
-                    VidoraSettings.setAutoResume(
-                        this@SettingsActivity,
-                        checked
-                    )
-                }
-            }
-
-        root.addView(
-            resume
-        )
-
-        val hidden =
-            Switch(this).apply {
-
-                text =
-                    "نمایش ویدئوهای مخفی"
-
-                textSize = 17f
-
-                isChecked =
-                    VidoraSettings.showHidden(
-                        this@SettingsActivity
-                    )
-
-                setTextColor(
-                    getColor(
-                        R.color.vidora_text
-                    )
-                )
-
-                setOnCheckedChangeListener {
-                        _,
-                        checked ->
-
-                    VidoraSettings.setShowHidden(
-                        this@SettingsActivity,
-                        checked
-                    )
-                }
-            }
-
-        root.addView(
-            hidden
-        )
-
-        val languageTitle =
+        val view =
             TextView(this).apply {
 
-                text =
-                    "زبان برنامه"
+                this.text =
+                    text
 
-                textSize = 18f
+                textSize =
+                    19f
 
                 setTextColor(
                     getColor(
                         R.color.vidora_text
                     )
                 )
-
-                gravity =
-                    Gravity.START
 
                 setPadding(
                     0,
-                    35,
+                    26,
                     0,
                     12
                 )
             }
 
         root.addView(
-            languageTitle
+            view
         )
+    }
+
+    private fun addSwitch(
+        text: String,
+        checked: Boolean,
+        listener: (Boolean) -> Unit
+    ) {
+
+        val switch =
+            Switch(this).apply {
+
+                this.text =
+                    text
+
+                textSize =
+                    16f
+
+                isChecked =
+                    checked
+
+                setTextColor(
+                    getColor(
+                        R.color.vidora_text
+                    )
+                )
+
+                setPadding(
+                    0,
+                    10,
+                    0,
+                    10
+                )
+
+                setOnCheckedChangeListener {
+                        _,
+                        value ->
+                    listener(
+                        value
+                    )
+                }
+            }
+
+        root.addView(
+            switch
+        )
+    }
+
+    private fun addDefaultSpeed() {
+
+        val label =
+            TextView(this).apply {
+
+                text =
+                    "سرعت پیش‌فرض"
+
+                textSize =
+                    16f
+
+                setTextColor(
+                    getColor(
+                        R.color.vidora_text
+                    )
+                )
+            }
+
+        root.addView(
+            label
+        )
+
+        val seek =
+            SeekBar(this).apply {
+
+                max =
+                    40
+
+                progress =
+                    (
+                        PlaybackSettings
+                            .getDefaultSpeed(
+                                this@SettingsActivity
+                            ) * 10f
+                        ).toInt()
+                        .coerceIn(
+                            5,
+                            50
+                        )
+
+                setOnSeekBarChangeListener(
+                    object :
+                        SeekBar.OnSeekBarChangeListener {
+
+                        override fun onProgressChanged(
+                            bar: SeekBar?,
+                            progress: Int,
+                            fromUser: Boolean
+                        ) {
+
+                            if (!fromUser) {
+                                return
+                            }
+
+                            val speed =
+                                (
+                                    progress
+                                        .coerceIn(
+                                            5,
+                                            40
+                                        )
+                                    ) / 10f
+
+                            PlaybackSettings
+                                .setDefaultSpeed(
+                                    this@SettingsActivity,
+                                    speed
+                                )
+                        }
+
+                        override fun onStartTrackingTouch(
+                            bar: SeekBar?
+                        ) {
+                        }
+
+                        override fun onStopTrackingTouch(
+                            bar: SeekBar?
+                        ) {
+                        }
+                    }
+                )
+            }
+
+        root.addView(
+            seek
+        )
+    }
+
+    private fun addSubtitleSize() {
+
+        val label =
+            TextView(this).apply {
+
+                text =
+                    "اندازه زیرنویس"
+
+                textSize =
+                    16f
+
+                setTextColor(
+                    getColor(
+                        R.color.vidora_text
+                    )
+                )
+            }
+
+        root.addView(
+            label
+        )
+
+        val seek =
+            SeekBar(this).apply {
+
+                max =
+                    80
+
+                progress =
+                    (
+                        getSharedPreferences(
+                            "vidora_player_preferences",
+                            MODE_PRIVATE
+                        )
+                            .getFloat(
+                                "subtitle_size",
+                                0.0533f
+                            ) * 1000f
+                        ).toInt()
+                        .coerceIn(
+                            20,
+                            100
+                        )
+
+                setOnSeekBarChangeListener(
+                    object :
+                        SeekBar.OnSeekBarChangeListener {
+
+                        override fun onProgressChanged(
+                            bar: SeekBar?,
+                            progress: Int,
+                            fromUser: Boolean
+                        ) {
+
+                            if (!fromUser) {
+                                return
+                            }
+
+                            val value =
+                                (
+                                    progress
+                                        .coerceIn(
+                                            20,
+                                            100
+                                        )
+                                    / 1000f
+                                    )
+
+                            getSharedPreferences(
+                                "vidora_player_preferences",
+                                MODE_PRIVATE
+                            )
+                                .edit()
+                                .putFloat(
+                                    "subtitle_size",
+                                    value
+                                )
+                                .apply()
+                        }
+
+                        override fun onStartTrackingTouch(
+                            bar: SeekBar?
+                        ) {
+                        }
+
+                        override fun onStopTrackingTouch(
+                            bar: SeekBar?
+                        ) {
+                        }
+                    }
+                )
+            }
+
+        root.addView(
+            seek
+        )
+    }
+
+    private fun addLanguageSwitch() {
 
         val languageSwitch =
             Switch(this).apply {
@@ -194,7 +512,8 @@ class SettingsActivity : ComponentActivity() {
                 text =
                     "English"
 
-                textSize = 17f
+                textSize =
+                    16f
 
                 isChecked =
                     VidoraSettings.getLanguage(
@@ -225,40 +544,35 @@ class SettingsActivity : ComponentActivity() {
         root.addView(
             languageSwitch
         )
+    }
 
-        val playlistsButton =
-            TextView(this).apply {
+    private fun addButton(
+        text: String,
+        action: () -> Unit
+    ) {
 
-                text =
-                    "مدیریت پلی‌لیست‌ها"
+        val button =
+            Button(this).apply {
 
-                textSize = 18f
+                this.text =
+                    text
 
-                setTextColor(
-                    getColor(
-                        R.color.vidora_text
-                    )
-                )
+                textSize =
+                    15f
 
-                setPadding(
-                    0,
-                    35,
-                    0,
-                    25
-                )
+                isAllCaps =
+                    false
+
+                minHeight =
+                    52
 
                 setOnClickListener {
-
-                    showPlaylists()
+                    action()
                 }
             }
 
         root.addView(
-            playlistsButton
-        )
-
-        setContentView(
-            root
+            button
         )
     }
 
@@ -271,11 +585,15 @@ class SettingsActivity : ComponentActivity() {
 
         val message =
             if (playlists.isEmpty()) {
+
                 "هنوز پلی‌لیستی ساخته نشده است."
+
             } else {
+
                 playlists.joinToString(
                     separator = "\n"
                 ) {
+
                     "• ${it.name} (${it.videos.size} ویدئو)"
                 }
             }
