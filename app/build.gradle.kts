@@ -97,6 +97,10 @@ dependencies {
     )
 
     implementation(
+        "androidx.fragment:fragment-ktx:1.8.9"
+    )
+
+    implementation(
         "androidx.media3:media3-exoplayer:1.11.0"
     )
 
