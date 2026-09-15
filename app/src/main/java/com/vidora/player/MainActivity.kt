@@ -1404,6 +1404,38 @@ class MainActivity : ComponentActivity() {
         LAST_ACCESS,
         NAME,
         SIZE,
-        FAVORITES
-    }
+
+    FAVORITES
+  fun openOnlinePlayer(
+    view: android.view.View
+) {
+    startActivity(
+        Intent(
+            this,
+            OnlineVideoActivity::class.java
+        )
+    )
+}
+
+fun openVidoraSettings(
+    view: android.view.View
+) {
+    startActivity(
+        Intent(
+            this,
+            SettingsActivity::class.java
+        )
+    )
+}
+
+fun openPrivateVault(
+    view: android.view.View
+) {
+    startActivity(
+        Intent(
+            this,
+            PrivateVaultActivity::class.java
+        )
+    )
+}  }
 }
