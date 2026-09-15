@@ -6,11 +6,12 @@
     android:layout_height="match_parent"
     android:background="#000000">
 
-    <androidx.media3.ui.PlayerView
+    <com.vidora.player.VidoraPlayerView
         android:id="@+id/playerView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:keepScreenOn="true" />
+        android:keepScreenOn="true"
+        android:contentDescription="پخش‌کننده ویدئو" />
 
     <HorizontalScrollView
         android:id="@+id/controlScroll"
@@ -19,7 +20,7 @@
         android:layout_gravity="bottom"
         android:fillViewport="true"
         android:scrollbars="none"
-        android:background="#99000000">
+        android:background="#CC101010">
 
         <LinearLayout
             android:id="@+id/controlBar"
@@ -27,119 +28,146 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:padding="6dp">
+            android:padding="7dp">
 
             <Button
                 android:id="@+id/previousButton"
-                android:layout_width="44dp"
-                android:layout_height="44dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 android:text="@string/previous_video"
-                android:textSize="18sp" />
+                android:textSize="18sp"
+                android:contentDescription="ویدئوی قبلی" />
 
             <Button
                 android:id="@+id/nextButton"
-                android:layout_width="44dp"
-                android:layout_height="44dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 android:text="@string/next_video"
-                android:textSize="18sp" />
+                android:textSize="18sp"
+                android:contentDescription="ویدئوی بعدی" />
 
             <Button
                 android:id="@+id/repeatButton"
-                android:layout_width="58dp"
-                android:layout_height="44dp"
+                android:layout_width="62dp"
+                android:layout_height="48dp"
                 android:text="@string/repeat_off"
-                android:textSize="10sp" />
+                android:textSize="10sp"
+                android:textAllCaps="false"
+                android:contentDescription="تکرار" />
 
             <Button
                 android:id="@+id/audioButton"
-                android:layout_width="62dp"
-                android:layout_height="44dp"
+                android:layout_width="68dp"
+                android:layout_height="48dp"
                 android:text="@string/audio_track"
-                android:textSize="10sp" />
+                android:textSize="10sp"
+                android:textAllCaps="false"
+                android:contentDescription="انتخاب صدا" />
 
             <Button
                 android:id="@+id/favoriteButton"
-                android:layout_width="52dp"
-                android:layout_height="44dp"
+                android:layout_width="58dp"
+                android:layout_height="48dp"
                 android:text="@string/favorite_off"
-                android:textSize="16sp" />
+                android:textSize="16sp"
+                android:contentDescription="علاقه‌مندی" />
 
             <Button
                 android:id="@+id/speedMinusButton"
-                android:layout_width="42dp"
-                android:layout_height="44dp"
+                android:layout_width="46dp"
+                android:layout_height="48dp"
                 android:text="−"
-                android:textSize="18sp" />
+                android:textSize="19sp"
+                android:contentDescription="کاهش سرعت" />
 
             <Button
                 android:id="@+id/speedButton"
-                android:layout_width="56dp"
-                android:layout_height="44dp"
+                android:layout_width="62dp"
+                android:layout_height="48dp"
                 android:text="@string/speed_default"
-                android:textSize="11sp" />
+                android:textSize="11sp"
+                android:textAllCaps="false"
+                android:contentDescription="سرعت پخش" />
 
             <Button
                 android:id="@+id/speedPlusButton"
-                android:layout_width="42dp"
-                android:layout_height="44dp"
+                android:layout_width="46dp"
+                android:layout_height="48dp"
                 android:text="+"
-                android:textSize="18sp" />
+                android:textSize="19sp"
+                android:contentDescription="افزایش سرعت" />
 
             <Button
                 android:id="@+id/aspectButton"
-                android:layout_width="56dp"
-                android:layout_height="44dp"
+                android:layout_width="60dp"
+                android:layout_height="48dp"
                 android:text="FIT"
-                android:textSize="10sp" />
+                android:textSize="10sp"
+                android:textAllCaps="false"
+                android:contentDescription="نسبت تصویر" />
 
             <Button
                 android:id="@+id/subtitleButton"
-                android:layout_width="62dp"
-                android:layout_height="44dp"
+                android:layout_width="70dp"
+                android:layout_height="48dp"
                 android:text="@string/subtitle"
-                android:textSize="10sp" />
+                android:textSize="10sp"
+                android:textAllCaps="false"
+                android:contentDescription="زیرنویس" />
 
             <Button
                 android:id="@+id/sleepTimerButton"
-                android:layout_width="62dp"
-                android:layout_height="44dp"
+                android:layout_width="70dp"
+                android:layout_height="48dp"
                 android:text="@string/sleep_timer"
-                android:textSize="10sp" />
+                android:textSize="10sp"
+                android:textAllCaps="false"
+                android:contentDescription="تایمر خواب" />
 
             <Button
                 android:id="@+id/shareButton"
-                android:layout_width="62dp"
-                android:layout_height="44dp"
+                android:layout_width="68dp"
+                android:layout_height="48dp"
                 android:text="@string/share_video"
-                android:textSize="10sp" />
+                android:textSize="10sp"
+                android:textAllCaps="false"
+                android:contentDescription="اشتراک‌گذاری" />
 
             <Button
                 android:id="@+id/deleteButton"
                 android:layout_width="62dp"
-                android:layout_height="44dp"
+                android:layout_height="48dp"
                 android:text="@string/delete_video"
-                android:textSize="10sp" />
-
-            <Button
-                android:id="@+id/moreButton"
-                android:layout_width="62dp"
-                android:layout_height="44dp"
-                android:text="بیشتر"
-                android:textSize="10sp" />
+                android:textSize="10sp"
+                android:textAllCaps="false"
+                android:contentDescription="حذف ویدئو" />
 
             <Button
                 android:id="@+id/lockButton"
-                android:layout_width="56dp"
-                android:layout_height="44dp"
+                android:layout_width="62dp"
+                android:layout_height="48dp"
                 android:text="@string/lock"
-                android:textSize="10sp" />
+                android:textSize="10sp"
+                android:textAllCaps="false"
+                android:contentDescription="قفل کنترل‌ها" />
 
             <Button
                 android:id="@+id/fullscreenButton"
-                android:layout_width="42dp"
-                android:layout_height="44dp"
+                android:layout_width="70dp"
+                android:layout_height="48dp"
                 android:text="@string/fullscreen"
-                android:textSize="16sp" />
+                android:textSize="10sp"
+                android:textAllCaps="false"
+                android:contentDescription="تمام صفحه" />
+
+            <Button
+                android:id="@+id/moreButton"
+                android:layout_width="70dp"
+                android:layout_height="48dp"
+                android:text="@string/more"
+                android:textSize="10sp"
+                android:textAllCaps="false"
+                android:contentDescription="امکانات بیشتر" />
 
         </LinearLayout>
 
@@ -150,22 +178,26 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
-        android:padding="14dp"
+        android:background="#CC000000"
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="12dp"
         android:textColor="#FFFFFF"
-        android:textSize="18sp"
-        android:background="#99000000"
+        android:textSize="17sp"
         android:visibility="gone" />
 
     <TextView
         android:id="@+id/lockedOverlay"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:padding="16dp"
-        android:text="@string/screen_locked"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:text="@string/player_locked"
         android:textColor="#FFFFFF"
         android:textSize="18sp"
-        android:background="#99000000"
-        android:visibility="gone" />
+        android:background="#33000000"
+        android:visibility="gone"
+        android:clickable="true"
+        android:focusable="true" />
 
 </FrameLayout>
