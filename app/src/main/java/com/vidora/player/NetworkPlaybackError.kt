@@ -15,9 +15,6 @@ object NetworkPlaybackError {
             PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED ->
                 "اتصال اینترنت برقرار نیست."
 
-            PlaybackException.ERROR_CODE_IO_NETWORK_TIMEOUT ->
-                "اتصال اینترنت زمان‌بر شد."
-
             PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS ->
                 "سرور ویدیو پاسخ مناسبی نداد."
 
