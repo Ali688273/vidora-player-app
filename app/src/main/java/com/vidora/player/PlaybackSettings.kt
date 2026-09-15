@@ -19,6 +19,18 @@ object PlaybackSettings {
     private const val KEY_RESUME =
         "resume_playback"
 
+    private const val KEY_BACKGROUND =
+        "background_playback"
+
+    private const val KEY_KEEP_SCREEN =
+        "keep_screen_on"
+
+    private const val KEY_GESTURES =
+        "gesture_controls"
+
+    private const val KEY_SUBTITLE_SIZE =
+        "subtitle_size"
+
     private fun prefs(context: Context) =
         context.getSharedPreferences(
             PREFS,
@@ -28,7 +40,6 @@ object PlaybackSettings {
     fun getDefaultSpeed(
         context: Context
     ): Float {
-
         return prefs(context)
             .getFloat(
                 KEY_SPEED,
@@ -44,7 +55,6 @@ object PlaybackSettings {
         context: Context,
         value: Float
     ) {
-
         prefs(context)
             .edit()
             .putFloat(
@@ -60,7 +70,6 @@ object PlaybackSettings {
     fun getDefaultAspect(
         context: Context
     ): Int {
-
         return prefs(context)
             .getInt(
                 KEY_ASPECT,
@@ -72,7 +81,6 @@ object PlaybackSettings {
         context: Context,
         value: Int
     ) {
-
         prefs(context)
             .edit()
             .putInt(
@@ -85,7 +93,6 @@ object PlaybackSettings {
     fun autoPlayNext(
         context: Context
     ): Boolean {
-
         return prefs(context)
             .getBoolean(
                 KEY_AUTO_PLAY,
@@ -97,7 +104,6 @@ object PlaybackSettings {
         context: Context,
         value: Boolean
     ) {
-
         prefs(context)
             .edit()
             .putBoolean(
@@ -110,7 +116,6 @@ object PlaybackSettings {
     fun resumePlayback(
         context: Context
     ): Boolean {
-
         return prefs(context)
             .getBoolean(
                 KEY_RESUME,
@@ -122,12 +127,110 @@ object PlaybackSettings {
         context: Context,
         value: Boolean
     ) {
-
         prefs(context)
             .edit()
             .putBoolean(
                 KEY_RESUME,
                 value
+            )
+            .apply()
+    }
+
+    fun backgroundPlayback(
+        context: Context
+    ): Boolean {
+        return prefs(context)
+            .getBoolean(
+                KEY_BACKGROUND,
+                true
+            )
+    }
+
+    fun setBackgroundPlayback(
+        context: Context,
+        value: Boolean
+    ) {
+        prefs(context)
+            .edit()
+            .putBoolean(
+                KEY_BACKGROUND,
+                value
+            )
+            .apply()
+    }
+
+    fun keepScreenOn(
+        context: Context
+    ): Boolean {
+        return prefs(context)
+            .getBoolean(
+                KEY_KEEP_SCREEN,
+                true
+            )
+    }
+
+    fun setKeepScreenOn(
+        context: Context,
+        value: Boolean
+    ) {
+        prefs(context)
+            .edit()
+            .putBoolean(
+                KEY_KEEP_SCREEN,
+                value
+            )
+            .apply()
+    }
+
+    fun gestureControls(
+        context: Context
+    ): Boolean {
+        return prefs(context)
+            .getBoolean(
+                KEY_GESTURES,
+                true
+            )
+    }
+
+    fun setGestureControls(
+        context: Context,
+        value: Boolean
+    ) {
+        prefs(context)
+            .edit()
+            .putBoolean(
+                KEY_GESTURES,
+                value
+            )
+            .apply()
+    }
+
+    fun getSubtitleSize(
+        context: Context
+    ): Float {
+        return prefs(context)
+            .getFloat(
+                KEY_SUBTITLE_SIZE,
+                0.0533f
+            )
+            .coerceIn(
+                0.025f,
+                0.12f
+            )
+    }
+
+    fun setSubtitleSize(
+        context: Context,
+        value: Float
+    ) {
+        prefs(context)
+            .edit()
+            .putFloat(
+                KEY_SUBTITLE_SIZE,
+                value.coerceIn(
+                    0.025f,
+                    0.12f
+                )
             )
             .apply()
     }
