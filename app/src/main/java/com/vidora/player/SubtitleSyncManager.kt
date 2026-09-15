@@ -5,11 +5,14 @@ import android.net.Uri
 
 object SubtitleSyncManager {
 
-    private const val PREFS =
+    private const val PREF =
         "vidora_subtitle_sync"
 
-    private fun key(uri: Uri) =
-        "offset_${uri}"
+    private fun key(
+        uri: Uri
+    ): String {
+        return "offset_${uri}"
+    }
 
     fun getOffset(
         context: Context,
@@ -18,7 +21,7 @@ object SubtitleSyncManager {
 
         return context
             .getSharedPreferences(
-                PREFS,
+                PREF,
                 Context.MODE_PRIVATE
             )
             .getLong(
@@ -30,39 +33,23 @@ object SubtitleSyncManager {
     fun setOffset(
         context: Context,
         uri: Uri,
-        offset: Long
+        offsetMs: Long
     ) {
 
         context
             .getSharedPreferences(
-                PREFS,
+                PREF,
                 Context.MODE_PRIVATE
             )
             .edit()
             .putLong(
                 key(uri),
-                offset
+                offsetMs.coerceIn(
+                    -10_000L,
+                    10_000L
+                )
             )
             .apply()
-    }
-
-    fun increase(
-        context: Context,
-        uri: Uri,
-        amount: Long
-    ): Long {
-
-        val value =
-            getOffset(context, uri) +
-                amount
-
-        setOffset(
-            context,
-            uri,
-            value
-        )
-
-        return value
     }
 
     fun reset(
@@ -72,11 +59,13 @@ object SubtitleSyncManager {
 
         context
             .getSharedPreferences(
-                PREFS,
+                PREF,
                 Context.MODE_PRIVATE
             )
             .edit()
-            .remove(key(uri))
+            .remove(
+                key(uri)
+            )
             .apply()
     }
 }
