@@ -28,6 +28,15 @@
         android:theme="@style/Theme.Vidora"
         android:usesCleartextTraffic="true">
 
+        <!-- Google Cast / Media3 -->
+        <meta-data
+            android:name="com.google.android.gms.cast.framework.OPTIONS_PROVIDER_CLASS_NAME"
+            android:value="androidx.media3.cast.DefaultCastOptionsProvider" />
+
+        <receiver
+            android:name="androidx.mediarouter.media.MediaTransferReceiver"
+            android:exported="true" />
+
         <service
             android:name=".PlaybackService"
             android:foregroundServiceType="mediaPlayback"
