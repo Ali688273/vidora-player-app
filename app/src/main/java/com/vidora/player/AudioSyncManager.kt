@@ -1,15 +1,22 @@
 package com.vidora.player
 
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 
 object AudioSyncManager {
 
-    private const val PREFS =
+    private const val PREF =
         "vidora_audio_sync"
 
-    private fun key(uri: Uri) =
-        "sync_${uri}"
+    private const val ACTION_CHANGED =
+        "com.vidora.player.AUDIO_SYNC_CHANGED"
+
+    private fun key(
+        uri: Uri
+    ): String {
+        return "offset_${uri}"
+    }
 
     fun getOffset(
         context: Context,
@@ -18,7 +25,7 @@ object AudioSyncManager {
 
         return context
             .getSharedPreferences(
-                PREFS,
+                PREF,
                 Context.MODE_PRIVATE
             )
             .getLong(
@@ -30,52 +37,56 @@ object AudioSyncManager {
     fun setOffset(
         context: Context,
         uri: Uri,
-        milliseconds: Long
+        offsetMs: Long
     ) {
+
+        val value =
+            offsetMs.coerceIn(
+                -10_000L,
+                10_000L
+            )
 
         context
             .getSharedPreferences(
-                PREFS,
+                PREF,
                 Context.MODE_PRIVATE
             )
             .edit()
             .putLong(
                 key(uri),
-                milliseconds
+                value
             )
             .apply()
-    }
 
-    fun increase(
-        context: Context,
-        uri: Uri,
-        amount: Long
-    ): Long {
-
-        val value =
-            getOffset(
-                context,
-                uri
-            ) + amount
-
-        setOffset(
-            context,
-            uri,
-            value
+        context.sendBroadcast(
+            Intent(ACTION_CHANGED).apply {
+                setPackage(
+                    context.packageName
+                )
+                putExtra(
+                    "uri",
+                    uri.toString()
+                )
+                putExtra(
+                    "offset",
+                    value
+                )
+            }
         )
-
-        return value
     }
 
     fun reset(
         context: Context,
         uri: Uri
     ) {
-
         setOffset(
             context,
             uri,
             0L
         )
+    }
+
+    fun actionChanged(): String {
+        return ACTION_CHANGED
     }
 }
