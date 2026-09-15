@@ -1,71 +1,32 @@
 package com.vidora.player
 
-import android.app.Activity
+import android.net.Uri
 import android.os.Bundle
 import android.view.Gravity
-import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
-import android.widget.Toast
+import androidx.activity.ComponentActivity
 import androidx.media3.common.MediaItem
-import androidx.media3.common.Player
-import androidx.media3.common.PlaybackException
+import androidx.media3.common.MimeTypes
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 
-class OnlineVideoActivity : Activity() {
+@UnstableApi
+class OnlineVideoActivity : ComponentActivity() {
 
     private var player: ExoPlayer? = null
 
-    private lateinit var playerView: PlayerView
     private lateinit var urlInput: EditText
+    private lateinit var playerView: PlayerView
     private lateinit var statusText: TextView
 
-    private fun dp(
-        value: Int
-    ): Int {
-        return (
-            value *
-                resources.displayMetrics.density
-            ).toInt()
-    }
-
-    override fun onCreate(
-        savedInstanceState: Bundle?
-    ) {
-
-        super.onCreate(
-            savedInstanceState
-        )
-
-        title =
-            "پخش آنلاین"
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
 
         buildUi()
-
-        val initialUrl =
-            intent.getStringExtra(
-                "url"
-            )
-                ?: intent.getStringExtra(
-                    "video_url"
-                )
-                ?: ""
-
-        if (
-            initialUrl.isNotBlank()
-        ) {
-
-            urlInput.setText(
-                initialUrl
-            )
-
-            playUrl(
-                initialUrl
-            )
-        }
     }
 
     private fun buildUi() {
@@ -76,36 +37,92 @@ class OnlineVideoActivity : Activity() {
                 orientation =
                     LinearLayout.VERTICAL
 
+                gravity =
+                    Gravity.CENTER_HORIZONTAL
+
                 setPadding(
-                    dp(12),
-                    dp(12),
-                    dp(12),
-                    dp(12)
+                    24,
+                    24,
+                    24,
+                    24
+                )
+
+                setBackgroundColor(
+                    getColor(
+                        R.color.vidora_background
+                    )
                 )
             }
+
+        val title =
+            TextView(this).apply {
+
+                text =
+                    "پخش ویدئوی آنلاین"
+
+                textSize =
+                    24f
+
+                gravity =
+                    Gravity.CENTER
+
+                setTextColor(
+                    getColor(
+                        R.color.vidora_text
+                    )
+                )
+
+                setPadding(
+                    0,
+                    12,
+                    0,
+                    24
+                )
+            }
+
+        root.addView(title)
 
         urlInput =
             EditText(this).apply {
 
                 hint =
-                    "لینک ویدیو را وارد کنید"
+                    "آدرس ویدئو را وارد کنید"
 
-                textSize = 16f
+                textSize =
+                    16f
 
                 singleLine = true
 
+                isSingleLine = true
+
+                inputType =
+                    android.text.InputType.TYPE_CLASS_TEXT or
+                        android.text.InputType.TYPE_TEXT_VARIATION_URI
+
                 setPadding(
-                    dp(16),
-                    dp(12),
-                    dp(16),
-                    dp(12)
+                    18,
+                    14,
+                    18,
+                    14
+                )
+
+                setTextColor(
+                    getColor(
+                        R.color.vidora_text
+                    )
+                )
+
+                setHintTextColor(
+                    getColor(
+                        R.color.vidora_text
+                    )
                 )
             }
 
         root.addView(
             urlInput,
             LinearLayout.LayoutParams(
-                -1,
+                LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
         )
@@ -114,108 +131,120 @@ class OnlineVideoActivity : Activity() {
             Button(this).apply {
 
                 text =
-                    "پخش ویدیو"
+                    "▶ پخش ویدئو"
+
+                isAllCaps =
+                    false
+
+                textSize =
+                    16f
 
                 setOnClickListener {
 
-                    playUrl(
+                    playOnlineVideo(
                         urlInput.text
                             .toString()
+                            .trim()
                     )
                 }
             }
 
         root.addView(
-            playButton
+            playButton,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = 16
+            }
         )
 
         statusText =
             TextView(this).apply {
 
                 text =
-                    "آماده پخش"
+                    "آدرس ویدئو را وارد کنید."
 
-                textSize = 14f
+                textSize =
+                    14f
 
                 gravity =
                     Gravity.CENTER
 
+                setTextColor(
+                    getColor(
+                        R.color.vidora_text
+                    )
+                )
+
                 setPadding(
-                    dp(8),
-                    dp(8),
-                    dp(8),
-                    dp(8)
+                    0,
+                    16,
+                    0,
+                    16
                 )
             }
 
-        root.addView(
-            statusText
-        )
+        root.addView(statusText)
 
         playerView =
             PlayerView(this).apply {
 
-                useController = true
+                useController =
+                    true
 
-                controllerAutoShow = true
+                controllerAutoShow =
+                    true
 
-                controllerHideOnTouch = true
+                controllerHideOnTouch =
+                    true
 
-                setShowBuffering(
-                    PlayerView.SHOW_BUFFERING_ALWAYS
-                )
+                controllerShowTimeoutMs =
+                    3500
             }
 
         root.addView(
             playerView,
             LinearLayout.LayoutParams(
-                -1,
+                LinearLayout.LayoutParams.MATCH_PARENT,
                 0,
                 1f
             )
         )
 
-        val closeButton =
-            Button(this).apply {
-
-                text =
-                    "بستن"
-
-                setOnClickListener {
-                    finish()
-                }
-            }
-
-        root.addView(
-            closeButton
-        )
-
-        setContentView(
-            root
-        )
+        setContentView(root)
     }
 
-    private fun playUrl(
-        rawUrl: String
+    private fun playOnlineVideo(
+        url: String
     ) {
 
-        val url =
-            rawUrl.trim()
+        if (url.isBlank()) {
+
+            statusText.text =
+                "لطفاً آدرس ویدئو را وارد کنید."
+
+            return
+        }
+
+        val uri =
+            try {
+                Uri.parse(url)
+            } catch (_: Exception) {
+
+                statusText.text =
+                    "آدرس ویدئو معتبر نیست."
+
+                return
+            }
 
         if (
-            !VideoUrlValidator.isValid(
-                url
-            )
+            uri.scheme != "http" &&
+            uri.scheme != "https"
         ) {
 
             statusText.text =
-                "لینک واردشده معتبر نیست."
-
-            Toast.makeText(
-                this,
-                "لطفاً یک لینک معتبر http یا https وارد کنید.",
-                Toast.LENGTH_SHORT
-            ).show()
+                "فقط آدرس‌های HTTP و HTTPS پشتیبانی می‌شوند."
 
             return
         }
@@ -223,112 +252,135 @@ class OnlineVideoActivity : Activity() {
         releasePlayer()
 
         statusText.text =
-            "در حال اتصال..."
+            "در حال اتصال به ویدئو..."
 
         val mediaItem =
-            try {
+            createMediaItem(
+                uri
+            )
 
-                OnlinePlaybackResolver
-                    .createMediaItem(
-                        url
-                    )
-
-            } catch (
-                _: Exception
-            ) {
-
-                statusText.text =
-                    "لینک قابل پخش نیست."
-
-                return
-            }
-
-        val newPlayer =
+        player =
             ExoPlayer.Builder(
                 this
             )
                 .build()
+                .also { exoPlayer ->
 
-        player =
-            newPlayer
+                    playerView.player =
+                        exoPlayer
 
-        playerView.player =
-            newPlayer
+                    exoPlayer.setMediaItem(
+                        mediaItem
+                    )
 
-        newPlayer.addListener(
-            object : Player.Listener {
+                    exoPlayer.prepare()
 
-                override fun onPlaybackStateChanged(
-                    playbackState: Int
-                ) {
+                    exoPlayer.playWhenReady =
+                        true
 
-                    when (
-                        playbackState
-                    ) {
+                    exoPlayer.addListener(
+                        object :
+                            androidx.media3.common.Player.Listener {
 
-                        Player.STATE_BUFFERING -> {
-                            statusText.text =
-                                "در حال بارگذاری..."
+                            override fun onPlaybackStateChanged(
+                                playbackState: Int
+                            ) {
+
+                                when (
+                                    playbackState
+                                ) {
+
+                                    androidx.media3.common.Player.STATE_BUFFERING -> {
+
+                                        statusText.text =
+                                            "در حال بارگذاری ویدئو..."
+                                    }
+
+                                    androidx.media3.common.Player.STATE_READY -> {
+
+                                        statusText.text =
+                                            "ویدئو آماده پخش است."
+                                    }
+
+                                    androidx.media3.common.Player.STATE_ENDED -> {
+
+                                        statusText.text =
+                                            "پخش ویدئو تمام شد."
+                                    }
+                                }
+                            }
+
+                            override fun onPlayerError(
+                                error:
+                                    androidx.media3.common.PlaybackException
+                            ) {
+
+                                statusText.text =
+                                    NetworkPlaybackError.message(
+                                        error
+                                    )
+                            }
                         }
-
-                        Player.STATE_READY -> {
-                            statusText.text =
-                                "در حال پخش"
-                        }
-
-                        Player.STATE_ENDED -> {
-                            statusText.text =
-                                "پخش به پایان رسید"
-                        }
-
-                        else -> Unit
-                    }
+                    )
                 }
+    }
 
-                override fun onPlayerError(
-                    error: PlaybackException
-                ) {
+    private fun createMediaItem(
+        uri: Uri
+    ): MediaItem {
 
-                    statusText.text =
-                        NetworkPlaybackError
-                            .message(
-                                error
-                            )
+        val url =
+            uri.toString()
+                .lowercase()
 
-                    Toast.makeText(
-                        this@OnlineVideoActivity,
-                        NetworkPlaybackError
-                            .message(
-                                error
-                            ),
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
+        val builder =
+            MediaItem.Builder()
+                .setUri(uri)
+
+        when {
+
+            url.contains(".m3u8") ||
+                url.contains("m3u8?") -> {
+
+                builder.setMimeType(
+                    MimeTypes.APPLICATION_M3U8
+                )
             }
-        )
 
-        newPlayer.setMediaItem(
-            mediaItem
-        )
+            url.contains(".mpd") ||
+                url.contains("mpd?") -> {
 
-        newPlayer.prepare()
+                builder.setMimeType(
+                    MimeTypes.APPLICATION_MPD
+                )
+            }
 
-        newPlayer.playWhenReady =
-            true
-    }
+            url.endsWith(".mp4") ||
+                url.contains(".mp4?") -> {
 
-    override fun onPause() {
+                builder.setMimeType(
+                    MimeTypes.VIDEO_MP4
+                )
+            }
 
-        super.onPause()
+            url.endsWith(".webm") ||
+                url.contains(".webm?") -> {
 
-        player?.pause()
-    }
+                builder.setMimeType(
+                    MimeTypes.VIDEO_WEBM
+                )
+            }
 
-    override fun onDestroy() {
+            url.endsWith(".mkv") ||
+                url.contains(".mkv?") -> {
 
-        releasePlayer()
+                builder.setMimeType(
+                    MimeTypes.VIDEO_MATROSKA
+                )
+            }
+        }
 
-        super.onDestroy()
+        return builder.build()
     }
 
     private fun releasePlayer() {
@@ -340,5 +392,19 @@ class OnlineVideoActivity : Activity() {
 
         player =
             null
+    }
+
+    override fun onStop() {
+
+        super.onStop()
+
+        player?.pause()
+    }
+
+    override fun onDestroy() {
+
+        releasePlayer()
+
+        super.onDestroy()
     }
 }
