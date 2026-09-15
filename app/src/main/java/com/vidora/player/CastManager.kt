@@ -5,8 +5,7 @@ import android.net.Uri
 
 object CastManager {
 
-    private var currentUri: Uri? =
-        null
+    private var currentUri: Uri? = null
 
     fun prepare(
         context: Context,
