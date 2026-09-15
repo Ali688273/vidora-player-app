@@ -117,6 +117,10 @@ dependencies {
     )
 
     implementation(
+        "androidx.media3:media3-cast:1.11.0"
+    )
+
+    implementation(
         "ir.tapsell.plus:tapsell-plus-sdk-android:2.3.3"
     )
 
