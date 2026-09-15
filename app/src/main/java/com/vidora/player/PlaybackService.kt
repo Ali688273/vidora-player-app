@@ -47,8 +47,7 @@ class PlaybackService : MediaSessionService() {
                 override fun buildAudioSink(
                     context: android.content.Context,
                     enableFloatOutput: Boolean,
-                    enableAudioTrackPlaybackParams: Boolean,
-                    enableOffload: Boolean
+                    enableAudioTrackPlaybackParams: Boolean
                 ): AudioSink? {
 
                     return DefaultAudioSink.Builder(
@@ -59,15 +58,6 @@ class PlaybackService : MediaSessionService() {
                         )
                         .setEnableAudioTrackPlaybackParams(
                             enableAudioTrackPlaybackParams
-                        )
-                        .setOffloadMode(
-                            if (enableOffload) {
-                                DefaultAudioSink
-                                    .OFFLOAD_MODE_ENABLED_GAPLESS_REQUIRED
-                            } else {
-                                DefaultAudioSink
-                                    .OFFLOAD_MODE_DISABLED
-                            }
                         )
                         .setAudioProcessors(
                             arrayOf(processor)
