@@ -132,7 +132,7 @@ object AdsManager {
             TapsellPlus.requestInterstitialAd(
                 activity,
                 BuildConfig.TAPSELL_INTERSTITIAL,
-                object : AdRequestCallback {
+                object : AdRequestCallback() {
 
                     override fun response(
                         adModel: TapsellPlusAdModel
@@ -182,7 +182,7 @@ object AdsManager {
             TapsellPlus.requestRewardedVideoAd(
                 activity,
                 BuildConfig.TAPSELL_REWARDED,
-                object : AdRequestCallback {
+                object : AdRequestCallback() {
 
                     override fun response(
                         adModel: TapsellPlusAdModel
