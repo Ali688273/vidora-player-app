@@ -24,11 +24,12 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 
-import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.OptIn
 import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentActivity
 
+import androidx.media3.cast.MediaRouteButtonViewProvider
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
@@ -45,7 +46,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import kotlin.math.abs
 
 @OptIn(androidx.media3.common.util.UnstableApi::class)
-class PlayerActivity : ComponentActivity() {
+class PlayerActivity : FragmentActivity() {
 
     private lateinit var playerView: PlayerView
 
@@ -64,8 +65,7 @@ class PlayerActivity : ComponentActivity() {
     private lateinit var deleteButton: Button
     private lateinit var lockButton: Button
     private lateinit var fullscreenButton: Button
-    private lateinit var moreButton
-        : Button
+    private lateinit var moreButton: Button
     private lateinit var gestureInfo: TextView
     private lateinit var lockedOverlay: TextView
 
@@ -217,9 +217,27 @@ class PlayerActivity : ComponentActivity() {
         setupButtons()
         setupGestures()
 
+        setupCastButton()
+
         connectToPlaybackService()
 
         enterFullscreen()
+    }
+
+    private fun setupCastButton() {
+
+        try {
+
+            playerView.setMediaRouteButtonViewProvider(
+                MediaRouteButtonViewProvider()
+            )
+
+        } catch (_: Exception) {
+
+            showTemporaryMessage(
+                "Cast در این دستگاه در دسترس نیست."
+            )
+        }
     }
 
     private fun connectToPlaybackService() {
