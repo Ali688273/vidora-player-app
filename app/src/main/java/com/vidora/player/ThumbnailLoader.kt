@@ -10,10 +10,11 @@ import java.util.concurrent.Executors
 
 object ThumbnailLoader {
 
-    private val executor = Executors.newFixedThreadPool(2)
+    private val executor =
+        Executors.newFixedThreadPool(2)
 
-    private val memoryCache =
-        object : LruCache<String, Bitmap>(20 * 1024 * 1024) {
+    private val cache =
+        object : LruCache<String, Bitmap>(24 * 1024 * 1024) {
 
             override fun sizeOf(
                 key: String,
@@ -30,7 +31,7 @@ object ThumbnailLoader {
     ) {
         val key = uri.toString()
 
-        val cached = memoryCache.get(key)
+        val cached = cache.get(key)
 
         if (cached != null) {
             imageView.setImageBitmap(cached)
@@ -40,25 +41,27 @@ object ThumbnailLoader {
         imageView.tag = key
 
         executor.execute {
-            val bitmap = createThumbnail(
-                context,
-                uri
-            )
+
+            val bitmap =
+                createThumbnail(
+                    context,
+                    uri
+                )
 
             if (bitmap != null) {
-                memoryCache.put(
+                cache.put(
                     key,
                     bitmap
                 )
             }
 
             imageView.post {
+
                 if (imageView.tag == key) {
+
                     if (bitmap != null) {
-                        imageView.setImageBitmap(bitmap)
-                    } else {
-                        imageView.setImageResource(
-                            android.R.color.transparent
+                        imageView.setImageBitmap(
+                            bitmap
                         )
                     }
                 }
@@ -100,6 +103,6 @@ object ThumbnailLoader {
     }
 
     fun clear() {
-        memoryCache.evictAll()
+        cache.evictAll()
     }
 }
