@@ -25,99 +25,72 @@ class OnlineVideoActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         buildUi()
     }
 
     private fun buildUi() {
 
-        val root =
-            LinearLayout(this).apply {
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
 
-                orientation =
-                    LinearLayout.VERTICAL
+            setPadding(
+                24,
+                24,
+                24,
+                24
+            )
 
-                gravity =
-                    Gravity.CENTER_HORIZONTAL
+            setBackgroundColor(
+                getColor(R.color.vidora_background)
+            )
+        }
 
-                setPadding(
-                    24,
-                    24,
-                    24,
-                    24
-                )
+        val title = TextView(this).apply {
+            text = "پخش ویدئوی آنلاین"
+            textSize = 24f
+            gravity = Gravity.CENTER
 
-                setBackgroundColor(
-                    getColor(
-                        R.color.vidora_background
-                    )
-                )
-            }
+            setTextColor(
+                getColor(R.color.vidora_text)
+            )
 
-        val title =
-            TextView(this).apply {
-
-                text =
-                    "پخش ویدئوی آنلاین"
-
-                textSize =
-                    24f
-
-                gravity =
-                    Gravity.CENTER
-
-                setTextColor(
-                    getColor(
-                        R.color.vidora_text
-                    )
-                )
-
-                setPadding(
-                    0,
-                    12,
-                    0,
-                    24
-                )
-            }
+            setPadding(
+                0,
+                12,
+                0,
+                24
+            )
+        }
 
         root.addView(title)
 
-        urlInput =
-            EditText(this).apply {
+        urlInput = EditText(this).apply {
 
-                hint =
-                    "آدرس ویدئو را وارد کنید"
+            hint = "آدرس ویدئو را وارد کنید"
+            textSize = 16f
 
-                textSize =
-                    16f
+            isSingleLine = true
 
-                singleLine = true
+            inputType =
+                android.text.InputType.TYPE_CLASS_TEXT or
+                    android.text.InputType.TYPE_TEXT_VARIATION_URI
 
-                isSingleLine = true
+            setPadding(
+                18,
+                14,
+                18,
+                14
+            )
 
-                inputType =
-                    android.text.InputType.TYPE_CLASS_TEXT or
-                        android.text.InputType.TYPE_TEXT_VARIATION_URI
+            setTextColor(
+                getColor(R.color.vidora_text)
+            )
 
-                setPadding(
-                    18,
-                    14,
-                    18,
-                    14
-                )
-
-                setTextColor(
-                    getColor(
-                        R.color.vidora_text
-                    )
-                )
-
-                setHintTextColor(
-                    getColor(
-                        R.color.vidora_text
-                    )
-                )
-            }
+            setHintTextColor(
+                getColor(R.color.vidora_text)
+            )
+        }
 
         root.addView(
             urlInput,
@@ -127,27 +100,21 @@ class OnlineVideoActivity : ComponentActivity() {
             )
         )
 
-        val playButton =
-            Button(this).apply {
+        val playButton = Button(this).apply {
 
-                text =
-                    "▶ پخش ویدئو"
+            text = "▶ پخش ویدئو"
+            isAllCaps = false
+            textSize = 16f
 
-                isAllCaps =
-                    false
+            setOnClickListener {
 
-                textSize =
-                    16f
-
-                setOnClickListener {
-
-                    playOnlineVideo(
-                        urlInput.text
-                            .toString()
-                            .trim()
-                    )
-                }
+                playOnlineVideo(
+                    urlInput.text
+                        .toString()
+                        .trim()
+                )
             }
+        }
 
         root.addView(
             playButton,
@@ -159,49 +126,33 @@ class OnlineVideoActivity : ComponentActivity() {
             }
         )
 
-        statusText =
-            TextView(this).apply {
+        statusText = TextView(this).apply {
 
-                text =
-                    "آدرس ویدئو را وارد کنید."
+            text = "آدرس ویدئو را وارد کنید."
+            textSize = 14f
+            gravity = Gravity.CENTER
 
-                textSize =
-                    14f
+            setTextColor(
+                getColor(R.color.vidora_text)
+            )
 
-                gravity =
-                    Gravity.CENTER
-
-                setTextColor(
-                    getColor(
-                        R.color.vidora_text
-                    )
-                )
-
-                setPadding(
-                    0,
-                    16,
-                    0,
-                    16
-                )
-            }
+            setPadding(
+                0,
+                16,
+                0,
+                16
+            )
+        }
 
         root.addView(statusText)
 
-        playerView =
-            PlayerView(this).apply {
+        playerView = PlayerView(this).apply {
 
-                useController =
-                    true
-
-                controllerAutoShow =
-                    true
-
-                controllerHideOnTouch =
-                    true
-
-                controllerShowTimeoutMs =
-                    3500
-            }
+            useController = true
+            controllerAutoShow = true
+            controllerHideOnTouch = true
+            controllerShowTimeoutMs = 3500
+        }
 
         root.addView(
             playerView,
@@ -215,9 +166,7 @@ class OnlineVideoActivity : ComponentActivity() {
         setContentView(root)
     }
 
-    private fun playOnlineVideo(
-        url: String
-    ) {
+    private fun playOnlineVideo(url: String) {
 
         if (url.isBlank()) {
 
@@ -227,16 +176,15 @@ class OnlineVideoActivity : ComponentActivity() {
             return
         }
 
-        val uri =
-            try {
-                Uri.parse(url)
-            } catch (_: Exception) {
+        val uri = try {
+            Uri.parse(url)
+        } catch (_: Exception) {
 
-                statusText.text =
-                    "آدرس ویدئو معتبر نیست."
+            statusText.text =
+                "آدرس ویدئو معتبر نیست."
 
-                return
-            }
+            return
+        }
 
         if (
             uri.scheme != "http" &&
@@ -255,14 +203,10 @@ class OnlineVideoActivity : ComponentActivity() {
             "در حال اتصال به ویدئو..."
 
         val mediaItem =
-            createMediaItem(
-                uri
-            )
+            createMediaItem(uri)
 
         player =
-            ExoPlayer.Builder(
-                this
-            )
+            ExoPlayer.Builder(this)
                 .build()
                 .also { exoPlayer ->
 
@@ -286,24 +230,19 @@ class OnlineVideoActivity : ComponentActivity() {
                                 playbackState: Int
                             ) {
 
-                                when (
-                                    playbackState
-                                ) {
+                                when (playbackState) {
 
                                     androidx.media3.common.Player.STATE_BUFFERING -> {
-
                                         statusText.text =
                                             "در حال بارگذاری ویدئو..."
                                     }
 
                                     androidx.media3.common.Player.STATE_READY -> {
-
                                         statusText.text =
                                             "ویدئو آماده پخش است."
                                     }
 
                                     androidx.media3.common.Player.STATE_ENDED -> {
-
                                         statusText.text =
                                             "پخش ویدئو تمام شد."
                                     }
@@ -330,8 +269,7 @@ class OnlineVideoActivity : ComponentActivity() {
     ): MediaItem {
 
         val url =
-            uri.toString()
-                .lowercase()
+            uri.toString().lowercase()
 
         val builder =
             MediaItem.Builder()
@@ -385,13 +323,11 @@ class OnlineVideoActivity : ComponentActivity() {
 
     private fun releasePlayer() {
 
-        playerView.player =
-            null
+        playerView.player = null
 
         player?.release()
 
-        player =
-            null
+        player = null
     }
 
     override fun onStop() {
