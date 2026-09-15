@@ -136,6 +136,18 @@ class PlayerActivity : FragmentActivity() {
             } catch (_: Exception) {
             }
 
+            val videoUri =
+                getIncomingVideoUri()
+
+            if (videoUri != null) {
+
+                SubtitleFileManager.setSubtitleUri(
+                    this,
+                    videoUri,
+                    uri
+                )
+            }
+
             loadVideoWithSubtitle(uri)
         }
 
@@ -1651,13 +1663,36 @@ class PlayerActivity : FragmentActivity() {
                 ?: return
 
         if (isExternalVideo()) {
+
             deleteButton.visibility =
                 View.GONE
+
+            createPlayer(
+                MediaItem.fromUri(uri)
+            )
+
+            return
         }
 
-        createPlayer(
-            MediaItem.fromUri(uri)
-        )
+        val savedSubtitle =
+            SubtitleFileManager.getSubtitleUri(
+                this,
+                uri
+            )
+
+        if (savedSubtitle != null) {
+
+            createPlayerWithSubtitle(
+                uri,
+                savedSubtitle
+            )
+
+        } else {
+
+            createPlayer(
+                MediaItem.fromUri(uri)
+            )
+        }
     }
 
     private fun loadVideoWithSubtitle(
@@ -1668,22 +1703,32 @@ class PlayerActivity : FragmentActivity() {
             getIncomingVideoUri()
                 ?: return
 
+        SubtitleFileManager.setSubtitleUri(
+            this,
+            videoUri,
+            subtitleUri
+        )
+
+        createPlayerWithSubtitle(
+            videoUri,
+            subtitleUri
+        )
+    }
+
+    private fun createPlayerWithSubtitle(
+        videoUri: Uri,
+        subtitleUri: Uri
+    ) {
+
         val subtitleMimeType =
-            when (
-                contentResolver.getType(
-                    subtitleUri
-                )
-            ) {
+            getSubtitleMimeType(
+                subtitleUri
+            )
 
-                "text/vtt" ->
-                    MimeTypes.TEXT_VTT
-
-                "application/x-subrip" ->
-                    MimeTypes.APPLICATION_SUBRIP
-
-                else ->
-                    MimeTypes.APPLICATION_SUBRIP
-            }
+        val subtitleLanguage =
+            detectSubtitleLanguage(
+                subtitleUri
+            )
 
         val subtitle =
             MediaItem.SubtitleConfiguration
@@ -1691,7 +1736,9 @@ class PlayerActivity : FragmentActivity() {
                 .setMimeType(
                     subtitleMimeType
                 )
-                .setLanguage("fa")
+                .setLanguage(
+                    subtitleLanguage
+                )
                 .setSelectionFlags(
                     C.SELECTION_FLAG_DEFAULT
                 )
@@ -1705,7 +1752,134 @@ class PlayerActivity : FragmentActivity() {
                 )
                 .build()
 
-        createPlayer(mediaItem)
+        createPlayer(
+            mediaItem
+        )
+    }
+
+    private fun getSubtitleMimeType(
+        subtitleUri: Uri
+    ): String {
+
+        val detectedType =
+            try {
+                contentResolver.getType(
+                    subtitleUri
+                )
+            } catch (_: Exception) {
+                null
+            }
+
+        if (
+            detectedType ==
+            MimeTypes.TEXT_VTT
+        ) {
+            return MimeTypes.TEXT_VTT
+        }
+
+        if (
+            detectedType ==
+            MimeTypes.APPLICATION_SUBRIP
+        ) {
+            return MimeTypes.APPLICATION_SUBRIP
+        }
+
+        val name =
+            getDisplayName(
+                subtitleUri
+            ).lowercase()
+
+        return when {
+
+            name.endsWith(".vtt") ->
+                MimeTypes.TEXT_VTT
+
+            name.endsWith(".srt") ->
+                MimeTypes.APPLICATION_SUBRIP
+
+            else ->
+                MimeTypes.APPLICATION_SUBRIP
+        }
+    }
+
+    private fun detectSubtitleLanguage(
+        subtitleUri: Uri
+    ): String {
+
+        val name =
+            getDisplayName(
+                subtitleUri
+            ).lowercase()
+
+        return when {
+
+            name.contains(".fa.") ||
+                name.contains("_fa.") ||
+                name.contains("-fa.") ->
+                "fa"
+
+            name.contains(".en.") ||
+                name.contains("_en.") ||
+                name.contains("-en.") ->
+                "en"
+
+            name.contains(".ar.") ||
+                name.contains("_ar.") ||
+                name.contains("-ar.") ->
+                "ar"
+
+            name.contains(".de.") ||
+                name.contains("_de.") ||
+                name.contains("-de.") ->
+                "de"
+
+            name.contains(".fr.") ||
+                name.contains("_fr.") ||
+                name.contains("-fr.") ->
+                "fr"
+
+            else ->
+                "fa"
+        }
+    }
+
+    private fun getDisplayName(
+        uri: Uri
+    ): String {
+
+        return try {
+
+            contentResolver.query(
+                uri,
+                arrayOf(
+                    MediaStore.MediaColumns.DISPLAY_NAME
+                ),
+                null,
+                null,
+                null
+            )?.use { cursor ->
+
+                if (cursor.moveToFirst()) {
+
+                    cursor.getString(0)
+                        ?: uri.lastPathSegment
+                        ?: "subtitle"
+
+                } else {
+
+                    uri.lastPathSegment
+                        ?: "subtitle"
+                }
+            } ?: (
+                uri.lastPathSegment
+                    ?: "subtitle"
+                )
+
+        } catch (_: Exception) {
+
+            uri.lastPathSegment
+                ?: "subtitle"
+        }
     }
 
     private fun createPlayer(
@@ -1935,9 +2109,25 @@ class PlayerActivity : FragmentActivity() {
             getVideoName(uri)
         )
 
-        createPlayer(
-            MediaItem.fromUri(uri)
-        )
+        val savedSubtitle =
+            SubtitleFileManager.getSubtitleUri(
+                this,
+                uri
+            )
+
+        if (savedSubtitle != null) {
+
+            createPlayerWithSubtitle(
+                uri,
+                savedSubtitle
+            )
+
+        } else {
+
+            createPlayer(
+                MediaItem.fromUri(uri)
+            )
+        }
     }
 
     private fun getVideoName(
@@ -2093,6 +2283,11 @@ class PlayerActivity : FragmentActivity() {
                         uri
                     )
 
+                    SubtitleFileManager.removeSubtitle(
+                        this,
+                        uri
+                    )
+
                     showTemporaryMessage(
                         getString(
                             R.string.video_deleted
@@ -2137,9 +2332,17 @@ class PlayerActivity : FragmentActivity() {
 
             if (uriString != null) {
 
+                val uri =
+                    Uri.parse(uriString)
+
                 PlaybackHistoryManager.clear(
                     this,
-                    Uri.parse(uriString)
+                    uri
+                )
+
+                SubtitleFileManager.removeSubtitle(
+                    this,
+                    uri
                 )
             }
 
