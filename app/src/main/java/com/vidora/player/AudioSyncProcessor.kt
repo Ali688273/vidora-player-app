@@ -4,7 +4,6 @@ import androidx.media3.common.C
 import androidx.media3.common.audio.AudioProcessor
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import kotlin.math.max
 
 class AudioSyncProcessor : AudioProcessor {
 
@@ -17,8 +16,7 @@ class AudioSyncProcessor : AudioProcessor {
 
     private var skipBytes = 0
 
-    private var delayedBytes =
-        ByteArray(0)
+    private var delayedBytes = ByteArray(0)
 
     private var outputBuffer =
         AudioProcessor.EMPTY_BUFFER
@@ -28,6 +26,7 @@ class AudioSyncProcessor : AudioProcessor {
     fun setOffset(
         offset: Long
     ) {
+
         offsetMs =
             offset.coerceIn(
                 -10_000L,
@@ -45,6 +44,7 @@ class AudioSyncProcessor : AudioProcessor {
             inputAudioFormat.encoding !=
             C.ENCODING_PCM_16BIT
         ) {
+
             throw AudioProcessor.UnhandledAudioFormatException(
                 inputAudioFormat
             )
@@ -57,10 +57,8 @@ class AudioSyncProcessor : AudioProcessor {
             inputAudioFormat.channelCount
 
         bytesPerFrame =
-            max(
-                1,
-                channelCount * 2
-            )
+            (channelCount * 2)
+                .coerceAtLeast(1)
 
         return inputAudioFormat
     }
@@ -78,18 +76,25 @@ class AudioSyncProcessor : AudioProcessor {
             val size =
                 inputBuffer.remaining()
 
-            outputBuffer =
+            if (size <= 0) {
+
+                outputBuffer =
+                    AudioProcessor.EMPTY_BUFFER
+
+                return
+            }
+
+            val output =
                 ByteBuffer.allocateDirect(
                     size
                 ).order(
                     ByteOrder.nativeOrder()
                 )
 
-            outputBuffer.put(
-                inputBuffer
-            )
+            output.put(inputBuffer)
+            output.flip()
 
-            outputBuffer.flip()
+            outputBuffer = output
 
             return
         }
@@ -99,62 +104,94 @@ class AudioSyncProcessor : AudioProcessor {
 
         if (currentOffset < 0L) {
 
-            if (skipBytes == 0) {
-
-                skipBytes =
-                    (
-                        (-currentOffset) *
-                            sampleRate *
-                            bytesPerFrame /
-                            1000L
-                        ).toInt()
-                }
-
-                skipBytes -=
-                    skipBytes %
-                        bytesPerFrame
-            }
-
-            val available =
-                inputBuffer.remaining()
-
-            val toSkip =
-                minOf(
-                    skipBytes,
-                    available
-                )
-
-            inputBuffer.position(
-                inputBuffer.position() +
-                    toSkip
+            queueNegativeOffset(
+                inputBuffer,
+                currentOffset
             )
-
-            skipBytes -= toSkip
-
-            val remaining =
-                inputBuffer.remaining()
-
-            if (remaining <= 0) {
-                outputBuffer =
-                    AudioProcessor.EMPTY_BUFFER
-                return
-            }
-
-            outputBuffer =
-                ByteBuffer.allocateDirect(
-                    remaining
-                ).order(
-                    ByteOrder.nativeOrder()
-                )
-
-            outputBuffer.put(
-                inputBuffer
-            )
-
-            outputBuffer.flip()
 
             return
         }
+
+        queuePositiveOffset(
+            inputBuffer,
+            currentOffset
+        )
+    }
+
+    private fun queueNegativeOffset(
+        inputBuffer: ByteBuffer,
+        currentOffset: Long
+    ) {
+
+        if (skipBytes <= 0) {
+
+            skipBytes =
+                (
+                    (-currentOffset) *
+                        sampleRate *
+                        bytesPerFrame /
+                        1000L
+                    ).toInt()
+
+            if (bytesPerFrame > 0) {
+
+                skipBytes -=
+                    skipBytes % bytesPerFrame
+            }
+        }
+
+        val available =
+            inputBuffer.remaining()
+
+        if (available <= 0) {
+
+            outputBuffer =
+                AudioProcessor.EMPTY_BUFFER
+
+            return
+        }
+
+        val toSkip =
+            minOf(
+                skipBytes,
+                available
+            )
+
+        inputBuffer.position(
+            inputBuffer.position() +
+                toSkip
+        )
+
+        skipBytes -= toSkip
+
+        val remaining =
+            inputBuffer.remaining()
+
+        if (remaining <= 0) {
+
+            outputBuffer =
+                AudioProcessor.EMPTY_BUFFER
+
+            return
+        }
+
+        val output =
+            ByteBuffer.allocateDirect(
+                remaining
+            ).order(
+                ByteOrder.nativeOrder()
+            )
+
+        output.put(inputBuffer)
+        output.flip()
+
+        outputBuffer = output
+    }
+
+    private fun queuePositiveOffset(
+        inputBuffer: ByteBuffer,
+        currentOffset: Long
+    ) {
 
         val delayBytes =
             (
@@ -164,15 +201,31 @@ class AudioSyncProcessor : AudioProcessor {
                     1000L
                 ).toInt()
                 .coerceAtLeast(0)
+                .let { value ->
+
+                    if (bytesPerFrame > 0) {
+                        value -
+                            (value % bytesPerFrame)
+                    } else {
+                        value
+                    }
+                }
+
+        val incomingSize =
+            inputBuffer.remaining()
+
+        if (incomingSize <= 0) {
+
+            outputBuffer =
+                AudioProcessor.EMPTY_BUFFER
+
+            return
+        }
 
         val incoming =
-            ByteArray(
-                inputBuffer.remaining()
-            )
+            ByteArray(incomingSize)
 
-        inputBuffer.get(
-            incoming
-        )
+        inputBuffer.get(incoming)
 
         val combined =
             ByteArray(
@@ -229,8 +282,7 @@ class AudioSyncProcessor : AudioProcessor {
 
         output.flip()
 
-        outputBuffer =
-            output
+        outputBuffer = output
 
         delayedBytes =
             combined.copyOfRange(
@@ -244,28 +296,26 @@ class AudioSyncProcessor : AudioProcessor {
         ended = true
 
         if (
-            delayedBytes.isNotEmpty()
+            delayedBytes.isEmpty()
         ) {
 
-            val output =
-                ByteBuffer.allocateDirect(
-                    delayedBytes.size
-                ).order(
-                    ByteOrder.nativeOrder()
-                )
+            return
+        }
 
-            output.put(
-                delayedBytes
+        val output =
+            ByteBuffer.allocateDirect(
+                delayedBytes.size
+            ).order(
+                ByteOrder.nativeOrder()
             )
 
-            output.flip()
+        output.put(delayedBytes)
+        output.flip()
 
-            outputBuffer =
-                output
+        outputBuffer = output
 
-            delayedBytes =
-                ByteArray(0)
-        }
+        delayedBytes =
+            ByteArray(0)
     }
 
     override fun getOutput(): ByteBuffer {
@@ -297,26 +347,31 @@ class AudioSyncProcessor : AudioProcessor {
 
         ended = false
 
-        if (sampleRate > 0) {
+        skipBytes =
+            if (
+                offsetMs < 0L &&
+                sampleRate > 0 &&
+                bytesPerFrame > 0
+            ) {
 
-            skipBytes =
-                if (offsetMs < 0L) {
+                (
+                    (-offsetMs) *
+                        sampleRate *
+                        bytesPerFrame /
+                        1000L
+                    ).toInt()
+                    .let { value ->
+                        value -
+                            (
+                                value %
+                                    bytesPerFrame
+                                )
+                    }
 
-                    (
-                        (-offsetMs) *
-                            sampleRate *
-                            bytesPerFrame /
-                            1000L
-                        ).toInt()
+            } else {
 
-                } else {
-                    0
-                }
-
-            skipBytes -=
-                skipBytes %
-                    bytesPerFrame
-        }
+                0
+            }
     }
 
     override fun reset() {
