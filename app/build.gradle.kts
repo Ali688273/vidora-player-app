@@ -5,7 +5,6 @@ plugins {
 
 android {
     namespace = "com.vidora.player"
-
     compileSdk = 36
 
     defaultConfig {
@@ -54,6 +53,34 @@ android {
         )
     }
 
+    signingConfigs {
+        create("release") {
+            val keystorePath =
+                System.getenv("VIDORA_KEYSTORE_PATH")
+
+            val keystorePassword =
+                System.getenv("VIDORA_KEYSTORE_PASSWORD")
+
+            val keyAlias =
+                System.getenv("VIDORA_KEY_ALIAS")
+
+            val keyPassword =
+                System.getenv("VIDORA_KEY_PASSWORD")
+
+            if (
+                !keystorePath.isNullOrBlank() &&
+                !keystorePassword.isNullOrBlank() &&
+                !keyAlias.isNullOrBlank() &&
+                !keyPassword.isNullOrBlank()
+            ) {
+                storeFile = file(keystorePath)
+                storePassword = keystorePassword
+                this.keyAlias = keyAlias
+                this.keyPassword = keyPassword
+            }
+        }
+    }
+
     buildTypes {
         debug {
             isMinifyEnabled = false
@@ -62,6 +89,9 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+
+            signingConfig =
+                signingConfigs.getByName("release")
 
             proguardFiles(
                 getDefaultProguardFile(
@@ -87,7 +117,6 @@ android {
 }
 
 dependencies {
-
     implementation(
         "androidx.core:core-ktx:1.18.0"
     )
