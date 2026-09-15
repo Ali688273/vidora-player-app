@@ -1,76 +1,63 @@
 package com.vidora.player
 
-import android.net.Uri
+import android.app.Activity
 import android.os.Bundle
+import android.view.Gravity
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
+import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.activity.ComponentActivity
+import android.widget.Toast
 import androidx.media3.common.MediaItem
-import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.PlaybackException
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 
-class OnlineVideoActivity : ComponentActivity() {
+class OnlineVideoActivity : Activity() {
 
-    companion object {
-        const val EXTRA_URL =
-            "com.vidora.player.EXTRA_ONLINE_URL"
-    }
+    private var player: ExoPlayer? = null
 
     private lateinit var playerView: PlayerView
     private lateinit var urlInput: EditText
-    private lateinit var playButton: Button
-    private lateinit var retryButton: Button
-    private lateinit var errorText: TextView
+    private lateinit var statusText: TextView
 
-    private var player: ExoPlayer? = null
-    private var currentUrl: String = ""
+    private fun dp(
+        value: Int
+    ): Int {
+        return (
+            value *
+                resources.displayMetrics.density
+            ).toInt()
+    }
 
     override fun onCreate(
         savedInstanceState: Bundle?
     ) {
+
         super.onCreate(
             savedInstanceState
         )
 
-        setContentView(
-            R.layout.activity_online_video
-        )
+        title =
+            "پخش آنلاین"
 
-        playerView =
-            findViewById(
-                R.id.onlinePlayerView
-            )
-
-        urlInput =
-            findViewById(
-                R.id.onlineUrlInput
-            )
-
-        playButton =
-            findViewById(
-                R.id.onlinePlayButton
-            )
-
-        retryButton =
-            findViewById(
-                R.id.onlineRetryButton
-            )
-
-        errorText =
-            findViewById(
-                R.id.onlineErrorText
-            )
+        buildUi()
 
         val initialUrl =
             intent.getStringExtra(
-                EXTRA_URL
-            ).orEmpty()
+                "url"
+            )
+                ?: intent.getStringExtra(
+                    "video_url"
+                )
+                ?: ""
 
-        if (initialUrl.isNotBlank()) {
+        if (
+            initialUrl.isNotBlank()
+        ) {
+
             urlInput.setText(
                 initialUrl
             )
@@ -79,207 +66,269 @@ class OnlineVideoActivity : ComponentActivity() {
                 initialUrl
             )
         }
+    }
 
-        playButton.setOnClickListener {
+    private fun buildUi() {
 
-            val url =
-                urlInput.text
-                    .toString()
-                    .trim()
+        val root =
+            LinearLayout(this).apply {
 
-            if (url.isBlank()) {
-                showError(
-                    "لطفاً لینک ویدئو را وارد کنید."
+                orientation =
+                    LinearLayout.VERTICAL
+
+                setPadding(
+                    dp(12),
+                    dp(12),
+                    dp(12),
+                    dp(12)
                 )
-                return@setOnClickListener
             }
 
-            playUrl(
-                url
+        urlInput =
+            EditText(this).apply {
+
+                hint =
+                    "لینک ویدیو را وارد کنید"
+
+                textSize = 16f
+
+                singleLine = true
+
+                setPadding(
+                    dp(16),
+                    dp(12),
+                    dp(16),
+                    dp(12)
+                )
+            }
+
+        root.addView(
+            urlInput,
+            LinearLayout.LayoutParams(
+                -1,
+                LinearLayout.LayoutParams.WRAP_CONTENT
             )
-        }
+        )
 
-        retryButton.setOnClickListener {
+        val playButton =
+            Button(this).apply {
 
-            if (currentUrl.isNotBlank()) {
-                playUrl(
-                    currentUrl
+                text =
+                    "پخش ویدیو"
+
+                setOnClickListener {
+
+                    playUrl(
+                        urlInput.text
+                            .toString()
+                    )
+                }
+            }
+
+        root.addView(
+            playButton
+        )
+
+        statusText =
+            TextView(this).apply {
+
+                text =
+                    "آماده پخش"
+
+                textSize = 14f
+
+                gravity =
+                    Gravity.CENTER
+
+                setPadding(
+                    dp(8),
+                    dp(8),
+                    dp(8),
+                    dp(8)
                 )
             }
-        }
+
+        root.addView(
+            statusText
+        )
+
+        playerView =
+            PlayerView(this).apply {
+
+                useController = true
+
+                controllerAutoShow = true
+
+                controllerHideOnTouch = true
+
+                setShowBuffering(
+                    PlayerView.SHOW_BUFFERING_ALWAYS
+                )
+            }
+
+        root.addView(
+            playerView,
+            LinearLayout.LayoutParams(
+                -1,
+                0,
+                1f
+            )
+        )
+
+        val closeButton =
+            Button(this).apply {
+
+                text =
+                    "بستن"
+
+                setOnClickListener {
+                    finish()
+                }
+            }
+
+        root.addView(
+            closeButton
+        )
+
+        setContentView(
+            root
+        )
     }
 
     private fun playUrl(
-        url: String
+        rawUrl: String
     ) {
 
-        val uri =
-            try {
-                Uri.parse(url)
-            } catch (_: Exception) {
-                null
-            }
+        val url =
+            rawUrl.trim()
 
         if (
-            uri == null ||
-            uri.scheme !in listOf(
-                "http",
-                "https"
+            !VideoUrlValidator.isValid(
+                url
             )
         ) {
-            showError(
+
+            statusText.text =
                 "لینک واردشده معتبر نیست."
-            )
+
+            Toast.makeText(
+                this,
+                "لطفاً یک لینک معتبر http یا https وارد کنید.",
+                Toast.LENGTH_SHORT
+            ).show()
+
             return
         }
 
-        currentUrl = url
-
-        hideError()
-
         releasePlayer()
 
-        val builder =
-            ExoPlayer.Builder(this)
-
-        player =
-            builder.build()
-
-        playerView.player =
-            player
+        statusText.text =
+            "در حال اتصال..."
 
         val mediaItem =
-            buildMediaItem(
-                uri
-            )
+            try {
 
-        player?.setMediaItem(
-            mediaItem
-        )
-
-        player?.addListener(
-            object : Player.Listener {
-
-                override fun onPlayerError(
-                    error: PlaybackException
-                ) {
-                    showError(
-                        errorMessage(
-                            error
-                        )
+                OnlinePlaybackResolver
+                    .createMediaItem(
+                        url
                     )
-                }
+
+            } catch (
+                _: Exception
+            ) {
+
+                statusText.text =
+                    "لینک قابل پخش نیست."
+
+                return
+            }
+
+        val newPlayer =
+            ExoPlayer.Builder(
+                this
+            )
+                .build()
+
+        player =
+            newPlayer
+
+        playerView.player =
+            newPlayer
+
+        newPlayer.addListener(
+            object : Player.Listener {
 
                 override fun onPlaybackStateChanged(
                     playbackState: Int
                 ) {
 
-                    if (
-                        playbackState ==
-                        Player.STATE_READY
+                    when (
+                        playbackState
                     ) {
-                        hideError()
+
+                        Player.STATE_BUFFERING -> {
+                            statusText.text =
+                                "در حال بارگذاری..."
+                        }
+
+                        Player.STATE_READY -> {
+                            statusText.text =
+                                "در حال پخش"
+                        }
+
+                        Player.STATE_ENDED -> {
+                            statusText.text =
+                                "پخش به پایان رسید"
+                        }
+
+                        else -> Unit
                     }
+                }
+
+                override fun onPlayerError(
+                    error: PlaybackException
+                ) {
+
+                    statusText.text =
+                        NetworkPlaybackError
+                            .message(
+                                error
+                            )
+
+                    Toast.makeText(
+                        this@OnlineVideoActivity,
+                        NetworkPlaybackError
+                            .message(
+                                error
+                            ),
+                        Toast.LENGTH_LONG
+                    ).show()
                 }
             }
         )
 
-        player?.prepare()
-        player?.playWhenReady = true
+        newPlayer.setMediaItem(
+            mediaItem
+        )
+
+        newPlayer.prepare()
+
+        newPlayer.playWhenReady =
+            true
     }
 
-    private fun buildMediaItem(
-        uri: Uri
-    ): MediaItem {
+    override fun onPause() {
 
-        val lower =
-            uri.toString()
-                .lowercase()
+        super.onPause()
 
-        return when {
-
-            lower.contains(
-                ".m3u8"
-            ) -> {
-
-                MediaItem.Builder()
-                    .setUri(uri)
-                    .setMimeType(
-                        "application/x-mpegURL"
-                    )
-                    .build()
-            }
-
-            lower.contains(
-                ".mpd"
-            ) -> {
-
-                MediaItem.Builder()
-                    .setUri(uri)
-                    .setMimeType(
-                        "application/dash+xml"
-                    )
-                    .build()
-            }
-
-            else -> {
-
-                MediaItem.Builder()
-                    .setUri(uri)
-                    .build()
-            }
-        }
+        player?.pause()
     }
 
-    private fun errorMessage(
-        error: PlaybackException
-    ): String {
+    override fun onDestroy() {
 
-        return when (
-            error.errorCode
-        ) {
+        releasePlayer()
 
-            PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED ->
-                "اتصال اینترنت برقرار نیست."
-
-            PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT ->
-                "زمان اتصال به سرور تمام شد."
-
-            PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS ->
-                "سرور پاسخ نامعتبر داد."
-
-            PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED ->
-                "فرمت ویدئو قابل شناسایی نیست."
-
-            PlaybackException.ERROR_CODE_DECODER_INIT_FAILED ->
-                "این ویدئو روی دستگاه قابل پخش نیست."
-
-            else ->
-                "پخش ویدئوی آنلاین با خطا مواجه شد."
-        }
-    }
-
-    private fun showError(
-        message: String
-    ) {
-
-        errorText.text =
-            message
-
-        errorText.visibility =
-            View.VISIBLE
-
-        retryButton.visibility =
-            View.VISIBLE
-    }
-
-    private fun hideError() {
-
-        errorText.visibility =
-            View.GONE
-
-        retryButton.visibility =
-            View.GONE
+        super.onDestroy()
     }
 
     private fun releasePlayer() {
@@ -289,20 +338,7 @@ class OnlineVideoActivity : ComponentActivity() {
 
         player?.release()
 
-        player = null
-    }
-
-    override fun onStop() {
-
-        super.onStop()
-
-        releasePlayer()
-    }
-
-    override fun onDestroy() {
-
-        releasePlayer()
-
-        super.onDestroy()
+        player =
+            null
     }
 }
