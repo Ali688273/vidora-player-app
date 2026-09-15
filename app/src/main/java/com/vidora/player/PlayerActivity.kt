@@ -689,7 +689,6 @@ class PlayerActivity : FragmentActivity() {
             )
                 .setAllowAdaptiveSelections(true)
                 .setShowDisableOption(false)
-                .setIsDisabledAllowed(false)
                 .build()
                 .show()
 
