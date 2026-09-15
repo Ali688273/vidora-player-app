@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-
 <resources>
 
     <!-- نام برنامه -->
@@ -17,6 +16,7 @@
 
     <string name="favorite_off">☆</string>
     <string name="favorite_on">★</string>
+
     <string name="added_to_favorites">به علاقه‌مندی‌ها اضافه شد.</string>
     <string name="removed_from_favorites">از علاقه‌مندی‌ها حذف شد.</string>
 
@@ -33,7 +33,6 @@
     <string name="sleep_timer_active">تایمر %1$d دقیقه</string>
 
     <string name="share_video">اشتراک</string>
-
     <string name="delete_video">حذف</string>
     <string name="delete_video_title">حذف ویدئو</string>
     <string name="delete_video_message">آیا از حذف این ویدئو مطمئن هستید؟</string>
@@ -44,6 +43,10 @@
     <string name="unlock">بازکردن</string>
     <string name="fullscreen">⛶</string>
     <string name="screen_locked">صفحه قفل است</string>
+
+    <!-- موارد اضافه شده برای activity_player -->
+    <string name="more">بیشتر</string>
+    <string name="player_locked">پخش‌کننده قفل است</string>
 
     <!-- ژست‌های لمسی -->
     <string name="seek_backward">۱۰ ثانیه عقب</string>
