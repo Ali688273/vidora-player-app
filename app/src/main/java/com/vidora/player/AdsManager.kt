@@ -3,6 +3,8 @@ package com.vidora.player
 import android.app.Activity
 import android.app.Application
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 
 import com.adivery.sdk.Adivery
@@ -17,18 +19,38 @@ object AdsManager {
 
     private const val TAG = "VidoraAds"
 
+    private const val PREFS_NAME = "vidora_ads"
+    private const val OPEN_COUNT_KEY = "player_open_count"
+
+    private const val SHOW_AFTER_OPENS = 4
+
+    private var initialized = false
     private var tapsellInitialized = false
 
     private var tapsellInterstitialResponseId: String? = null
     private var tapsellRewardedResponseId: String? = null
 
+    private var lifecycleRegistered = false
+    private var showingAd = false
+
+    private val mainHandler =
+        Handler(Looper.getMainLooper())
+
     fun initialize(context: Context) {
+
+        if (initialized) {
+            return
+        }
+
+        initialized = true
 
         val application =
             context.applicationContext as Application
 
         initializeAdivery(application)
         initializeTapsell(application)
+
+        registerActivityLifecycle(application)
     }
 
     private fun initializeAdivery(
@@ -119,11 +141,140 @@ object AdsManager {
         }
     }
 
+    private fun registerActivityLifecycle(
+        application: Application
+    ) {
+
+        if (lifecycleRegistered) {
+            return
+        }
+
+        lifecycleRegistered = true
+
+        application.registerActivityLifecycleCallbacks(
+            object : Application.ActivityLifecycleCallbacks {
+
+                override fun onActivityCreated(
+                    activity: Activity,
+                    savedInstanceState: android.os.Bundle?
+                ) {
+                }
+
+                override fun onActivityStarted(
+                    activity: Activity
+                ) {
+
+                    if (
+                        activity !is PlayerActivity
+                    ) {
+                        return
+                    }
+
+                    prepareInterstitial(
+                        activity
+                    )
+
+                    registerPlayerOpen(
+                        activity
+                    )
+                }
+
+                override fun onActivityResumed(
+                    activity: Activity
+                ) {
+                }
+
+                override fun onActivityPaused(
+                    activity: Activity
+                ) {
+                }
+
+                override fun onActivityStopped(
+                    activity: Activity
+                ) {
+                }
+
+                override fun onActivitySaveInstanceState(
+                    activity: Activity,
+                    outState: android.os.Bundle
+                ) {
+                }
+
+                override fun onActivityDestroyed(
+                    activity: Activity
+                ) {
+                }
+            }
+        )
+    }
+
+    private fun registerPlayerOpen(
+        activity: Activity
+    ) {
+
+        val preferences =
+            activity.getSharedPreferences(
+                PREFS_NAME,
+                Context.MODE_PRIVATE
+            )
+
+        val oldCount =
+            preferences.getInt(
+                OPEN_COUNT_KEY,
+                0
+            )
+
+        val newCount =
+            oldCount + 1
+
+        if (
+            newCount >= SHOW_AFTER_OPENS
+        ) {
+
+            preferences.edit()
+                .putInt(
+                    OPEN_COUNT_KEY,
+                    0
+                )
+                .apply()
+
+            mainHandler.postDelayed(
+                {
+                    if (
+                        !activity.isFinishing &&
+                        !activity.isDestroyed &&
+                        !showingAd
+                    ) {
+                        showInterstitial(
+                            activity
+                        )
+                    }
+                },
+                900L
+            )
+
+        } else {
+
+            preferences.edit()
+                .putInt(
+                    OPEN_COUNT_KEY,
+                    newCount
+                )
+                .apply()
+        }
+    }
+
     fun prepareInterstitial(
         activity: Activity
     ) {
 
         if (!tapsellInitialized) {
+            return
+        }
+
+        if (
+            !tapsellInterstitialResponseId.isNullOrBlank()
+        ) {
             return
         }
 
@@ -177,6 +328,12 @@ object AdsManager {
             return
         }
 
+        if (
+            !tapsellRewardedResponseId.isNullOrBlank()
+        ) {
+            return
+        }
+
         try {
 
             TapsellPlus.requestRewardedVideoAd(
@@ -223,10 +380,25 @@ object AdsManager {
         activity: Activity
     ) {
 
+        if (showingAd) {
+            return
+        }
+
+        if (
+            activity.isFinishing ||
+            activity.isDestroyed
+        ) {
+            return
+        }
+
         val responseId =
             tapsellInterstitialResponseId
 
-        if (!responseId.isNullOrBlank()) {
+        if (
+            !responseId.isNullOrBlank()
+        ) {
+
+            showingAd = true
 
             try {
 
@@ -242,7 +414,10 @@ object AdsManager {
                     },
 
                     {
-                        tapsellInterstitialResponseId = null
+                        showingAd = false
+
+                        tapsellInterstitialResponseId =
+                            null
 
                         prepareInterstitial(
                             activity
@@ -255,7 +430,10 @@ object AdsManager {
                     },
 
                     {
-                        tapsellInterstitialResponseId = null
+                        showingAd = false
+
+                        tapsellInterstitialResponseId =
+                            null
 
                         Log.e(
                             TAG,
@@ -272,7 +450,10 @@ object AdsManager {
 
             } catch (e: Exception) {
 
-                tapsellInterstitialResponseId = null
+                showingAd = false
+
+                tapsellInterstitialResponseId =
+                    null
 
                 Log.e(
                     TAG,
@@ -292,10 +473,25 @@ object AdsManager {
         onRewarded: () -> Unit
     ) {
 
+        if (showingAd) {
+            return
+        }
+
+        if (
+            activity.isFinishing ||
+            activity.isDestroyed
+        ) {
+            return
+        }
+
         val responseId =
             tapsellRewardedResponseId
 
-        if (!responseId.isNullOrBlank()) {
+        if (
+            !responseId.isNullOrBlank()
+        ) {
+
+            showingAd = true
 
             try {
 
@@ -311,7 +507,10 @@ object AdsManager {
                     },
 
                     {
-                        tapsellRewardedResponseId = null
+                        showingAd = false
+
+                        tapsellRewardedResponseId =
+                            null
 
                         prepareRewarded(
                             activity
@@ -333,7 +532,10 @@ object AdsManager {
                     },
 
                     {
-                        tapsellRewardedResponseId = null
+                        showingAd = false
+
+                        tapsellRewardedResponseId =
+                            null
 
                         Log.e(
                             TAG,
@@ -351,7 +553,10 @@ object AdsManager {
 
             } catch (e: Exception) {
 
-                tapsellRewardedResponseId = null
+                showingAd = false
+
+                tapsellRewardedResponseId =
+                    null
 
                 Log.e(
                     TAG,
@@ -389,6 +594,20 @@ object AdsManager {
                 "Adivery interstitial error",
                 e
             )
+
+        } finally {
+
+            showingAd = false
+
+            try {
+
+                Adivery.prepareInterstitialAd(
+                    activity.application,
+                    BuildConfig.ADIVERY_INTERSTITIAL
+                )
+
+            } catch (_: Exception) {
+            }
         }
     }
 
@@ -415,6 +634,10 @@ object AdsManager {
                 "Adivery rewarded error",
                 e
             )
+
+        } finally {
+
+            showingAd = false
         }
     }
 }
