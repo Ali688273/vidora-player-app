@@ -4,24 +4,26 @@ import android.Manifest
 import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
-import android.view.Gravity
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.PopupMenu
 import android.widget.TextView
+import android.widget.Toast
+
 import androidx.activity.ComponentActivity
-import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import java.util.Locale
 
 class MainActivity : ComponentActivity() {
 
@@ -29,60 +31,151 @@ class MainActivity : ComponentActivity() {
     private lateinit var countText: TextView
     private lateinit var searchInput: EditText
     private lateinit var sortButton: Button
+    private lateinit var viewModeButton: Button
+    private lateinit var backFolderButton: Button
+    private lateinit var locationText: TextView
 
-    private val allVideos = mutableListOf<VideoItem>()
+    private val allVideos =
+        mutableListOf<VideoItem>()
 
-    private var sortMode = SortMode.LAST_ACCESS
+    private var currentFolder: String? = null
 
-    private val permissionLauncher =
-        registerForActivityResult(
-            ActivityResultContracts.RequestPermission()
-        ) { granted ->
+    private var sortMode =
+        SortMode.LAST_ACCESS
 
-            if (granted) {
-                loadVideos()
-            } else {
-                showMessage(
-                    "برای نمایش ویدئوها، اجازه دسترسی به ویدئوها لازم است."
-                )
-            }
-        }
+    private var gridMode =
+        false
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        setContentView(R.layout.activity_main)
-
-        videoContainer = findViewById(R.id.videoContainer)
-
-        countText = findViewById(R.id.countText)
-
-        searchInput = findViewById(R.id.searchInput)
-
-        sortButton = findViewById(R.id.sortButton)
-
-        setupSearch()
-        setupSortButton()
-        setupExtraMenu()
-
-        checkPermissionAndLoad()
+    private enum class SortMode {
+        LAST_ACCESS,
+        NAME,
+        SIZE,
+        FAVORITES
     }
 
-    override fun onResume() {
-        super.onResume()
+    private val permissionRequestCode =
+        7001
 
-        if (
-            ::videoContainer.isInitialized &&
-            hasVideoPermission()
-        ) {
-            loadVideos()
+    override fun onCreate(
+        savedInstanceState: Bundle?
+    ) {
+        super.onCreate(savedInstanceState)
+
+        setContentView(
+            R.layout.activity_main
+        )
+
+        videoContainer =
+            findViewById(
+                R.id.videoContainer
+            )
+
+        countText =
+            findViewById(
+                R.id.countText
+            )
+
+        searchInput =
+            findViewById(
+                R.id.searchInput
+            )
+
+        sortButton =
+            findViewById(
+                R.id.sortButton
+            )
+
+        viewModeButton =
+            findViewById(
+                R.id.viewModeButton
+            )
+
+        backFolderButton =
+            findViewById(
+                R.id.backFolderButton
+            )
+
+        locationText =
+            findViewById(
+                R.id.locationText
+            )
+
+        loadSavedDisplayMode()
+
+        setupSearch()
+
+        sortButton.setOnClickListener {
+            showSortMenu()
         }
+
+        viewModeButton.setOnClickListener {
+            gridMode = !gridMode
+            saveDisplayMode()
+            updateViewModeButton()
+            displayVideos()
+        }
+
+        backFolderButton.setOnClickListener {
+            openRoot()
+        }
+
+        updateViewModeButton()
+
+        if (hasVideoPermission()) {
+            loadVideos()
+        } else {
+            requestVideoPermission()
+        }
+    }
+
+    private fun loadSavedDisplayMode() {
+
+        gridMode =
+            getSharedPreferences(
+                DISPLAY_PREFS,
+                MODE_PRIVATE
+            )
+                .getBoolean(
+                    KEY_GRID_MODE,
+                    false
+                )
+    }
+
+    private fun saveDisplayMode() {
+
+        getSharedPreferences(
+            DISPLAY_PREFS,
+            MODE_PRIVATE
+        )
+            .edit()
+            .putBoolean(
+                KEY_GRID_MODE,
+                gridMode
+            )
+            .apply()
+    }
+
+    private fun updateViewModeButton() {
+
+        viewModeButton.text =
+            if (gridMode) {
+                "☰"
+            } else {
+                "▦"
+            }
+
+        viewModeButton.contentDescription =
+            if (gridMode) {
+                "نمایش فهرستی"
+            } else {
+                "نمایش شبکه‌ای"
+            }
     }
 
     private fun setupSearch() {
 
         searchInput.addTextChangedListener(
-            object : android.text.TextWatcher {
+            object : TextWatcher {
 
                 override fun beforeTextChanged(
                     s: CharSequence?,
@@ -98,315 +191,87 @@ class MainActivity : ComponentActivity() {
                     before: Int,
                     count: Int
                 ) {
-                    filterVideos(
-                        s?.toString().orEmpty()
-                    )
+                    displayVideos()
                 }
 
                 override fun afterTextChanged(
-                    s: android.text.Editable?
+                    s: Editable?
                 ) {
                 }
             }
         )
     }
 
-    private fun setupSortButton() {
+    private fun hasVideoPermission(): Boolean {
 
-        updateSortButtonText()
-
-        sortButton.setOnClickListener {
-
-            sortMode =
-                when (sortMode) {
-
-                    SortMode.LAST_ACCESS ->
-                        SortMode.NAME
-
-                    SortMode.NAME ->
-                        SortMode.SIZE
-
-                    SortMode.SIZE ->
-                        SortMode.FAVORITES
-
-                    SortMode.FAVORITES ->
-                        SortMode.LAST_ACCESS
-                }
-
-            updateSortButtonText()
-
-            filterVideos(
-                searchInput.text.toString()
-            )
-        }
-    }
-
-    private fun setupExtraMenu() {
-
-        sortButton.setOnLongClickListener {
-
-            showMainMenu()
-
-            true
-        }
-    }
-
-    private fun showMainMenu() {
-
-        val popup = PopupMenu(
+        return ContextCompat.checkSelfPermission(
             this,
-            sortButton
+            requiredVideoPermission()
+        ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun requestVideoPermission() {
+
+        ActivityCompat.requestPermissions(
+            this,
+            arrayOf(
+                requiredVideoPermission()
+            ),
+            permissionRequestCode
         )
-
-        popup.menu.add("تنظیمات")
-
-        popup.menu.add("پلی‌لیست‌ها")
-
-        popup.menu.add("نمایش ویدئوهای مخفی")
-
-        popup.menu.add("ساخت پلی‌لیست جدید")
-
-        popup.setOnMenuItemClickListener { item ->
-
-            when (item.title.toString()) {
-
-                "تنظیمات" -> {
-
-                    startActivity(
-                        Intent(
-                            this,
-                            SettingsActivity::class.java
-                        )
-                    )
-                }
-
-                "پلی‌لیست‌ها" -> {
-
-                    showPlaylists()
-                }
-
-                "نمایش ویدئوهای مخفی" -> {
-
-                    VidoraSettings.setShowHidden(
-                        this,
-                        !VidoraSettings.showHidden(this)
-                    )
-
-                    loadVideos()
-                }
-
-                "ساخت پلی‌لیست جدید" -> {
-
-                    createPlaylist()
-                }
-            }
-
-            true
-        }
-
-        popup.show()
     }
 
-    private fun createPlaylist() {
-
-        val input = EditText(this).apply {
-            hint = "نام پلی‌لیست"
-        }
-
-        AlertDialog.Builder(this)
-            .setTitle("پلی‌لیست جدید")
-            .setView(input)
-            .setNegativeButton(
-                "لغو",
-                null
-            )
-            .setPositiveButton(
-                "ساختن"
-            ) { _, _ ->
-
-                val success =
-                    PlaylistManager.create(
-                        this,
-                        input.text.toString()
-                    )
-
-                showMessage(
-                    if (success) {
-                        "پلی‌لیست ساخته شد."
-                    } else {
-                        "این نام قبلاً استفاده شده یا نام خالی است."
-                    }
-                )
-            }
-            .show()
-    }
-
-    private fun showPlaylists() {
-
-        val playlists =
-            PlaylistManager.getPlaylists(this)
-
-        if (playlists.isEmpty()) {
-
-            AlertDialog.Builder(this)
-                .setTitle("پلی‌لیست‌ها")
-                .setMessage(
-                    "هنوز پلی‌لیستی ساخته نشده است."
-                )
-                .setPositiveButton(
-                    "ساخت پلی‌لیست"
-                ) { _, _ ->
-                    createPlaylist()
-                }
-                .setNegativeButton(
-                    "بستن",
-                    null
-                )
-                .show()
-
-            return
-        }
-
-        val names =
-            playlists.map {
-                "${it.name} (${it.videos.size})"
-            }.toTypedArray()
-
-        AlertDialog.Builder(this)
-            .setTitle("پلی‌لیست‌ها")
-            .setItems(
-                names
-            ) { _, which ->
-
-                val playlist =
-                    playlists[which]
-
-                showPlaylistOptions(
-                    playlist.name
-                )
-            }
-            .setPositiveButton(
-                "بستن",
-                null
-            )
-            .show()
-    }
-
-    private fun showPlaylistOptions(
-        playlistName: String
-    ) {
-
-        AlertDialog.Builder(this)
-            .setTitle(playlistName)
-            .setItems(
-                arrayOf(
-                    "حذف پلی‌لیست"
-                )
-            ) { _, _ ->
-
-                AlertDialog.Builder(this)
-                    .setTitle("حذف پلی‌لیست")
-                    .setMessage(
-                        "آیا این پلی‌لیست حذف شود؟"
-                    )
-                    .setNegativeButton(
-                        "لغو",
-                        null
-                    )
-                    .setPositiveButton(
-                        "حذف"
-                    ) { _, _ ->
-
-                        PlaylistManager.delete(
-                            this,
-                            playlistName
-                        )
-
-                        showMessage(
-                            "پلی‌لیست حذف شد."
-                        )
-                    }
-                    .show()
-            }
-            .setNegativeButton(
-                "بستن",
-                null
-            )
-            .show()
-    }
-
-    private fun updateSortButtonText() {
-
-        sortButton.text =
-            when (sortMode) {
-
-                SortMode.LAST_ACCESS ->
-                    "آخرین دسترسی"
-
-                SortMode.NAME ->
-                    "نام"
-
-                SortMode.SIZE ->
-                    "حجم"
-
-                SortMode.FAVORITES ->
-                    "علاقه‌مندی‌ها"
-            }
-    }
-
-    private fun checkPermissionAndLoad() {
-
-        if (hasVideoPermission()) {
-            loadVideos()
-        } else {
-            permissionLauncher.launch(
-                requiredPermission()
-            )
-        }
-    }
-
-    private fun requiredPermission(): String {
+    private fun requiredVideoPermission(): String {
 
         return if (
             Build.VERSION.SDK_INT >=
             Build.VERSION_CODES.TIRAMISU
         ) {
-
             Manifest.permission.READ_MEDIA_VIDEO
-
         } else {
-
             Manifest.permission.READ_EXTERNAL_STORAGE
         }
     }
 
-    private fun hasVideoPermission(): Boolean {
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
 
-        return ContextCompat.checkSelfPermission(
-            this,
-            requiredPermission()
-        ) == PackageManager.PERMISSION_GRANTED
+        super.onRequestPermissionsResult(
+            requestCode,
+            permissions,
+            grantResults
+        )
+
+        if (
+            requestCode ==
+            permissionRequestCode
+        ) {
+
+            if (
+                grantResults.isNotEmpty() &&
+                grantResults[0] ==
+                PackageManager.PERMISSION_GRANTED
+            ) {
+
+                loadVideos()
+
+            } else {
+
+                countText.text =
+                    "مجوز دسترسی به ویدئوها داده نشد."
+            }
+        }
     }
 
     private fun loadVideos() {
 
         allVideos.clear()
 
-        val projection = mutableListOf(
-            MediaStore.Video.Media._ID,
-            MediaStore.Video.Media.DISPLAY_NAME,
-            MediaStore.Video.Media.DURATION,
-            MediaStore.Video.Media.SIZE,
-            MediaStore.Video.Media.DATE_ADDED
-        )
-
-        if (
-            Build.VERSION.SDK_INT >=
-            Build.VERSION_CODES.Q
-        ) {
-            projection.add(
-                MediaStore.Video.Media.BUCKET_DISPLAY_NAME
-            )
+        if (!hasVideoPermission()) {
+            return
         }
 
         val collection =
@@ -415,18 +280,30 @@ class MainActivity : ComponentActivity() {
                 Build.VERSION_CODES.Q
             ) {
 
-                MediaStore.Video.Media.getContentUri(
-                    MediaStore.VOLUME_EXTERNAL
-                )
+                MediaStore.Video.Media
+                    .getContentUri(
+                        MediaStore.VOLUME_EXTERNAL
+                    )
 
             } else {
 
-                MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+                MediaStore.Video.Media
+                    .EXTERNAL_CONTENT_URI
             }
+
+        val projection =
+            arrayOf(
+                MediaStore.Video.Media._ID,
+                MediaStore.Video.Media.DISPLAY_NAME,
+                MediaStore.Video.Media.DURATION,
+                MediaStore.Video.Media.SIZE,
+                MediaStore.Video.Media.DATE_ADDED,
+                MediaStore.Video.Media.BUCKET_DISPLAY_NAME
+            )
 
         contentResolver.query(
             collection,
-            projection.toTypedArray(),
+            projection,
             null,
             null,
             "${MediaStore.Video.Media.DATE_ADDED} DESC"
@@ -457,7 +334,7 @@ class MainActivity : ComponentActivity() {
                     MediaStore.Video.Media.DATE_ADDED
                 )
 
-            val bucketColumn =
+            val folderColumn =
                 cursor.getColumnIndex(
                     MediaStore.Video.Media.BUCKET_DISPLAY_NAME
                 )
@@ -465,34 +342,9 @@ class MainActivity : ComponentActivity() {
             while (cursor.moveToNext()) {
 
                 val id =
-                    cursor.getLong(idColumn)
-
-                val name =
-                    cursor.getString(nameColumn)
-                        ?: "ویدئوی ناشناس"
-
-                val duration =
-                    cursor.getLong(durationColumn)
-
-                val size =
-                    cursor.getLong(sizeColumn)
-
-                val dateAdded =
-                    cursor.getLong(dateColumn)
-
-                val folderName =
-                    if (bucketColumn >= 0) {
-
-                        cursor.getString(bucketColumn)
-                            ?.takeIf {
-                                it.isNotBlank()
-                            }
-                            ?: "پوشه ناشناس"
-
-                    } else {
-
-                        "پوشه ناشناس"
-                    }
+                    cursor.getLong(
+                        idColumn
+                    )
 
                 val uri =
                     Uri.withAppendedPath(
@@ -501,221 +353,383 @@ class MainActivity : ComponentActivity() {
                     )
 
                 if (
-                    !HiddenVideoManager.isHidden(
+                    HiddenVideoManager.isHidden(
                         this,
                         uri
-                    ) ||
-                    VidoraSettings.showHidden(this)
+                    ) &&
+                    !VidoraSettings.isShowHidden(
+                        this
+                    )
                 ) {
-
-                    allVideos.add(
-                        VideoItem(
-                            uri = uri,
-                            name = name,
-                            duration = duration,
-                            size = size,
-                            dateAdded = dateAdded,
-                            folderName = folderName
-                        )
-                    )
+                    continue
                 }
+
+                val name =
+                    cursor.getString(
+                        nameColumn
+                    ) ?: "ویدئو"
+
+                val duration =
+                    cursor.getLong(
+                        durationColumn
+                    )
+
+                val size =
+                    cursor.getLong(
+                        sizeColumn
+                    )
+
+                val dateAdded =
+                    cursor.getLong(
+                        dateColumn
+                    )
+
+                val folderName =
+                    if (
+                        folderColumn >= 0
+                    ) {
+                        cursor.getString(
+                            folderColumn
+                        ) ?: "سایر"
+                    } else {
+                        "سایر"
+                    }
+
+                allVideos.add(
+                    VideoItem(
+                        uri = uri,
+                        name = name,
+                        duration = duration,
+                        size = size,
+                        dateAdded = dateAdded,
+                        folderName =
+                            folderName.ifBlank {
+                                "سایر"
+                            }
+                    )
+                )
             }
         }
 
-        filterVideos(
-            searchInput.text.toString()
-        )
+        displayVideos()
     }
 
-    private fun filterVideos(
-        query: String
-    ) {
-
-        val normalizedQuery =
-            query.trim()
-                .lowercase(Locale.getDefault())
-
-        var filtered =
-            if (normalizedQuery.isEmpty()) {
-
-                allVideos.toList()
-
-            } else {
-
-                allVideos.filter {
-
-                    it.name
-                        .lowercase(Locale.getDefault())
-                        .contains(normalizedQuery) ||
-
-                        it.folderName
-                            .lowercase(Locale.getDefault())
-                            .contains(normalizedQuery)
-                }
-            }
-
-        if (
-            sortMode ==
-            SortMode.FAVORITES
-        ) {
-
-            filtered =
-                filtered.filter {
-
-                    FavoriteManager.isFavorite(
-                        this,
-                        it.uri
-                    )
-                }
-        }
-
-        val sorted =
-            when (sortMode) {
-
-                SortMode.LAST_ACCESS ->
-
-                    filtered.sortedWith(
-
-                        compareByDescending<VideoItem> {
-                            getLastAccess(it.uri)
-                        }.thenBy {
-
-                            it.name.lowercase(
-                                Locale.getDefault()
-                            )
-                        }
-                    )
-
-                SortMode.NAME ->
-
-                    filtered.sortedWith(
-
-                        compareBy<VideoItem> {
-                            it.name.lowercase(
-                                Locale.getDefault()
-                            )
-                        }.thenBy {
-
-                            it.folderName.lowercase(
-                                Locale.getDefault()
-                            )
-                        }
-                    )
-
-                SortMode.SIZE ->
-
-                    filtered.sortedWith(
-
-                        compareByDescending<VideoItem> {
-                            it.size
-                        }.thenBy {
-
-                            it.name.lowercase(
-                                Locale.getDefault()
-                            )
-                        }
-                    )
-
-                SortMode.FAVORITES ->
-
-                    filtered.sortedWith(
-
-                        compareBy<VideoItem> {
-                            it.name.lowercase(
-                                Locale.getDefault()
-                            )
-                        }
-                    )
-            }
-
-        displayVideos(sorted)
-    }
-
-    private fun displayVideos(
-        videos: List<VideoItem>
-    ) {
+    private fun displayVideos() {
 
         videoContainer.removeAllViews()
 
+        val query =
+            searchInput.text
+                .toString()
+                .trim()
+                .lowercase()
+
+        if (currentFolder == null) {
+
+            displayFolders(
+                query
+            )
+
+        } else {
+
+            displayFolderVideos(
+                currentFolder!!,
+                query
+            )
+        }
+    }
+
+    private fun displayFolders(
+        query: String
+    ) {
+
+        val folders =
+            allVideos
+                .groupBy {
+                    it.folderName
+                }
+                .toSortedMap(
+                    compareBy {
+                        it.lowercase()
+                    }
+                )
+
+        var visibleFolderCount = 0
+        var visibleVideoCount = 0
+
+        folders.forEach { (folderName, videos) ->
+
+            val matchingVideos =
+                if (query.isBlank()) {
+                    videos
+                } else {
+                    videos.filter {
+                        it.name
+                            .lowercase()
+                            .contains(query)
+                    }
+                }
+
+            if (
+                query.isNotBlank() &&
+                matchingVideos.isEmpty()
+            ) {
+                return@forEach
+            }
+
+            visibleFolderCount++
+            visibleVideoCount +=
+                matchingVideos.size
+
+            addFolderItem(
+                folderName,
+                matchingVideos.size
+            )
+        }
+
+        if (folders.isEmpty()) {
+
+            showEmptyMessage(
+                "هیچ ویدئویی پیدا نشد."
+            )
+
+        } else if (
+            visibleFolderCount == 0
+        ) {
+
+            showEmptyMessage(
+                "نتیجه‌ای برای جستجو پیدا نشد."
+            )
+        }
+
+        locationText.text =
+            "همه پوشه‌ها"
+
+        backFolderButton.visibility =
+            View.GONE
+
         countText.text =
-            videos.size.toString()
+            if (query.isBlank()) {
+                "${folders.size} پوشه • ${allVideos.size} ویدئو"
+            } else {
+                "$visibleFolderCount پوشه • $visibleVideoCount ویدئو"
+            }
+    }
+
+    private fun displayFolderVideos(
+        folderName: String,
+        query: String
+    ) {
+
+        val videos =
+            allVideos
+                .filter {
+                    it.folderName == folderName
+                }
+                .filter {
+                    query.isBlank() ||
+                        it.name
+                            .lowercase()
+                            .contains(query)
+                }
+                .let {
+                    sortVideos(it)
+                }
+
+        locationText.text =
+            "📁 $folderName"
+
+        backFolderButton.visibility =
+            View.VISIBLE
+
+        countText.text =
+            "${videos.size} ویدئو"
 
         if (videos.isEmpty()) {
 
-            showMessage(
-                if (
-                    sortMode ==
-                    SortMode.FAVORITES
-                ) {
-
-                    "هنوز ویدئوی مورد علاقه‌ای وجود ندارد."
-
+            showEmptyMessage(
+                if (query.isBlank()) {
+                    "این پوشه ویدئویی ندارد."
                 } else {
-
-                    "ویدئویی پیدا نشد."
+                    "نتیجه‌ای برای جستجو پیدا نشد."
                 }
             )
 
             return
         }
 
-        var currentFolder: String? = null
+        if (gridMode) {
 
-        videos.forEach { video ->
+            displayGrid(
+                videos
+            )
 
-            if (
-                currentFolder !=
-                video.folderName
-            ) {
+        } else {
 
-                addFolderHeader(
-                    video.folderName
+            videos.forEach {
+                addVideoItem(
+                    it,
+                    false
                 )
-
-                currentFolder =
-                    video.folderName
             }
-
-            addVideoItem(video)
         }
     }
 
-    private fun addFolderHeader(
-        folderName: String
+    private fun sortVideos(
+        videos: List<VideoItem>
+    ): List<VideoItem> {
+
+        return when (sortMode) {
+
+            SortMode.LAST_ACCESS ->
+                videos.sortedByDescending {
+                    it.dateAdded
+                }
+
+            SortMode.NAME ->
+                videos.sortedBy {
+                    it.name.lowercase()
+                }
+
+            SortMode.SIZE ->
+                videos.sortedByDescending {
+                    it.size
+                }
+
+            SortMode.FAVORITES ->
+                videos.sortedWith(
+                    compareByDescending<VideoItem> {
+                        FavoriteManager.isFavorite(
+                            this,
+                            it.uri
+                        )
+                    }.thenBy {
+                        it.name.lowercase()
+                    }
+                )
+        }
+    }
+
+    private fun displayGrid(
+        videos: List<VideoItem>
     ) {
 
-        val folderText =
-            TextView(this).apply {
+        var row: LinearLayout? =
+            null
 
-                text =
-                    "📁 $folderName"
+        videos.forEachIndexed { index, video ->
 
-                textSize = 17f
+            if (index % 2 == 0) {
 
-                setTextColor(
-                    ContextCompat.getColor(
-                        this@MainActivity,
-                        R.color.vidora_text
-                    )
+                row =
+                    LinearLayout(this).apply {
+
+                        orientation =
+                            LinearLayout.HORIZONTAL
+
+                        layoutParams =
+                            LinearLayout.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT,
+                                ViewGroup.LayoutParams.WRAP_CONTENT
+                            )
+                    }
+
+                videoContainer.addView(
+                    row
                 )
-
-                setPadding(
-                    20,
-                    28,
-                    20,
-                    12
-                )
-
-                gravity =
-                    Gravity.START or
-                        Gravity.CENTER_VERTICAL
             }
 
-        videoContainer.addView(folderText)
+            addGridVideoItem(
+                row!!,
+                video
+            )
+        }
+    }
+
+    private fun addFolderItem(
+        folderName: String,
+        videoCount: Int
+    ) {
+
+        val view =
+            LayoutInflater.from(this)
+                .inflate(
+                    R.layout.item_folder,
+                    videoContainer,
+                    false
+                )
+
+        val nameText =
+            view.findViewById<TextView>(
+                R.id.folderNameText
+            )
+
+        val infoText =
+            view.findViewById<TextView>(
+                R.id.folderInfoText
+            )
+
+        nameText.text =
+            folderName
+
+        infoText.text =
+            if (videoCount == 1) {
+                "۱ ویدئو"
+            } else {
+                "$videoCount ویدئو"
+            }
+
+        view.setOnClickListener {
+
+            currentFolder =
+                folderName
+
+            searchInput.text.clear()
+
+            displayVideos()
+        }
+
+        videoContainer.addView(
+            view
+        )
+    }
+
+    private fun addGridVideoItem(
+        parent: LinearLayout,
+        video: VideoItem
+    ) {
+
+        val view =
+            LayoutInflater.from(this)
+                .inflate(
+                    R.layout.item_video_grid,
+                    parent,
+                    false
+                )
+
+        bindVideoView(
+            view,
+            video
+        )
+
+        val params =
+            LinearLayout.LayoutParams(
+                0,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                1f
+            )
+
+        view.layoutParams =
+            params
+
+        parent.addView(
+            view
+        )
     }
 
     private fun addVideoItem(
-        video: VideoItem
+        video: VideoItem,
+        includeFolderName: Boolean
     ) {
 
         val view =
@@ -726,7 +740,41 @@ class MainActivity : ComponentActivity() {
                     false
                 )
 
-        val thumbnailImage =
+        bindVideoView(
+            view,
+            video
+        )
+
+        if (includeFolderName) {
+
+            val info =
+                view.findViewById<TextView>(
+                    R.id.infoText
+                )
+
+            info.text =
+                "${video.folderName} • ${
+                    formatDuration(
+                        video.duration
+                    )
+                } • ${
+                    formatFileSize(
+                        video.size
+                    )
+                }"
+        }
+
+        videoContainer.addView(
+            view
+        )
+    }
+
+    private fun bindVideoView(
+        view: View,
+        video: VideoItem
+    ) {
+
+        val thumbnail =
             view.findViewById<ImageView>(
                 R.id.thumbnailImage
             )
@@ -744,46 +792,33 @@ class MainActivity : ComponentActivity() {
         nameText.text =
             video.name
 
-        val favoriteMark =
-            if (
-                FavoriteManager.isFavorite(
-                    this,
-                    video.uri
-                )
-            ) {
-                "  ⭐"
-            } else {
-                ""
-            }
+        val favorite =
+            FavoriteManager.isFavorite(
+                this,
+                video.uri
+            )
 
         infoText.text =
-            buildString {
-
-                append(
-                    formatDuration(
-                        video.duration
-                    )
+            "${if (favorite) "★ " else ""}${
+                formatDuration(
+                    video.duration
                 )
-
-                append("  •  ")
-
-                append(
-                    formatSize(
-                        video.size
-                    )
+            } • ${
+                formatFileSize(
+                    video.size
                 )
+            }"
 
-                append(favoriteMark)
-            }
+        thumbnail.setImageResource(
+            android.R.drawable.ic_media_play
+        )
 
         loadThumbnail(
             video.uri,
-            thumbnailImage
+            thumbnail
         )
 
         view.setOnClickListener {
-
-            saveLastAccess(video.uri)
 
             val intent =
                 Intent(
@@ -801,147 +836,187 @@ class MainActivity : ComponentActivity() {
                 video.name
             )
 
-            startActivity(intent)
+            startActivity(
+                intent
+            )
         }
 
         view.setOnLongClickListener {
 
-            showVideoMenu(video)
+            showVideoMenu(
+                video
+            )
 
             true
         }
+    }
 
-        videoContainer.addView(view)
+    private fun loadThumbnail(
+        uri: Uri,
+        imageView: ImageView
+    ) {
+
+        Thread {
+
+            val bitmap =
+                try {
+
+                    val retriever =
+                        MediaMetadataRetriever()
+
+                    retriever.setDataSource(
+                        this,
+                        uri
+                    )
+
+                    val frame =
+                        retriever.getFrameAtTime(
+                            0,
+                            MediaMetadataRetriever.OPTION_CLOSEST_SYNC
+                        )
+
+                    retriever.release()
+
+                    frame
+
+                } catch (_: Exception) {
+
+                    null
+                }
+
+            imageView.post {
+
+                if (bitmap != null) {
+                    imageView.setImageBitmap(
+                        bitmap
+                    )
+                }
+            }
+
+        }.start()
     }
 
     private fun showVideoMenu(
         video: VideoItem
     ) {
 
+        val favorite =
+            FavoriteManager.isFavorite(
+                this,
+                video.uri
+            )
+
         val options =
             arrayOf(
-                "پخش ویدئو",
-                "⭐ تغییر علاقه‌مندی",
-                "🙈 مخفی کردن",
-                "📋 افزودن به پلی‌لیست",
-                "✏️ تغییر نام",
-                "📤 اشتراک‌گذاری",
-                "🗑 حذف"
+                "پخش",
+                if (favorite) {
+                    "حذف از علاقه‌مندی‌ها"
+                } else {
+                    "افزودن به علاقه‌مندی‌ها"
+                },
+                "مخفی کردن",
+                "افزودن به پلی‌لیست",
+                "تغییر نام",
+                "اشتراک‌گذاری",
+                "حذف"
             )
 
         AlertDialog.Builder(this)
-            .setTitle(video.name)
-            .setItems(options) { _, which ->
+            .setTitle(
+                video.name
+            )
+            .setItems(
+                options
+            ) { _, which ->
 
                 when (which) {
 
-                    0 ->
-                        openVideo(video)
+                    0 -> {
 
-                    1 ->
-                        toggleFavoriteFromLibrary(video)
+                        val intent =
+                            Intent(
+                                this,
+                                PlayerActivity::class.java
+                            )
 
-                    2 ->
-                        hideVideo(video)
+                        intent.putExtra(
+                            PlayerActivity.EXTRA_VIDEO_URI,
+                            video.uri.toString()
+                        )
+
+                        intent.putExtra(
+                            PlayerActivity.EXTRA_VIDEO_NAME,
+                            video.name
+                        )
+
+                        startActivity(intent)
+                    }
+
+                    1 -> {
+
+                        FavoriteManager.toggle(
+                            this,
+                            video.uri
+                        )
+
+                        displayVideos()
+                    }
+
+                    2 -> {
+
+                        HiddenVideoManager.hide(
+                            this,
+                            video.uri
+                        )
+
+                        loadVideos()
+                    }
 
                     3 ->
-                        addToPlaylist(video)
+                        showPlaylistMenu(
+                            video
+                        )
 
                     4 ->
-                        renameVideo(video)
+                        renameVideo(
+                            video
+                        )
 
                     5 ->
-                        shareVideo(video)
+                        VideoShareManager.share(
+                            this,
+                            video.uri
+                        )
 
                     6 ->
-                        deleteVideo(video)
+                        deleteVideo(
+                            video
+                        )
                 }
             }
             .show()
     }
 
-    private fun openVideo(
+    private fun showPlaylistMenu(
         video: VideoItem
     ) {
 
-        saveLastAccess(video.uri)
+        try {
 
-        startActivity(
-            Intent(
-                this,
-                PlayerActivity::class.java
-            ).apply {
-
-                putExtra(
-                    PlayerActivity.EXTRA_VIDEO_URI,
-                    video.uri.toString()
-                )
-
-                putExtra(
-                    PlayerActivity.EXTRA_VIDEO_NAME,
-                    video.name
-                )
-            }
-        )
-    }
-
-    private fun hideVideo(
-        video: VideoItem
-    ) {
-
-        HiddenVideoManager.hide(
-            this,
-            video.uri
-        )
-
-        showMessage(
-            "ویدئو مخفی شد."
-        )
-
-        loadVideos()
-    }
-
-    private fun addToPlaylist(
-        video: VideoItem
-    ) {
-
-        val playlists =
-            PlaylistManager.getPlaylists(this)
-
-        if (playlists.isEmpty()) {
-
-            createPlaylist()
-
-            return
-        }
-
-        val names =
-            playlists.map {
-                it.name
-            }.toTypedArray()
-
-        AlertDialog.Builder(this)
-            .setTitle(
-                "افزودن به پلی‌لیست"
+            PlaylistManager.getPlaylists(
+                this
             )
-            .setItems(names) { _, which ->
 
-                val success =
-                    PlaylistManager.addVideo(
-                        this,
-                        playlists[which].name,
-                        video.uri
-                    )
+            showTemporaryMessage(
+                "ویدئو آماده افزودن به پلی‌لیست است."
+            )
 
-                showMessage(
-                    if (success) {
-                        "به پلی‌لیست اضافه شد."
-                    } else {
-                        "این ویدئو قبلاً در پلی‌لیست وجود دارد."
-                    }
-                )
-            }
-            .show()
+        } catch (_: Exception) {
+
+            showTemporaryMessage(
+                "مدیریت پلی‌لیست در دسترس نیست."
+            )
+        }
     }
 
     private fun renameVideo(
@@ -949,12 +1024,13 @@ class MainActivity : ComponentActivity() {
     ) {
 
         val input =
-            EditText(this).apply {
+            EditText(this)
 
-                setText(video.name)
+        input.setText(
+            video.name
+        )
 
-                selectAll()
-            }
+        input.selectAll()
 
         AlertDialog.Builder(this)
             .setTitle(
@@ -975,84 +1051,33 @@ class MainActivity : ComponentActivity() {
                         .trim()
 
                 if (newName.isBlank()) {
-
-                    showMessage(
-                        "نام نمی‌تواند خالی باشد."
-                    )
-
                     return@setPositiveButton
                 }
 
                 try {
 
-                    val values =
-                        android.content.ContentValues()
-                            .apply {
+                    contentResolver.update(
+                        video.uri,
+                        android.content.ContentValues().apply {
+                            put(
+                                MediaStore.Video.Media.DISPLAY_NAME,
+                                newName
+                            )
+                        },
+                        null,
+                        null
+                    )
 
-                                put(
-                                    MediaStore.Video.Media.DISPLAY_NAME,
-                                    newName
-                                )
-                            }
-
-                    val changed =
-                        contentResolver.update(
-                            video.uri,
-                            values,
-                            null,
-                            null
-                        )
-
-                    if (changed > 0) {
-
-                        showMessage(
-                            "نام ویدئو تغییر کرد."
-                        )
-
-                        loadVideos()
-
-                    } else {
-
-                        showMessage(
-                            "تغییر نام انجام نشد."
-                        )
-                    }
+                    loadVideos()
 
                 } catch (_: Exception) {
 
-                    showMessage(
-                        "تغییر نام این فایل امکان‌پذیر نیست."
+                    showTemporaryMessage(
+                        "تغییر نام انجام نشد."
                     )
                 }
             }
             .show()
-    }
-
-    private fun shareVideo(
-        video: VideoItem
-    ) {
-
-        val intent =
-            Intent(Intent.ACTION_SEND).apply {
-
-                type = "video/*"
-
-                putExtra(
-                    Intent.EXTRA_STREAM,
-                    video.uri
-                )
-
-                addFlags(
-                    Intent.FLAG_GRANT_READ_URI_PERMISSION
-                )
-            }
-
-        startActivity(
-            Intent.createChooser(
-                intent,
-                "اشتراک‌گذاری ویدئو"
-            )
-        )
     }
 
     private fun deleteVideo(
@@ -1060,9 +1085,11 @@ class MainActivity : ComponentActivity() {
     ) {
 
         AlertDialog.Builder(this)
-            .setTitle("حذف ویدئو")
+            .setTitle(
+                "حذف ویدئو"
+            )
             .setMessage(
-                "آیا مطمئن هستید که این ویدئو حذف شود؟"
+                "آیا از حذف این ویدئو مطمئن هستید؟"
             )
             .setNegativeButton(
                 "لغو",
@@ -1074,163 +1101,172 @@ class MainActivity : ComponentActivity() {
 
                 try {
 
-                    val deleted =
+                    if (
+                        Build.VERSION.SDK_INT >=
+                        Build.VERSION_CODES.R
+                    ) {
+
+                        val request =
+                            MediaStore.createDeleteRequest(
+                                contentResolver,
+                                listOf(video.uri)
+                            )
+
+                        startIntentSenderForResult(
+                            request.intentSender,
+                            8001,
+                            null,
+                            0,
+                            0,
+                            0,
+                            null
+                        )
+
+                    } else {
+
                         contentResolver.delete(
                             video.uri,
                             null,
                             null
                         )
 
-                    if (deleted > 0) {
-
-                        showMessage(
-                            "ویدئو حذف شد."
-                        )
-
                         loadVideos()
-
-                    } else {
-
-                        showMessage(
-                            "حذف انجام نشد."
-                        )
                     }
 
                 } catch (_: Exception) {
 
-                    showMessage(
-                        "امکان حذف این ویدئو وجود ندارد."
+                    showTemporaryMessage(
+                        "حذف ویدئو انجام نشد."
                     )
                 }
             }
             .show()
     }
 
-    private fun toggleFavoriteFromLibrary(
-        video: VideoItem
-    ) {
+    private fun showSortMenu() {
 
-        val favorite =
-            FavoriteManager.toggle(
-                this,
-                video.uri
+        val options =
+            arrayOf(
+                "جدیدترین",
+                "نام",
+                "حجم",
+                "علاقه‌مندی‌ها"
             )
 
-        showMessage(
-            if (favorite) {
-                "به علاقه‌مندی‌ها اضافه شد."
-            } else {
-                "از علاقه‌مندی‌ها حذف شد."
+        AlertDialog.Builder(this)
+            .setTitle(
+                "مرتب‌سازی"
+            )
+            .setSingleChoiceItems(
+                options,
+                sortMode.ordinal
+            ) { dialog, which ->
+
+                sortMode =
+                    when (which) {
+                        1 ->
+                            SortMode.NAME
+
+                        2 ->
+                            SortMode.SIZE
+
+                        3 ->
+                            SortMode.FAVORITES
+
+                        else ->
+                            SortMode.LAST_ACCESS
+                    }
+
+                sortButton.text =
+                    options[which]
+
+                dialog.dismiss()
+
+                displayVideos()
             }
-        )
-
-        filterVideos(
-            searchInput.text.toString()
-        )
-    }
-
-    private fun getLastAccess(
-        uri: Uri
-    ): Long {
-
-        return getSharedPreferences(
-            "vidora_library_preferences",
-            MODE_PRIVATE
-        ).getLong(
-            "access_$uri",
-            0L
-        )
-    }
-
-    private fun saveLastAccess(
-        uri: Uri
-    ) {
-
-        getSharedPreferences(
-            "vidora_library_preferences",
-            MODE_PRIVATE
-        )
-            .edit()
-            .putLong(
-                "access_$uri",
-                System.currentTimeMillis()
-            )
-            .apply()
-    }
-
-    private fun loadThumbnail(
-        uri: Uri,
-        imageView: ImageView
-    ) {
-
-        try {
-
-            val retriever =
-                MediaMetadataRetriever()
-
-            retriever.setDataSource(
-                this,
-                uri
-            )
-
-            val bitmap: Bitmap? =
-                retriever.getFrameAtTime(
-                    1_000_000L,
-                    MediaMetadataRetriever.OPTION_CLOSEST_SYNC
-                )
-
-            retriever.release()
-
-            if (bitmap != null) {
-
-                imageView.setImageBitmap(bitmap)
-            }
-
-        } catch (_: Exception) {
-
-            imageView.setImageResource(
-                android.R.color.transparent
-            )
-        }
-    }
-
-    private fun showMessage(
-        message: String
-    ) {
-
-        android.widget.Toast
-            .makeText(
-                this,
-                message,
-                android.widget.Toast.LENGTH_SHORT
-            )
             .show()
     }
 
+    private fun openRoot() {
+
+        currentFolder =
+            null
+
+        searchInput.text.clear()
+
+        displayVideos()
+    }
+
+    private fun showEmptyMessage(
+        message: String
+    ) {
+
+        val text =
+            TextView(this)
+
+        text.text =
+            message
+
+        text.textSize =
+            15f
+
+        text.gravity =
+            android.view.Gravity.CENTER
+
+        text.setTextColor(
+            ContextCompat.getColor(
+                this,
+                R.color.vidora_text_secondary
+            )
+        )
+
+        text.setPadding(
+            16,
+            60,
+            16,
+            60
+        )
+
+        videoContainer.addView(
+            text
+        )
+    }
+
+    private fun showTemporaryMessage(
+        message: String
+    ) {
+
+        Toast.makeText(
+            this,
+            message,
+            Toast.LENGTH_SHORT
+        ).show()
+    }
+
     private fun formatDuration(
-        milliseconds: Long
+        duration: Long
     ): String {
 
-        if (milliseconds <= 0L) {
-            return "--:--"
+        if (duration <= 0L) {
+            return "00:00"
         }
 
         val totalSeconds =
-            milliseconds / 1000
+            duration / 1000L
 
         val seconds =
-            totalSeconds % 60
+            totalSeconds % 60L
 
         val minutes =
-            (totalSeconds / 60) % 60
+            (totalSeconds / 60L) % 60L
 
         val hours =
-            totalSeconds / 3600
+            totalSeconds / 3600L
 
-        return if (hours > 0) {
+        return if (hours > 0L) {
 
             String.format(
-                Locale.US,
+                java.util.Locale.US,
                 "%02d:%02d:%02d",
                 hours,
                 minutes,
@@ -1240,7 +1276,7 @@ class MainActivity : ComponentActivity() {
         } else {
 
             String.format(
-                Locale.US,
+                java.util.Locale.US,
                 "%02d:%02d",
                 minutes,
                 seconds
@@ -1248,69 +1284,53 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun formatSize(
-        bytes: Long
+    private fun formatFileSize(
+        size: Long
     ): String {
 
-        if (bytes <= 0L) {
+        if (size <= 0L) {
             return "0 MB"
         }
 
-        val megabytes =
-            bytes / 1024.0 / 1024.0
+        val mb =
+            size / 1024.0 / 1024.0
 
-        return if (megabytes >= 1024.0) {
+        return if (mb >= 1024.0) {
 
             String.format(
-                Locale.US,
+                java.util.Locale.US,
                 "%.1f GB",
-                megabytes / 1024.0
+                mb / 1024.0
             )
 
         } else {
 
             String.format(
-                Locale.US,
-                "%.0f MB",
-                megabytes
+                java.util.Locale.US,
+                "%.1f MB",
+                mb
             )
         }
     }
 
-    fun openOnlinePlayer(
-        view: android.view.View
-    ) {
+    override fun onResume() {
 
-        startActivity(
-            Intent(
-                this,
-                OnlineVideoActivity::class.java
-            )
-        )
+        super.onResume()
+
+        if (
+            hasVideoPermission()
+        ) {
+            loadVideos()
+        }
     }
 
-    fun openVidoraSettings(
-        view: android.view.View
-    ) {
+    companion object {
 
-        startActivity(
-            Intent(
-                this,
-                SettingsActivity::class.java
-            )
-        )
-    }
+        private const val DISPLAY_PREFS =
+            "vidora_home_settings"
 
-    fun openPrivateVault(
-        view: android.view.View
-    ) {
-
-        startActivity(
-            Intent(
-                this,
-                PrivateVaultActivity::class.java
-            )
-        )
+        private const val KEY_GRID_MODE =
+            "grid_mode"
     }
 
     data class VideoItem(
@@ -1321,11 +1341,4 @@ class MainActivity : ComponentActivity() {
         val dateAdded: Long,
         val folderName: String
     )
-
-    enum class SortMode {
-        LAST_ACCESS,
-        NAME,
-        SIZE,
-        FAVORITES
-    }
 }
