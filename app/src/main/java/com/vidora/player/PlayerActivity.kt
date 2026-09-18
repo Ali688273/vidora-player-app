@@ -80,6 +80,9 @@ class PlayerActivity : FragmentActivity() {
     private var controllerFuture:
         ListenableFuture<MediaController>? = null
 
+    private lateinit var playbackAutoSaveManager:
+        PlaybackAutoSaveManager
+
     private var isLocked = false
     private var currentSpeed = 1.0f
     private var aspectIndex = 0
@@ -97,23 +100,6 @@ class PlayerActivity : FragmentActivity() {
                 !isInPictureInPictureMode
             ) {
                 hidePlayerControls()
-            }
-        }
-
-    private val savePositionRunnable =
-        object : Runnable {
-
-            override fun run() {
-
-                if (!isFinishing) {
-                    savePosition()
-                    saveDisplaySettings()
-
-                    controlsHandler.postDelayed(
-                        this,
-                        POSITION_SAVE_INTERVAL
-                    )
-                }
             }
         }
 
@@ -279,6 +265,14 @@ class PlayerActivity : FragmentActivity() {
                 Context.AUDIO_SERVICE
             ) as AudioManager
 
+        playbackAutoSaveManager =
+            PlaybackAutoSaveManager(
+                this,
+                { player },
+                { getIncomingVideoUri() },
+                { isExternalVideo() }
+            )
+
         loadSavedDisplaySettings()
 
         setupButtons()
@@ -290,10 +284,7 @@ class PlayerActivity : FragmentActivity() {
 
         enterFullscreen()
 
-        controlsHandler.postDelayed(
-            savePositionRunnable,
-            POSITION_SAVE_INTERVAL
-        )
+        playbackAutoSaveManager.start()
     }
 
     private fun loadSavedDisplaySettings() {
@@ -468,6 +459,7 @@ class PlayerActivity : FragmentActivity() {
         backButton.setOnClickListener {
 
             if (!isLocked) {
+                playbackAutoSaveManager.saveNow()
                 savePosition()
                 saveDisplaySettings()
                 finish()
@@ -699,8 +691,13 @@ class PlayerActivity : FragmentActivity() {
 
     private fun showPlaybackSettings() {
 
-        val current =
+        val currentAutoPlayNext =
             PlaybackSettings.autoPlayNext(
+                this
+            )
+
+        val currentAutoResume =
+            VidoraSettings.autoResume(
                 this
             )
 
@@ -710,15 +707,29 @@ class PlayerActivity : FragmentActivity() {
             )
             .setMultiChoiceItems(
                 arrayOf(
-                    "پخش خودکار ویدئوی بعدی"
+                    "پخش خودکار ویدئوی بعدی",
+                    "ادامه پخش از آخرین موقعیت"
                 ),
-                booleanArrayOf(current)
-            ) { _, _, checked ->
-
-                PlaybackSettings.setAutoPlayNext(
-                    this,
-                    checked
+                booleanArrayOf(
+                    currentAutoPlayNext,
+                    currentAutoResume
                 )
+            ) { _, which, checked ->
+
+                when (which) {
+
+                    0 ->
+                        PlaybackSettings.setAutoPlayNext(
+                            this,
+                            checked
+                        )
+
+                    1 ->
+                        VidoraSettings.setAutoResume(
+                            this,
+                            checked
+                        )
+                }
             }
             .setPositiveButton(
                 "باشه",
@@ -2203,7 +2214,10 @@ class PlayerActivity : FragmentActivity() {
                 ?: return
 
         val savedPosition =
-            if (isExternalVideo()) {
+            if (
+                isExternalVideo() ||
+                !VidoraSettings.autoResume(this)
+            ) {
                 0L
             } else {
                 PlaybackHistoryManager
@@ -2403,6 +2417,7 @@ class PlayerActivity : FragmentActivity() {
         uri: Uri
     ) {
 
+        playbackAutoSaveManager.saveNow()
         savePosition()
 
         intent.action =
@@ -2739,6 +2754,7 @@ class PlayerActivity : FragmentActivity() {
 
     override fun onPause() {
 
+        playbackAutoSaveManager.saveNow()
         savePosition()
         saveDisplaySettings()
 
@@ -2805,6 +2821,7 @@ class PlayerActivity : FragmentActivity() {
 
     override fun onStop() {
 
+        playbackAutoSaveManager.saveNow()
         savePosition()
         saveDisplaySettings()
 
@@ -2817,15 +2834,13 @@ class PlayerActivity : FragmentActivity() {
             hideControlsRunnable
         )
 
-        controlsHandler.removeCallbacks(
-            savePositionRunnable
-        )
-
         sleepTimerRunnable?.let {
             sleepHandler.removeCallbacks(it)
         }
 
         sleepTimerRunnable = null
+
+        playbackAutoSaveManager.release()
 
         savePosition()
         saveDisplaySettings()
@@ -2864,8 +2879,5 @@ class PlayerActivity : FragmentActivity() {
 
         private const val CONTROL_HIDE_DELAY =
             4000L
-
-        private const val POSITION_SAVE_INTERVAL =
-            3000L
     }
 }
