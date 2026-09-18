@@ -18,10 +18,12 @@ object PlaylistDialogManager {
             PlaylistVideoManager.getPlaylists(context)
 
         if (playlists.isEmpty()) {
+
             showCreatePlaylistDialog(
                 context,
                 videoUri
             )
+
             return
         }
 
@@ -56,17 +58,23 @@ object PlaylistDialogManager {
                     )
                     .show()
             }
-            .setNeutralButton("پلی‌لیست جدید") { _, _ ->
+            .setNeutralButton(
+                "مدیریت پلی‌لیست‌ها"
+            ) { _, _ ->
+
+                showManagePlaylistsDialog(
+                    context
+                )
+            }
+            .setNegativeButton(
+                "پلی‌لیست جدید"
+            ) { _, _ ->
 
                 showCreatePlaylistDialog(
                     context,
                     videoUri
                 )
             }
-            .setNegativeButton(
-                "لغو",
-                null
-            )
             .show()
     }
 
@@ -220,39 +228,110 @@ object PlaylistDialogManager {
         playlistName: String
     ) {
 
-        val actions =
-            arrayOf(
-                "نمایش ویدئوها",
-                "تغییر نام",
-                "حذف پلی‌لیست"
+        val videos =
+            PlaylistVideoManager.getVideos(
+                context,
+                playlistName
             )
 
+        val actions =
+            if (videos.isEmpty()) {
+
+                arrayOf(
+                    "تغییر نام",
+                    "حذف پلی‌لیست"
+                )
+
+            } else {
+
+                arrayOf(
+                    "پخش ویدئوها",
+                    "نمایش ویدئوها",
+                    "تغییر نام",
+                    "حذف پلی‌لیست"
+                )
+            }
+
         AlertDialog.Builder(context)
-            .setTitle(playlistName)
+            .setTitle(
+                "$playlistName (${videos.size})"
+            )
             .setItems(actions) { _, which ->
 
-                when (which) {
+                if (videos.isEmpty()) {
 
-                    0 ->
-                        showPlaylistVideos(
-                            context,
-                            playlistName
-                        )
+                    when (which) {
 
-                    1 ->
-                        showRenameDialog(
-                            context,
-                            playlistName
-                        )
+                        0 ->
+                            showRenameDialog(
+                                context,
+                                playlistName
+                            )
 
-                    2 ->
-                        confirmDeletePlaylist(
-                            context,
-                            playlistName
-                        )
+                        1 ->
+                            confirmDeletePlaylist(
+                                context,
+                                playlistName
+                            )
+                    }
+
+                } else {
+
+                    when (which) {
+
+                        0 ->
+                            playPlaylist(
+                                context,
+                                playlistName
+                            )
+
+                        1 ->
+                            showPlaylistVideos(
+                                context,
+                                playlistName
+                            )
+
+                        2 ->
+                            showRenameDialog(
+                                context,
+                                playlistName
+                            )
+
+                        3 ->
+                            confirmDeletePlaylist(
+                                context,
+                                playlistName
+                            )
+                    }
                 }
             }
             .show()
+    }
+
+    private fun playPlaylist(
+        context: Context,
+        playlistName: String
+    ) {
+
+        val videos =
+            PlaylistVideoManager.getVideos(
+                context,
+                playlistName
+            )
+
+        if (videos.isEmpty()) {
+            return
+        }
+
+        val firstUri =
+            Uri.parse(
+                videos.first()
+            )
+
+        openVideo(
+            context,
+            firstUri
+        )
     }
 
     private fun showPlaylistVideos(
@@ -295,7 +374,9 @@ object PlaylistDialogManager {
             }.toTypedArray()
 
         AlertDialog.Builder(context)
-            .setTitle(playlistName)
+            .setTitle(
+                "$playlistName (${videos.size})"
+            )
             .setItems(names) { _, which ->
 
                 val uri =
@@ -303,8 +384,9 @@ object PlaylistDialogManager {
                         videos[which]
                     )
 
-                openVideo(
+                showVideoActions(
                     context,
+                    playlistName,
                     uri
                 )
             }
@@ -312,6 +394,54 @@ object PlaylistDialogManager {
                 "بستن",
                 null
             )
+            .show()
+    }
+
+    private fun showVideoActions(
+        context: Context,
+        playlistName: String,
+        videoUri: Uri
+    ) {
+
+        val videoName =
+            getVideoDisplayName(
+                context,
+                videoUri
+            )
+
+        val actions =
+            arrayOf(
+                "پخش",
+                "حذف از پلی‌لیست"
+            )
+
+        AlertDialog.Builder(context)
+            .setTitle(videoName)
+            .setItems(actions) { _, which ->
+
+                when (which) {
+
+                    0 ->
+                        openVideo(
+                            context,
+                            videoUri
+                        )
+
+                    1 -> {
+
+                        PlaylistVideoManager.removeVideo(
+                            context,
+                            playlistName,
+                            videoUri
+                        )
+
+                        showPlaylistVideos(
+                            context,
+                            playlistName
+                        )
+                    }
+                }
+            }
             .show()
     }
 
@@ -350,11 +480,25 @@ object PlaylistDialogManager {
                     return@setPositiveButton
                 }
 
-                PlaylistVideoManager.renamePlaylist(
-                    context,
-                    oldName,
-                    newName
-                )
+                val renamed =
+                    PlaylistVideoManager.renamePlaylist(
+                        context,
+                        oldName,
+                        newName
+                    )
+
+                if (!renamed) {
+
+                    AlertDialog.Builder(context)
+                        .setMessage(
+                            "این نام قبلاً استفاده شده است."
+                        )
+                        .setPositiveButton(
+                            "باشه",
+                            null
+                        )
+                        .show()
+                }
             }
             .show()
     }
@@ -425,7 +569,7 @@ object PlaylistDialogManager {
             context.contentResolver.query(
                 uri,
                 arrayOf(
-                    android.provider.MediaStore.MediaColumns.DISPLAY_NAME
+                    MediaStoreDisplayNameColumn
                 ),
                 null,
                 null,
@@ -455,4 +599,7 @@ object PlaylistDialogManager {
                 ?: "ویدئو"
         }
     }
+
+    private const val MediaStoreDisplayNameColumn =
+        android.provider.MediaStore.MediaColumns.DISPLAY_NAME
 }
