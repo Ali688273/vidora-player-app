@@ -30,9 +30,10 @@
                 android:textStyle="bold" />
 
             <TextView
+                android:id="@+id/locationText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="کتابخانه ویدئو"
+                android:text="همه پوشه‌ها"
                 android:textColor="@color/vidora_text_secondary"
                 android:textSize="12sp" />
 
@@ -81,7 +82,18 @@
             android:textSize="12sp"
             android:paddingStart="10dp"
             android:paddingEnd="10dp"
-            android:contentDescription="مرتب‌سازی و امکانات بیشتر" />
+            android:contentDescription="مرتب‌سازی" />
+
+        <Button
+            android:id="@+id/viewModeButton"
+            android:layout_width="52dp"
+            android:layout_height="50dp"
+            android:layout_marginStart="6dp"
+            android:minWidth="0dp"
+            android:text="▦"
+            android:textSize="20sp"
+            android:textAllCaps="false"
+            android:contentDescription="تغییر حالت نمایش" />
 
     </LinearLayout>
 
@@ -94,6 +106,17 @@
         android:paddingBottom="10dp">
 
         <Button
+            android:id="@+id/backFolderButton"
+            android:layout_width="0dp"
+            android:layout_height="46dp"
+            android:layout_weight="1"
+            android:text="‹ بازگشت"
+            android:textAllCaps="false"
+            android:visibility="gone"
+            android:contentDescription="بازگشت از پوشه" />
+
+        <Button
+            android:id="@+id/onlineButton"
             android:layout_width="0dp"
             android:layout_height="46dp"
             android:layout_weight="1"
@@ -103,6 +126,7 @@
             android:contentDescription="پخش ویدئوی آنلاین" />
 
         <Button
+            android:id="@+id/settingsButton"
             android:layout_width="0dp"
             android:layout_height="46dp"
             android:layout_weight="1"
@@ -113,6 +137,7 @@
             android:contentDescription="تنظیمات برنامه" />
 
         <Button
+            android:id="@+id/privateButton"
             android:layout_width="0dp"
             android:layout_height="46dp"
             android:layout_weight="1"
