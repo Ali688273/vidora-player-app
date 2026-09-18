@@ -178,6 +178,24 @@ class PlayerActivity : FragmentActivity() {
             loadVideoWithSubtitle(uri)
         }
 
+    private val playbackListener =
+        object : Player.Listener {
+
+            override fun onPlaybackStateChanged(
+                playbackState: Int
+            ) {
+
+                if (
+                    playbackState ==
+                    Player.STATE_ENDED
+                ) {
+                    handlePlaybackEnded()
+                }
+
+                updatePauseButton()
+            }
+        }
+
     override fun onCreate(
         savedInstanceState: Bundle?
     ) {
@@ -431,6 +449,10 @@ class PlayerActivity : FragmentActivity() {
                             ?: return@addListener
 
                     player = controller
+
+                    controller.addListener(
+                        playbackListener
+                    )
 
                     playerView.player =
                         controller
@@ -736,6 +758,66 @@ class PlayerActivity : FragmentActivity() {
                 null
             )
             .show()
+    }
+
+    private fun handlePlaybackEnded() {
+
+        if (isExternalVideo()) {
+            return
+        }
+
+        if (repeatEnabled) {
+            return
+        }
+
+        if (
+            !PlaybackSettings.autoPlayNext(
+                this
+            )
+        ) {
+            updatePauseButton()
+            showPlayerControlsTemporarily()
+            return
+        }
+
+        val videos =
+            getVideoUris()
+
+        if (videos.isEmpty()) {
+            updatePauseButton()
+            return
+        }
+
+        val currentUri =
+            intent.getStringExtra(
+                EXTRA_VIDEO_URI
+            )
+
+        val currentIndex =
+            videos.indexOfFirst {
+                it.toString() == currentUri
+            }
+
+        val nextIndex =
+            when {
+
+                currentIndex < 0 ->
+                    0
+
+                currentIndex >= videos.lastIndex ->
+                    0
+
+                else ->
+                    currentIndex + 1
+            }
+
+        openVideo(
+            videos[nextIndex]
+        )
+
+        showTemporaryMessage(
+            "ویدئوی بعدی"
+        )
     }
 
     private fun showAudioSyncDialog() {
@@ -2844,6 +2926,10 @@ class PlayerActivity : FragmentActivity() {
 
         savePosition()
         saveDisplaySettings()
+
+        player?.removeListener(
+            playbackListener
+        )
 
         playerView.player = null
 
