@@ -2,8 +2,8 @@ package com.vidora.player
 
 import android.app.AlertDialog
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
-import android.view.View
 import android.widget.EditText
 import android.widget.LinearLayout
 
@@ -15,16 +15,13 @@ object PlaylistDialogManager {
     ) {
 
         val playlists =
-            PlaylistVideoManager
-                .getPlaylists(context)
+            PlaylistVideoManager.getPlaylists(context)
 
         if (playlists.isEmpty()) {
-
             showCreatePlaylistDialog(
                 context,
                 videoUri
             )
-
             return
         }
 
@@ -32,12 +29,8 @@ object PlaylistDialogManager {
             playlists.toTypedArray()
 
         AlertDialog.Builder(context)
-            .setTitle(
-                "افزودن به پلی‌لیست"
-            )
-            .setItems(
-                names
-            ) { _, which ->
+            .setTitle("افزودن به پلی‌لیست")
+            .setItems(names) { _, which ->
 
                 val name =
                     names[which]
@@ -63,9 +56,7 @@ object PlaylistDialogManager {
                     )
                     .show()
             }
-            .setNeutralButton(
-                "پلی‌لیست جدید"
-            ) { _, _ ->
+            .setNeutralButton("پلی‌لیست جدید") { _, _ ->
 
                 showCreatePlaylistDialog(
                     context,
@@ -86,10 +77,7 @@ object PlaylistDialogManager {
 
         val input =
             EditText(context).apply {
-
-                hint =
-                    "نام پلی‌لیست"
-
+                hint = "نام پلی‌لیست"
                 setSingleLine(true)
             }
 
@@ -115,81 +103,74 @@ object PlaylistDialogManager {
                 addView(input)
             }
 
-        AlertDialog.Builder(context)
-            .setTitle(
-                "پلی‌لیست جدید"
-            )
-            .setView(container)
-            .setNegativeButton(
-                "لغو",
-                null
-            )
-            .setPositiveButton(
-                "ساختن",
-                null
-            )
-            .create()
-            .also { dialog ->
+        val dialog =
+            AlertDialog.Builder(context)
+                .setTitle("پلی‌لیست جدید")
+                .setView(container)
+                .setNegativeButton(
+                    "لغو",
+                    null
+                )
+                .setPositiveButton(
+                    "ساختن",
+                    null
+                )
+                .create()
 
-                dialog.setOnShowListener {
+        dialog.setOnShowListener {
 
-                    dialog.getButton(
-                        AlertDialog.BUTTON_POSITIVE
-                    ).setOnClickListener {
+            dialog.getButton(
+                AlertDialog.BUTTON_POSITIVE
+            ).setOnClickListener {
 
-                        val name =
-                            input.text
-                                .toString()
-                                .trim()
+                val name =
+                    input.text
+                        .toString()
+                        .trim()
 
-                        if (
-                            name.isEmpty()
-                        ) {
+                if (name.isEmpty()) {
 
-                            input.error =
-                                "نام پلی‌لیست را وارد کنید."
+                    input.error =
+                        "نام پلی‌لیست را وارد کنید."
 
-                            return@setOnClickListener
-                        }
-
-                        val created =
-                            PlaylistVideoManager
-                                .createPlaylist(
-                                    context,
-                                    name
-                                )
-
-                        if (!created) {
-
-                            input.error =
-                                "این نام قبلاً استفاده شده است."
-
-                            return@setOnClickListener
-                        }
-
-                        PlaylistVideoManager
-                            .addVideo(
-                                context,
-                                name,
-                                videoUri
-                            )
-
-                        dialog.dismiss()
-
-                        AlertDialog.Builder(context)
-                            .setMessage(
-                                "پلی‌لیست «$name» ساخته شد و ویدئو به آن اضافه شد."
-                            )
-                            .setPositiveButton(
-                                "باشه",
-                                null
-                            )
-                            .show()
-                    }
+                    return@setOnClickListener
                 }
 
-                dialog.show()
+                val created =
+                    PlaylistVideoManager.createPlaylist(
+                        context,
+                        name
+                    )
+
+                if (!created) {
+
+                    input.error =
+                        "این نام قبلاً استفاده شده است."
+
+                    return@setOnClickListener
+                }
+
+                PlaylistVideoManager.addVideo(
+                    context,
+                    name,
+                    videoUri
+                )
+
+                dialog.dismiss()
+
+                AlertDialog.Builder(context)
+                    .setMessage(
+                        "پلی‌لیست «$name» ساخته شد و ویدئو به آن اضافه شد."
+                    )
+                    .setPositiveButton(
+                        "باشه",
+                        null
+                    )
+                    .show()
             }
+        }
+
+        dialog.show()
     }
 
     fun showManagePlaylistsDialog(
@@ -197,20 +178,17 @@ object PlaylistDialogManager {
     ) {
 
         val playlists =
-            PlaylistVideoManager
-                .getPlaylists(context)
+            PlaylistVideoManager.getPlaylists(context)
 
         if (playlists.isEmpty()) {
 
             AlertDialog.Builder(context)
-                .setTitle(
-                    "پلی‌لیست‌ها"
-                )
+                .setTitle("پلی‌لیست‌ها")
                 .setMessage(
                     "هنوز پلی‌لیستی ساخته نشده است."
                 )
                 .setPositiveButton(
-                    "ساخت پلی‌لیست",
+                    "باشه",
                     null
                 )
                 .show()
@@ -222,12 +200,8 @@ object PlaylistDialogManager {
             playlists.toTypedArray()
 
         AlertDialog.Builder(context)
-            .setTitle(
-                "پلی‌لیست‌ها"
-            )
-            .setItems(
-                names
-            ) { _, which ->
+            .setTitle("پلی‌لیست‌ها")
+            .setItems(names) { _, which ->
 
                 showPlaylistActionsDialog(
                     context,
@@ -254,12 +228,8 @@ object PlaylistDialogManager {
             )
 
         AlertDialog.Builder(context)
-            .setTitle(
-                playlistName
-            )
-            .setItems(
-                actions
-            ) { _, which ->
+            .setTitle(playlistName)
+            .setItems(actions) { _, which ->
 
                 when (which) {
 
@@ -299,9 +269,7 @@ object PlaylistDialogManager {
         if (videos.isEmpty()) {
 
             AlertDialog.Builder(context)
-                .setTitle(
-                    playlistName
-                )
+                .setTitle(playlistName)
                 .setMessage(
                     "این پلی‌لیست خالی است."
                 )
@@ -327,12 +295,8 @@ object PlaylistDialogManager {
             }.toTypedArray()
 
         AlertDialog.Builder(context)
-            .setTitle(
-                playlistName
-            )
-            .setItems(
-                names
-            ) { _, which ->
+            .setTitle(playlistName)
+            .setItems(names) { _, which ->
 
                 val uri =
                     Uri.parse(
@@ -360,9 +324,7 @@ object PlaylistDialogManager {
             EditText(context).apply {
 
                 setText(oldName)
-
                 setSingleLine(true)
-
                 selectAll()
             }
 
