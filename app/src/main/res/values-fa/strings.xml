@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="language_auto">خودکار</string>
+    <string name="language_persian">فارسی</string>
+    <string name="language_english">انگلیسی</string>
+
+    <string name="settings">تنظیمات</string>
+    <string name="language">زبان</string>
+    <string name="dark_mode">حالت تاریک</string>
+    <string name="light_mode">حالت روشن</string>
+    <string name="system_default">پیش‌فرض سیستم</string>
+
+    <string name="auto_resume">ادامه پخش</string>
+    <string name="auto_play_next">پخش خودکار بعدی</string>
+    <string name="show_hidden">نمایش ویدئوهای مخفی</string>
+
+    <string name="favorites">علاقه‌مندی‌ها</string>
+    <string name="history">تاریخچه</string>
+    <string name="hidden_videos">ویدئوهای مخفی</string>
+    <string name="playlists">پلی‌لیست‌ها</string>
+
+    <string name="play">پخش</string>
+    <string name="pause">توقف</string>
+    <string name="back">بازگشت</string>
+    <string name="delete">حذف</string>
+    <string name="rename">تغییر نام</string>
+    <string name="share">اشتراک‌گذاری</string>
+    <string name="cancel">لغو</string>
+    <string name="save">ذخیره</string>
+    <string name="close">بستن</string>
+    <string name="ok">باشه</string>
+
+    <string name="add_to_playlist">افزودن به پلی‌لیست</string>
+    <string name="new_playlist">پلی‌لیست جدید</string>
+    <string name="manage_playlists">مدیریت پلی‌لیست‌ها</string>
+
+    <string name="sort">مرتب‌سازی</string>
+    <string name="newest">جدیدترین</string>
+    <string name="name">نام</string>
+    <string name="size">حجم</string>
+
+    <string name="grid_view">نمایش شبکه‌ای</string>
+    <string name="list_view">نمایش فهرستی</string>
+
+</resources>
