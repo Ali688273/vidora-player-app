@@ -66,6 +66,11 @@ class PlayerActivity : FragmentActivity() {
     private lateinit var lockButton: Button
     private lateinit var fullscreenButton: Button
     private lateinit var moreButton: Button
+
+    private lateinit var backButton: Button
+    private lateinit var pauseButton: Button
+
+    private lateinit var controlScroll: View
     private lateinit var gestureInfo: TextView
     private lateinit var lockedOverlay: TextView
 
@@ -78,6 +83,18 @@ class PlayerActivity : FragmentActivity() {
     private var currentSpeed = 1.0f
     private var aspectIndex = 0
     private var repeatEnabled = false
+
+    private var controlsVisible = true
+
+    private val controlsHandler =
+        Handler(Looper.getMainLooper())
+
+    private val hideControlsRunnable =
+        Runnable {
+            if (!isLocked && !isInPictureInPictureMode) {
+                hidePlayerControls()
+            }
+        }
 
     private val aspectModes = intArrayOf(
         AspectRatioFrameLayout.RESIZE_MODE_FIT,
@@ -118,6 +135,9 @@ class PlayerActivity : FragmentActivity() {
     private var lastTapTime = 0L
     private var lastTapX = 0f
     private var lastTapY = 0f
+
+    private var wasPlayingBeforePause = false
+    private var enteringPictureInPicture = false
 
     private val subtitlePicker =
         registerForActivityResult(
@@ -215,6 +235,15 @@ class PlayerActivity : FragmentActivity() {
         moreButton =
             findViewById(R.id.moreButton)
 
+        backButton =
+            findViewById(R.id.backButton)
+
+        pauseButton =
+            findViewById(R.id.pauseButton)
+
+        controlScroll =
+            findViewById(R.id.controlScroll)
+
         gestureInfo =
             findViewById(R.id.gestureInfo)
 
@@ -226,14 +255,95 @@ class PlayerActivity : FragmentActivity() {
                 Context.AUDIO_SERVICE
             ) as AudioManager
 
+        loadSavedDisplaySettings()
+
         setupButtons()
         setupGestures()
-
         setupCastButton()
 
         connectToPlaybackService()
 
         enterFullscreen()
+    }
+
+    private fun loadSavedDisplaySettings() {
+
+        val savedVolume =
+            getSharedPreferences(
+                DISPLAY_PREFS,
+                Context.MODE_PRIVATE
+            ).getInt(
+                KEY_VOLUME,
+                -1
+            )
+
+        if (savedVolume >= 0) {
+
+            val maxVolume =
+                audioManager.getStreamMaxVolume(
+                    AudioManager.STREAM_MUSIC
+                )
+
+            audioManager.setStreamVolume(
+                AudioManager.STREAM_MUSIC,
+                savedVolume.coerceIn(
+                    0,
+                    maxVolume
+                ),
+                0
+            )
+        }
+
+        val savedBrightness =
+            getSharedPreferences(
+                DISPLAY_PREFS,
+                Context.MODE_PRIVATE
+            ).getFloat(
+                KEY_BRIGHTNESS,
+                -1f
+            )
+
+        if (savedBrightness >= 0f) {
+
+            val attributes =
+                window.attributes
+
+            attributes.screenBrightness =
+                savedBrightness.coerceIn(
+                    0.05f,
+                    1.0f
+                )
+
+            window.attributes =
+                attributes
+        }
+    }
+
+    private fun saveDisplaySettings() {
+
+        val currentBrightness =
+            window.attributes.screenBrightness
+                .takeIf {
+                    it >= 0f
+                }
+                ?: 0.5f
+
+        getSharedPreferences(
+            DISPLAY_PREFS,
+            Context.MODE_PRIVATE
+        )
+            .edit()
+            .putInt(
+                KEY_VOLUME,
+                audioManager.getStreamVolume(
+                    AudioManager.STREAM_MUSIC
+                )
+            )
+            .putFloat(
+                KEY_BRIGHTNESS,
+                currentBrightness
+            )
+            .apply()
     }
 
     private fun setupCastButton() {
@@ -285,6 +395,10 @@ class PlayerActivity : FragmentActivity() {
 
                     initializePlayer()
 
+                    updatePauseButton()
+
+                    showPlayerControlsTemporarily()
+
                 } catch (_: Exception) {
 
                     showTemporaryMessage(
@@ -299,6 +413,32 @@ class PlayerActivity : FragmentActivity() {
     }
 
     private fun setupButtons() {
+
+        backButton.setOnClickListener {
+
+            if (!isLocked) {
+                savePosition()
+                finish()
+            }
+        }
+
+        pauseButton.setOnClickListener {
+
+            if (!isLocked) {
+
+                val currentPlayer =
+                    player ?: return@setOnClickListener
+
+                if (currentPlayer.isPlaying) {
+                    currentPlayer.pause()
+                } else {
+                    currentPlayer.play()
+                }
+
+                updatePauseButton()
+                showPlayerControlsTemporarily()
+            }
+        }
 
         previousButton.setOnClickListener {
             if (!isLocked) {
@@ -315,6 +455,7 @@ class PlayerActivity : FragmentActivity() {
         repeatButton.setOnClickListener {
             if (!isLocked) {
                 toggleRepeat()
+                showPlayerControlsTemporarily()
             }
         }
 
@@ -368,6 +509,8 @@ class PlayerActivity : FragmentActivity() {
 
             aspectButton.text =
                 aspectNames[aspectIndex]
+
+            showPlayerControlsTemporarily()
         }
 
         subtitleButton.setOnClickListener {
@@ -411,6 +554,7 @@ class PlayerActivity : FragmentActivity() {
 
         fullscreenButton.setOnClickListener {
             enterFullscreen()
+            showPlayerControlsTemporarily()
         }
 
         moreButton.setOnClickListener {
@@ -428,6 +572,7 @@ class PlayerActivity : FragmentActivity() {
         updateSpeedText()
         updateRepeatButton()
         updateFavoriteButton()
+        updatePauseButton()
     }
 
     private fun showMoreMenu() {
@@ -988,6 +1133,7 @@ class PlayerActivity : FragmentActivity() {
             )
 
         updateSpeedText()
+        showPlayerControlsTemporarily()
     }
 
     private fun resetSpeed() {
@@ -1005,6 +1151,7 @@ class PlayerActivity : FragmentActivity() {
             )
 
         updateSpeedText()
+        showPlayerControlsTemporarily()
     }
 
     private fun updateSpeedText() {
@@ -1015,6 +1162,21 @@ class PlayerActivity : FragmentActivity() {
                 "%.1f×",
                 currentSpeed
             )
+    }
+
+    private fun updatePauseButton() {
+
+        val currentPlayer =
+            player
+
+        pauseButton.text =
+            if (
+                currentPlayer?.isPlaying == true
+            ) {
+                "⏸ توقف"
+            } else {
+                "▶ پخش"
+            }
     }
 
     private fun showSleepTimerDialog() {
@@ -1137,6 +1299,8 @@ class PlayerActivity : FragmentActivity() {
             Runnable {
 
                 player?.pause()
+
+                updatePauseButton()
 
                 sleepTimerButton.text =
                     getString(
@@ -1325,6 +1489,8 @@ class PlayerActivity : FragmentActivity() {
                             lastTapTime = now
                             lastTapX = event.x
                             lastTapY = event.y
+
+                            togglePlayerControls()
                         }
 
                         return@setOnTouchListener true
@@ -1351,6 +1517,54 @@ class PlayerActivity : FragmentActivity() {
                 else -> true
             }
         }
+    }
+
+    private fun togglePlayerControls() {
+
+        if (isLocked) {
+            return
+        }
+
+        if (controlsVisible) {
+            hidePlayerControls()
+        } else {
+            showPlayerControlsTemporarily()
+        }
+    }
+
+    private fun showPlayerControlsTemporarily() {
+
+        if (isLocked || isInPictureInPictureMode) {
+            return
+        }
+
+        controlsHandler.removeCallbacks(
+            hideControlsRunnable
+        )
+
+        setPlayerControlsVisibility(
+            true
+        )
+
+        controlsVisible = true
+
+        controlsHandler.postDelayed(
+            hideControlsRunnable,
+            4000L
+        )
+    }
+
+    private fun hidePlayerControls() {
+
+        controlsHandler.removeCallbacks(
+            hideControlsRunnable
+        )
+
+        setPlayerControlsVisibility(
+            false
+        )
+
+        controlsVisible = false
     }
 
     private fun handleDoubleTap(
@@ -1486,6 +1700,8 @@ class PlayerActivity : FragmentActivity() {
             0
         )
 
+        saveDisplaySettings()
+
         val percent =
             if (maxVolume > 0) {
                 newVolume * 100 / maxVolume
@@ -1514,9 +1730,9 @@ class PlayerActivity : FragmentActivity() {
                 startBrightness +
                     change
                 ).coerceIn(
-                    0.05f,
-                    1.0f
-                )
+                0.05f,
+                1.0f
+            )
 
         val attributes =
             window.attributes
@@ -1526,6 +1742,8 @@ class PlayerActivity : FragmentActivity() {
 
         window.attributes =
             attributes
+
+        saveDisplaySettings()
 
         showGestureInfo(
             getString(
@@ -1579,9 +1797,7 @@ class PlayerActivity : FragmentActivity() {
                     R.string.unlock
                 )
 
-            setPlayerControlsVisibility(
-                false
-            )
+            hidePlayerControls()
 
         } else {
 
@@ -1593,9 +1809,7 @@ class PlayerActivity : FragmentActivity() {
                     R.string.lock
                 )
 
-            setPlayerControlsVisibility(
-                true
-            )
+            showPlayerControlsTemporarily()
         }
     }
 
@@ -1609,6 +1823,12 @@ class PlayerActivity : FragmentActivity() {
             } else {
                 View.GONE
             }
+
+        backButton.visibility =
+            visibility
+
+        pauseButton.visibility =
+            visibility
 
         previousButton.visibility =
             visibility
@@ -1649,11 +1869,22 @@ class PlayerActivity : FragmentActivity() {
         deleteButton.visibility =
             visibility
 
+        lockButton.visibility =
+            visibility
+
         fullscreenButton.visibility =
             visibility
 
         moreButton.visibility =
             visibility
+
+        if (controlScroll.visibility != visibility) {
+            controlScroll.visibility = visibility
+        }
+
+        if (visible) {
+            updatePauseButton()
+        }
     }
 
     private fun initializePlayer() {
@@ -1938,6 +2169,9 @@ class PlayerActivity : FragmentActivity() {
         )
 
         updateFavoriteButton()
+        updatePauseButton()
+
+        showPlayerControlsTemporarily()
     }
 
     private fun getVideoUris(): List<Uri> {
@@ -2363,6 +2597,8 @@ class PlayerActivity : FragmentActivity() {
             return
         }
 
+        enteringPictureInPicture = true
+
         val params =
             PictureInPictureParams.Builder()
                 .setAspectRatio(
@@ -2395,11 +2631,12 @@ class PlayerActivity : FragmentActivity() {
             isInPictureInPictureMode
         )
 
+        enteringPictureInPicture =
+            isInPictureInPictureMode
+
         if (isInPictureInPictureMode) {
 
-            setPlayerControlsVisibility(
-                false
-            )
+            hidePlayerControls()
 
             lockButton.visibility =
                 View.GONE
@@ -2416,10 +2653,57 @@ class PlayerActivity : FragmentActivity() {
                 View.VISIBLE
 
             if (!isLocked) {
-                setPlayerControlsVisibility(
-                    true
-                )
+                showPlayerControlsTemporarily()
             }
+        }
+    }
+
+    override fun onPause() {
+
+        savePosition()
+        saveDisplaySettings()
+
+        val currentPlayer =
+            player
+
+        if (
+            currentPlayer != null &&
+            currentPlayer.isPlaying &&
+            !isInPictureInPictureMode &&
+            !enteringPictureInPicture
+        ) {
+
+            wasPlayingBeforePause = true
+
+            currentPlayer.pause()
+
+            updatePauseButton()
+        }
+
+        super.onPause()
+    }
+
+    override fun onResume() {
+
+        super.onResume()
+
+        if (enteringPictureInPicture) {
+            return
+        }
+
+        val currentPlayer =
+            player
+
+        if (
+            wasPlayingBeforePause &&
+            currentPlayer != null
+        ) {
+
+            currentPlayer.play()
+
+            wasPlayingBeforePause = false
+
+            updatePauseButton()
         }
     }
 
@@ -2437,11 +2721,16 @@ class PlayerActivity : FragmentActivity() {
     override fun onStop() {
 
         savePosition()
+        saveDisplaySettings()
 
         super.onStop()
     }
 
     override fun onDestroy() {
+
+        controlsHandler.removeCallbacks(
+            hideControlsRunnable
+        )
 
         sleepTimerRunnable?.let {
             sleepHandler.removeCallbacks(it)
@@ -2450,6 +2739,7 @@ class PlayerActivity : FragmentActivity() {
         sleepTimerRunnable = null
 
         savePosition()
+        saveDisplaySettings()
 
         playerView.player = null
 
@@ -2473,5 +2763,14 @@ class PlayerActivity : FragmentActivity() {
 
         private const val DELETE_REQUEST_CODE =
             5001
+
+        private const val DISPLAY_PREFS =
+            "vidora_display_settings"
+
+        private const val KEY_VOLUME =
+            "volume"
+
+        private const val KEY_BRIGHTNESS =
+            "brightness"
     }
 }
