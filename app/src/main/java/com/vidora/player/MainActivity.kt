@@ -357,7 +357,7 @@ class MainActivity : ComponentActivity() {
                         this,
                         uri
                     ) &&
-                    !VidoraSettings.isShowHidden(
+                    !VidoraSettings.showHidden(
                         this
                     )
                 ) {
