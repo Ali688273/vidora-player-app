@@ -1003,12 +1003,9 @@ class MainActivity : ComponentActivity() {
 
         try {
 
-            PlaylistManager.getPlaylists(
-                this
-            )
-
-            showTemporaryMessage(
-                "ویدئو آماده افزودن به پلی‌لیست است."
+            PlaylistDialogManager.showAddToPlaylistDialog(
+                this,
+                video.uri
             )
 
         } catch (_: Exception) {
