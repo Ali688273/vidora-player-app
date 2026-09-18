@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="language_auto">Automatic</string>
+    <string name="language_persian">Persian</string>
+    <string name="language_english">English</string>
+
+    <string name="settings">Settings</string>
+    <string name="language">Language</string>
+    <string name="dark_mode">Dark mode</string>
+    <string name="light_mode">Light mode</string>
+    <string name="system_default">System default</string>
+
+    <string name="auto_resume">Resume playback</string>
+    <string name="auto_play_next">Auto play next</string>
+    <string name="show_hidden">Show hidden videos</string>
+
+    <string name="favorites">Favorites</string>
+    <string name="history">History</string>
+    <string name="hidden_videos">Hidden videos</string>
+    <string name="playlists">Playlists</string>
+
+    <string name="play">Play</string>
+    <string name="pause">Pause</string>
+    <string name="back">Back</string>
+    <string name="delete">Delete</string>
+    <string name="rename">Rename</string>
+    <string name="share">Share</string>
+    <string name="cancel">Cancel</string>
+    <string name="save">Save</string>
+    <string name="close">Close</string>
+    <string name="ok">OK</string>
+
+    <string name="add_to_playlist">Add to playlist</string>
+    <string name="new_playlist">New playlist</string>
+    <string name="manage_playlists">Manage playlists</string>
+
+    <string name="sort">Sort</string>
+    <string name="newest">Newest</string>
+    <string name="name">Name</string>
+    <string name="size">Size</string>
+
+    <string name="grid_view">Grid view</string>
+    <string name="list_view">List view</string>
+
+</resources>
