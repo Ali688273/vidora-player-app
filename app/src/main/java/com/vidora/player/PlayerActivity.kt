@@ -10,6 +10,8 @@ import android.content.pm.PackageManager
 import android.media.AudioManager
 import android.net.Uri
 import android.os.Build
+import android.view.Gravity
+import android.widget.FrameLayout
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
