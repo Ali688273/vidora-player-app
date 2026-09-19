@@ -11,7 +11,6 @@ import android.os.Bundle
 import android.provider.MediaStore
 import android.text.Editable
 import android.text.TextWatcher
-import android.util.DisplayMetrics
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
@@ -26,6 +25,8 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
 
@@ -58,10 +59,22 @@ class MainActivity : ComponentActivity() {
     private val permissionRequestCode =
         7001
 
+    override fun attachBaseContext(
+        newBase: android.content.Context
+    ) {
+        super.attachBaseContext(
+            VidoraLocaleManager.apply(
+                newBase
+            )
+        )
+    }
+
     override fun onCreate(
         savedInstanceState: Bundle?
     ) {
-        super.onCreate(savedInstanceState)
+        super.onCreate(
+            savedInstanceState
+        )
 
         setContentView(
             R.layout.activity_main
@@ -102,6 +115,11 @@ class MainActivity : ComponentActivity() {
                 R.id.locationText
             )
 
+        VidoraLocaleManager.applyDirection(
+            window.decorView,
+            this
+        )
+
         loadSavedDisplayMode()
 
         restoreScreenState(
@@ -133,6 +151,16 @@ class MainActivity : ComponentActivity() {
         } else {
             requestVideoPermission()
         }
+    }
+
+    private fun t(
+        text: String
+    ): String {
+
+        return VidoraTextTranslator.translate(
+            this,
+            text
+        )
     }
 
     fun openOnlinePlayer(
@@ -271,9 +299,9 @@ class MainActivity : ComponentActivity() {
 
         viewModeButton.contentDescription =
             if (gridMode) {
-                "نمایش فهرستی"
+                t("نمایش فهرستی")
             } else {
-                "نمایش شبکه‌ای"
+                t("نمایش شبکه‌ای")
             }
     }
 
@@ -283,20 +311,34 @@ class MainActivity : ComponentActivity() {
             when (sortMode) {
 
                 SortMode.LAST_ACCESS ->
-                    "جدیدترین"
+                    t("جدیدترین")
 
                 SortMode.NAME ->
-                    "نام"
+                    t("نام")
 
                 SortMode.SIZE ->
-                    "حجم"
+                    t("حجم")
 
                 SortMode.FAVORITES ->
-                    "علاقه‌مندی‌ها"
+                    t("علاقه‌مندی‌ها")
             }
     }
 
     private fun setupSearch() {
+
+        searchInput.hint =
+            if (
+                VidoraLanguageManager.isPersian(
+                    this
+                )
+            ) {
+                "جستجوی ویدئو"
+            } else {
+                "Search videos"
+            }
+
+        searchInput.contentDescription =
+            searchInput.hint
 
         searchInput.addTextChangedListener(
             object : TextWatcher {
@@ -385,7 +427,9 @@ class MainActivity : ComponentActivity() {
             } else {
 
                 countText.text =
-                    "مجوز دسترسی به ویدئوها داده نشد."
+                    t(
+                        "مجوز دسترسی به ویدئوها داده نشد."
+                    )
             }
         }
     }
@@ -491,7 +535,7 @@ class MainActivity : ComponentActivity() {
                 val name =
                     cursor.getString(
                         nameColumn
-                    ) ?: "ویدئو"
+                    ) ?: t("ویدئو")
 
                 val duration =
                     cursor.getLong(
@@ -512,9 +556,9 @@ class MainActivity : ComponentActivity() {
                     if (folderColumn >= 0) {
                         cursor.getString(
                             folderColumn
-                        ) ?: "سایر"
+                        ) ?: t("سایر")
                     } else {
-                        "سایر"
+                        t("سایر")
                     }
 
                 allVideos.add(
@@ -526,7 +570,7 @@ class MainActivity : ComponentActivity() {
                         dateAdded = dateAdded,
                         folderName =
                             folderName.ifBlank {
-                                "سایر"
+                                t("سایر")
                             }
                     )
                 )
@@ -613,9 +657,9 @@ class MainActivity : ComponentActivity() {
 
             showEmptyMessage(
                 if (folders.isEmpty()) {
-                    "هیچ ویدئویی پیدا نشد."
+                    t("هیچ ویدئویی پیدا نشد.")
                 } else {
-                    "نتیجه‌ای برای جستجو پیدا نشد."
+                    t("نتیجه‌ای برای جستجو پیدا نشد.")
                 }
             )
 
@@ -637,17 +681,57 @@ class MainActivity : ComponentActivity() {
         }
 
         locationText.text =
-            "همه پوشه‌ها"
+            t("همه پوشه‌ها")
 
         backFolderButton.visibility =
             View.GONE
 
         countText.text =
             if (query.isBlank()) {
-                "${folders.size} پوشه • ${allVideos.size} ویدئو"
+                folderSummaryText(
+                    folders.size,
+                    allVideos.size
+                )
             } else {
-                "${visibleFolders.size} پوشه • $visibleVideoCount ویدئو"
+                searchFolderSummaryText(
+                    visibleFolders.size,
+                    visibleVideoCount
+                )
             }
+    }
+
+    private fun folderSummaryText(
+        folderCount: Int,
+        videoCount: Int
+    ): String {
+
+        return if (
+            VidoraLanguageManager.isPersian(
+                this
+            )
+        ) {
+            "$folderCount پوشه • $videoCount ویدئو"
+        } else {
+            "$folderCount ${if (folderCount == 1) "folder" else "folders"} • " +
+                "$videoCount ${if (videoCount == 1) "video" else "videos"}"
+        }
+    }
+
+    private fun searchFolderSummaryText(
+        folderCount: Int,
+        videoCount: Int
+    ): String {
+
+        return if (
+            VidoraLanguageManager.isPersian(
+                this
+            )
+        ) {
+            "$folderCount پوشه • $videoCount ویدئو"
+        } else {
+            "$folderCount ${if (folderCount == 1) "folder" else "folders"} • " +
+                "$videoCount ${if (videoCount == 1) "video" else "videos"}"
+        }
     }
 
     private fun displayFolderGrid(
@@ -696,15 +780,17 @@ class MainActivity : ComponentActivity() {
             View.VISIBLE
 
         countText.text =
-            "${videos.size} ویدئو"
+            videoCountText(
+                videos.size
+            )
 
         if (videos.isEmpty()) {
 
             showEmptyMessage(
                 if (query.isBlank()) {
-                    "این پوشه ویدئویی ندارد."
+                    t("این پوشه ویدئویی ندارد.")
                 } else {
-                    "نتیجه‌ای برای جستجو پیدا نشد."
+                    t("نتیجه‌ای برای جستجو پیدا نشد.")
                 }
             )
 
@@ -725,6 +811,21 @@ class MainActivity : ComponentActivity() {
                     false
                 )
             }
+        }
+    }
+
+    private fun videoCountText(
+        count: Int
+    ): String {
+
+        return if (
+            VidoraLanguageManager.isPersian(
+                this
+            )
+        ) {
+            "$count ویدئو"
+        } else {
+            "$count ${if (count == 1) "video" else "videos"}"
         }
     }
 
@@ -986,10 +1087,27 @@ class MainActivity : ComponentActivity() {
         count: Int
     ): String {
 
-        return if (count == 1) {
-            "۱ ویدئو"
+        return if (
+            VidoraLanguageManager.isPersian(
+                this
+            )
+        ) {
+
+            if (count == 1) {
+                "۱ ویدئو"
+            } else {
+                "$count ویدئو"
+            }
+
         } else {
-            "$count ویدئو"
+
+            "$count ${
+                if (count == 1) {
+                    "video"
+                } else {
+                    "videos"
+                }
+            }"
         }
     }
 
@@ -1242,17 +1360,17 @@ class MainActivity : ComponentActivity() {
 
         val options =
             arrayOf(
-                "پخش",
+                t("پخش"),
                 if (favorite) {
-                    "حذف از علاقه‌مندی‌ها"
+                    t("حذف از علاقه‌مندی‌ها")
                 } else {
-                    "افزودن به علاقه‌مندی‌ها"
+                    t("افزودن به علاقه‌مندی‌ها")
                 },
-                "مخفی کردن",
-                "افزودن به پلی‌لیست",
-                "تغییر نام",
-                "اشتراک‌گذاری",
-                "حذف"
+                t("مخفی کردن"),
+                t("افزودن به پلی‌لیست"),
+                t("تغییر نام"),
+                t("اشتراک‌گذاری"),
+                t("حذف")
             )
 
         AlertDialog.Builder(this)
@@ -1354,7 +1472,7 @@ class MainActivity : ComponentActivity() {
         } catch (_: Exception) {
 
             showTemporaryMessage(
-                "مدیریت پلی‌لیست در دسترس نیست."
+                t("مدیریت پلی‌لیست در دسترس نیست.")
             )
         }
     }
@@ -1374,17 +1492,17 @@ class MainActivity : ComponentActivity() {
 
         AlertDialog.Builder(this)
             .setTitle(
-                "تغییر نام ویدئو"
+                t("تغییر نام ویدئو")
             )
             .setView(
                 input
             )
             .setNegativeButton(
-                "لغو",
+                t("لغو"),
                 null
             )
             .setPositiveButton(
-                "ذخیره"
+                t("ذخیره")
             ) { _, _ ->
 
                 val newName =
@@ -1415,7 +1533,7 @@ class MainActivity : ComponentActivity() {
                 } catch (_: Exception) {
 
                     showTemporaryMessage(
-                        "تغییر نام انجام نشد."
+                        t("تغییر نام انجام نشد.")
                     )
                 }
             }
@@ -1428,17 +1546,19 @@ class MainActivity : ComponentActivity() {
 
         AlertDialog.Builder(this)
             .setTitle(
-                "حذف ویدئو"
+                t("حذف ویدئو")
             )
             .setMessage(
-                "آیا از حذف این ویدئو مطمئن هستید؟"
+                t(
+                    "آیا از حذف این ویدئو مطمئن هستید؟"
+                )
             )
             .setNegativeButton(
-                "لغو",
+                t("لغو"),
                 null
             )
             .setPositiveButton(
-                "حذف"
+                t("حذف")
             ) { _, _ ->
 
                 try {
@@ -1478,7 +1598,7 @@ class MainActivity : ComponentActivity() {
                 } catch (_: Exception) {
 
                     showTemporaryMessage(
-                        "حذف ویدئو انجام نشد."
+                        t("حذف ویدئو انجام نشد.")
                     )
                 }
             }
@@ -1489,15 +1609,15 @@ class MainActivity : ComponentActivity() {
 
         val options =
             arrayOf(
-                "جدیدترین",
-                "نام",
-                "حجم",
-                "علاقه‌مندی‌ها"
+                t("جدیدترین"),
+                t("نام"),
+                t("حجم"),
+                t("علاقه‌مندی‌ها")
             )
 
         AlertDialog.Builder(this)
             .setTitle(
-                "مرتب‌سازی"
+                t("مرتب‌سازی")
             )
             .setSingleChoiceItems(
                 options,
@@ -1608,7 +1728,7 @@ class MainActivity : ComponentActivity() {
         return if (hours > 0L) {
 
             String.format(
-                java.util.Locale.US,
+                Locale.US,
                 "%02d:%02d:%02d",
                 hours,
                 minutes,
@@ -1618,7 +1738,7 @@ class MainActivity : ComponentActivity() {
         } else {
 
             String.format(
-                java.util.Locale.US,
+                Locale.US,
                 "%02d:%02d",
                 minutes,
                 seconds
@@ -1640,7 +1760,7 @@ class MainActivity : ComponentActivity() {
         return if (mb >= 1024.0) {
 
             String.format(
-                java.util.Locale.US,
+                Locale.US,
                 "%.1f GB",
                 mb / 1024.0
             )
@@ -1648,7 +1768,7 @@ class MainActivity : ComponentActivity() {
         } else {
 
             String.format(
-                java.util.Locale.US,
+                Locale.US,
                 "%.1f MB",
                 mb
             )
