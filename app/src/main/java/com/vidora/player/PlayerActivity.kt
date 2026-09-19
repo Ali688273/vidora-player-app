@@ -104,6 +104,9 @@ class PlayerActivity : FragmentActivity() {
     private var isExitingPlayer = false
     private var progressUserSeeking = false
 
+    private var pendingResumePosition = 0L
+    private var resumePositionApplied = false
+
     private val controlsHandler =
         Handler(Looper.getMainLooper())
 
@@ -124,6 +127,7 @@ class PlayerActivity : FragmentActivity() {
         object : Runnable {
             override fun run() {
                 updateProgress()
+
                 progressHandler.postDelayed(
                     this,
                     PROGRESS_UPDATE_INTERVAL
@@ -214,6 +218,13 @@ class PlayerActivity : FragmentActivity() {
 
                 if (
                     playbackState ==
+                    Player.STATE_READY
+                ) {
+                    applyPendingResumePosition()
+                }
+
+                if (
+                    playbackState ==
                     Player.STATE_ENDED
                 ) {
                     handlePlaybackEnded()
@@ -236,8 +247,17 @@ class PlayerActivity : FragmentActivity() {
                 mediaItem: MediaItem?,
                 reason: Int
             ) {
+                resumePositionApplied = false
+                pendingResumePosition = 0L
+
+                val uri =
+                    mediaItem?.localConfiguration?.uri
+
+                if (uri != null) {
+                    updateFavoriteButton()
+                }
+
                 updateProgress()
-                updateFavoriteButton()
             }
         }
 
@@ -407,12 +427,18 @@ class PlayerActivity : FragmentActivity() {
                 ) {
 
                     val currentPlayer =
-                        player ?: return
+                        player ?: run {
+                            progressUserSeeking = false
+                            return
+                        }
 
                     val duration =
                         currentPlayer.duration
 
-                    if (duration <= 0L) {
+                    if (
+                        duration <= 0L ||
+                        duration == C.TIME_UNSET
+                    ) {
                         progressUserSeeking = false
                         return
                     }
@@ -432,7 +458,10 @@ class PlayerActivity : FragmentActivity() {
                     )
 
                     progressUserSeeking = false
+
                     updateProgress()
+
+                    showPlayerControlsTemporarily()
                 }
 
                 override fun onProgressChanged(
@@ -449,7 +478,10 @@ class PlayerActivity : FragmentActivity() {
                         player?.duration
                             ?: return
 
-                    if (duration <= 0L) {
+                    if (
+                        duration <= 0L ||
+                        duration == C.TIME_UNSET
+                    ) {
                         return
                     }
 
@@ -463,8 +495,10 @@ class PlayerActivity : FragmentActivity() {
 
                     remainingTimeText.text =
                         "-${formatTime(
-                            (duration - position)
-                                .coerceAtLeast(0L)
+                            (
+                                duration -
+                                    position
+                                ).coerceAtLeast(0L)
                         )}"
                 }
             }
@@ -2033,7 +2067,10 @@ class PlayerActivity : FragmentActivity() {
         val duration =
             currentPlayer.duration
 
-        if (duration <= 0L) {
+        if (
+            duration <= 0L ||
+            duration == C.TIME_UNSET
+        ) {
             return
         }
 
@@ -2089,14 +2126,21 @@ class PlayerActivity : FragmentActivity() {
         val duration =
             currentPlayer.duration
 
-        if (duration <= 0L) {
+        if (
+            duration <= 0L ||
+            duration == C.TIME_UNSET
+        ) {
             return
         }
+
+        val width =
+            playerView.width
+                .coerceAtLeast(1)
 
         val seekAmount =
             (
                 deltaX /
-                    playerView.width
+                    width
                 ) * 60000L
 
         val newPosition =
@@ -2132,10 +2176,14 @@ class PlayerActivity : FragmentActivity() {
                 AudioManager.STREAM_MUSIC
             )
 
+        val height =
+            playerView.height
+                .coerceAtLeast(1)
+
         val volumeChange =
             (
                 -deltaY /
-                    playerView.height *
+                    height *
                     maxVolume
                 ).toInt()
 
@@ -2175,9 +2223,13 @@ class PlayerActivity : FragmentActivity() {
         deltaY: Float
     ) {
 
+        val height =
+            playerView.height
+                .coerceAtLeast(1)
+
         val change =
             -deltaY /
-                playerView.height
+                height
 
         val newBrightness =
             (
@@ -2212,6 +2264,7 @@ class PlayerActivity : FragmentActivity() {
     ) {
 
         gestureInfo.text = text
+
         gestureInfo.visibility =
             View.VISIBLE
     }
@@ -2543,7 +2596,7 @@ class PlayerActivity : FragmentActivity() {
             syncQueueCurrentVideo(videoUri)
         }
 
-        val savedPosition =
+        pendingResumePosition =
             if (
                 isExternalVideo() ||
                 !VidoraSettings.autoResume(this)
@@ -2557,6 +2610,9 @@ class PlayerActivity : FragmentActivity() {
                     )
                     .coerceAtLeast(0L)
             }
+
+        resumePositionApplied =
+            pendingResumePosition <= 0L
 
         currentSpeed =
             if (isExternalVideo()) {
@@ -2581,23 +2637,14 @@ class PlayerActivity : FragmentActivity() {
                 Player.REPEAT_MODE_OFF
             }
 
-        currentPlayer.prepare()
-
-        if (savedPosition > 0L) {
-
-            currentPlayer.seekTo(
-                savedPosition
-            )
-        }
-
         currentPlayer.playbackParameters =
             PlaybackParameters(
                 currentSpeed
             )
 
-        updateSpeedText()
+        currentPlayer.prepare()
 
-        currentPlayer.play()
+        updateSpeedText()
 
         intent.putExtra(
             EXTRA_VIDEO_URI,
@@ -2610,6 +2657,64 @@ class PlayerActivity : FragmentActivity() {
         updateProgress()
 
         showPlayerControlsTemporarily()
+
+        if (pendingResumePosition <= 0L) {
+            currentPlayer.play()
+        }
+    }
+
+    private fun applyPendingResumePosition() {
+
+        if (resumePositionApplied) {
+            return
+        }
+
+        val currentPlayer =
+            player
+                ?: return
+
+        val position =
+            pendingResumePosition
+
+        resumePositionApplied = true
+        pendingResumePosition = 0L
+
+        if (position <= 0L) {
+            currentPlayer.play()
+            return
+        }
+
+        val duration =
+            currentPlayer.duration
+
+        val safePosition =
+            if (
+                duration > 0L &&
+                duration != C.TIME_UNSET
+            ) {
+                position.coerceIn(
+                    0L,
+                    (duration - 500L)
+                        .coerceAtLeast(0L)
+                )
+            } else {
+                position
+            }
+
+        try {
+
+            currentPlayer.seekTo(
+                safePosition
+            )
+
+        } catch (_: Exception) {
+        }
+
+        currentPlayer.play()
+
+        updateProgress()
+        updatePauseButton()
+        updateCenterPlayButton()
     }
 
     private fun updateProgress() {
@@ -3076,6 +3181,7 @@ class PlayerActivity : FragmentActivity() {
 
         if (
             position <= 0L ||
+            duration <= 0L ||
             duration == C.TIME_UNSET
         ) {
             return
@@ -3087,6 +3193,30 @@ class PlayerActivity : FragmentActivity() {
             position,
             duration
         )
+    }
+
+    private fun stopPlaybackCompletely() {
+
+        val currentPlayer =
+            player
+                ?: return
+
+        try {
+            currentPlayer.pause()
+        } catch (_: Exception) {
+        }
+
+        try {
+            currentPlayer.stop()
+        } catch (_: Exception) {
+        }
+
+        try {
+            currentPlayer.clearMediaItems()
+        } catch (_: Exception) {
+        }
+
+        wasPlayingBeforePause = false
     }
 
     private fun exitPlayer() {
@@ -3101,7 +3231,9 @@ class PlayerActivity : FragmentActivity() {
         enteringPictureInPicture = false
 
         savePosition()
+
         playbackAutoSaveManager.stop()
+
         saveDisplaySettings()
 
         progressHandler.removeCallbacks(
@@ -3112,31 +3244,7 @@ class PlayerActivity : FragmentActivity() {
             hideControlsRunnable
         )
 
-        val currentPlayer =
-            player
-
-        if (currentPlayer != null) {
-
-            try {
-                currentPlayer.pause()
-            } catch (_: Exception) {
-            }
-
-            try {
-                currentPlayer.stop()
-            } catch (_: Exception) {
-            }
-
-            try {
-                currentPlayer.clearMediaItems()
-            } catch (_: Exception) {
-            }
-
-            try {
-                currentPlayer.stop()
-            } catch (_: Exception) {
-            }
-        }
+        stopPlaybackCompletely()
 
         playerView.player = null
 
