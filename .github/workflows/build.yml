@@ -4,11 +4,9 @@ on:
   push:
     branches:
       - main
-
   pull_request:
     branches:
       - main
-
   workflow_dispatch:
 
 jobs:
@@ -30,15 +28,6 @@ jobs:
         with:
           gradle-version: "8.13"
 
-      - name: Build Debug APK
-        run: gradle assembleDebug --no-daemon
-
-      - name: Upload Debug APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: VidoraPlayer-debug
-          path: app/build/outputs/apk/debug/app-debug.apk
-
       - name: Check Release Signing Secrets
         id: signing
         env:
@@ -47,6 +36,12 @@ jobs:
           KEY_ALIAS: ${{ secrets.VIDORA_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.VIDORA_KEY_PASSWORD }}
         run: |
+          echo "Checking release signing secret configuration..."
+          echo "VIDORA_KEYSTORE_BASE64 length: $(printf '%s' "$KEYSTORE_BASE64" | wc -c)"
+          echo "VIDORA_KEYSTORE_PASSWORD length: $(printf '%s' "$KEYSTORE_PASSWORD" | wc -c)"
+          echo "VIDORA_KEY_ALIAS length: $(printf '%s' "$KEY_ALIAS" | wc -c)"
+          echo "VIDORA_KEY_PASSWORD length: $(printf '%s' "$KEY_PASSWORD" | wc -c)"
+
           if [ -n "$KEYSTORE_BASE64" ] &&
              [ -n "$KEYSTORE_PASSWORD" ] &&
              [ -n "$KEY_ALIAS" ] &&
@@ -55,9 +50,18 @@ jobs:
             echo "Release signing secrets are configured."
           else
             echo "configured=false" >> "$GITHUB_OUTPUT"
-            echo "Release signing secrets are not configured yet."
+            echo "Release signing secrets are NOT fully configured."
             echo "Debug build will continue normally."
           fi
+
+      - name: Build Debug APK
+        run: gradle assembleDebug --no-daemon
+
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: VidoraPlayer-debug
+          path: app/build/outputs/apk/debug/app-debug.apk
 
       - name: Prepare Release Keystore
         if: steps.signing.outputs.configured == 'true'
