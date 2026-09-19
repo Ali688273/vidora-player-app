@@ -12,10 +12,21 @@ import android.widget.Switch
 import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.core.view.setPadding
+import java.util.Locale
 
 class SettingsActivity : ComponentActivity() {
 
     private lateinit var root: LinearLayout
+
+    override fun attachBaseContext(
+        newBase: android.content.Context
+    ) {
+        super.attachBaseContext(
+            VidoraLocaleManager.apply(
+                newBase
+            )
+        )
+    }
 
     override fun onCreate(
         savedInstanceState: Bundle?
@@ -25,6 +36,16 @@ class SettingsActivity : ComponentActivity() {
         )
 
         buildUi()
+    }
+
+    private fun t(
+        text: String
+    ): String {
+
+        return VidoraTextTranslator.translate(
+            this,
+            text
+        )
     }
 
     private fun buildUi() {
@@ -42,6 +63,11 @@ class SettingsActivity : ComponentActivity() {
                         R.color.vidora_background
                     )
                 )
+
+                VidoraLocaleManager.applyDirection(
+                    this,
+                    this@SettingsActivity
+                )
             }
 
         val scroll =
@@ -56,15 +82,15 @@ class SettingsActivity : ComponentActivity() {
         )
 
         addTitle(
-            "تنظیمات Vidora Player"
+            t("تنظیمات Vidora Player")
         )
 
         addSection(
-            "ظاهر"
+            t("ظاهر")
         )
 
         addSwitch(
-            "حالت تاریک",
+            t("حالت تاریک"),
             VidoraSettings.isDarkMode(this)
         ) { checked ->
 
@@ -75,7 +101,7 @@ class SettingsActivity : ComponentActivity() {
         }
 
         addSwitch(
-            "نمایش ویدئوهای مخفی",
+            t("نمایش ویدئوهای مخفی"),
             VidoraSettings.showHidden(this)
         ) { checked ->
 
@@ -86,11 +112,11 @@ class SettingsActivity : ComponentActivity() {
         }
 
         addSection(
-            "پخش"
+            t("پخش")
         )
 
         addSwitch(
-            "ادامه پخش از آخرین موقعیت",
+            t("ادامه پخش از آخرین موقعیت"),
             VidoraSettings.autoResume(this)
         ) { checked ->
 
@@ -106,7 +132,7 @@ class SettingsActivity : ComponentActivity() {
         }
 
         addSwitch(
-            "پخش خودکار ویدئوی بعدی",
+            t("پخش خودکار ویدئوی بعدی"),
             PlaybackSettings.autoPlayNext(this)
         ) { checked ->
 
@@ -117,7 +143,7 @@ class SettingsActivity : ComponentActivity() {
         }
 
         addSwitch(
-            "پخش در پس‌زمینه",
+            t("پخش در پس‌زمینه"),
             PlaybackSettings.backgroundPlayback(this)
         ) { checked ->
 
@@ -128,7 +154,7 @@ class SettingsActivity : ComponentActivity() {
         }
 
         addSwitch(
-            "روشن ماندن صفحه هنگام پخش",
+            t("روشن ماندن صفحه هنگام پخش"),
             PlaybackSettings.keepScreenOn(this)
         ) { checked ->
 
@@ -139,7 +165,7 @@ class SettingsActivity : ComponentActivity() {
         }
 
         addSwitch(
-            "کنترل‌های حرکتی",
+            t("کنترل‌های حرکتی"),
             PlaybackSettings.gestureControls(this)
         ) { checked ->
 
@@ -152,19 +178,19 @@ class SettingsActivity : ComponentActivity() {
         addDefaultSpeed()
 
         addSection(
-            "نسبت تصویر"
+            t("نسبت تصویر")
         )
 
         addAspectOptions()
 
         addSection(
-            "زیرنویس"
+            t("زیرنویس")
         )
 
         addSubtitleSize()
 
         addSwitch(
-            "نادیده گرفتن اندازه داخلی زیرنویس",
+            t("نادیده گرفتن اندازه داخلی زیرنویس"),
             getSharedPreferences(
                 "vidora_player_preferences",
                 MODE_PRIVATE
@@ -187,7 +213,7 @@ class SettingsActivity : ComponentActivity() {
         }
 
         addSwitch(
-            "پس‌زمینه زیرنویس",
+            t("پس‌زمینه زیرنویس"),
             SubtitleSettings.useBackground(this)
         ) { checked ->
 
@@ -198,7 +224,7 @@ class SettingsActivity : ComponentActivity() {
         }
 
         addSwitch(
-            "زیرنویس ضخیم",
+            t("زیرنویس ضخیم"),
             SubtitleSettings.bold(this)
         ) { checked ->
 
@@ -211,17 +237,17 @@ class SettingsActivity : ComponentActivity() {
         addSubtitleDelay()
 
         addSection(
-            "زبان برنامه"
+            t("زبان برنامه")
         )
 
         addLanguageSelector()
 
         addSection(
-            "امکانات"
+            t("امکانات")
         )
 
         addButton(
-            "🌐 پخش ویدئوی آنلاین"
+            t("🌐 پخش ویدئوی آنلاین")
         ) {
 
             startActivity(
@@ -233,7 +259,7 @@ class SettingsActivity : ComponentActivity() {
         }
 
         addButton(
-            "🔒 پوشه خصوصی"
+            t("🔒 پوشه خصوصی")
         ) {
 
             startActivity(
@@ -245,7 +271,7 @@ class SettingsActivity : ComponentActivity() {
         }
 
         addButton(
-            "📂 انتخاب پوشه رسانه"
+            t("📂 انتخاب پوشه رسانه")
         ) {
 
             startActivity(
@@ -263,14 +289,14 @@ class SettingsActivity : ComponentActivity() {
         }
 
         addButton(
-            "📋 مدیریت پلی‌لیست‌ها"
+            t("📋 مدیریت پلی‌لیست‌ها")
         ) {
 
             showPlaylists()
         }
 
         addButton(
-            "⚙️ تنظیمات دسترسی سیستم"
+            t("⚙️ تنظیمات دسترسی سیستم")
         ) {
 
             try {
@@ -288,7 +314,7 @@ class SettingsActivity : ComponentActivity() {
         }
 
         addButton(
-            "🔄 بازگردانی تنظیمات"
+            t("🔄 بازگردانی تنظیمات")
         ) {
 
             resetSettings()
@@ -309,7 +335,7 @@ class SettingsActivity : ComponentActivity() {
                     25f
 
                 gravity =
-                    Gravity.RIGHT
+                    Gravity.CENTER_HORIZONTAL
 
                 setTextColor(
                     getColor(
@@ -344,7 +370,7 @@ class SettingsActivity : ComponentActivity() {
                     19f
 
                 gravity =
-                    Gravity.RIGHT
+                    Gravity.START
 
                 setTextColor(
                     getColor(
@@ -417,7 +443,7 @@ class SettingsActivity : ComponentActivity() {
             TextView(this).apply {
 
                 text =
-                    "سرعت پیش‌فرض"
+                    t("سرعت پیش‌فرض")
 
                 textSize =
                     16f
@@ -477,8 +503,9 @@ class SettingsActivity : ComponentActivity() {
                             )
 
                 valueText.text =
-                    "سرعت: %.2fx"
+                    "${t("سرعت")}: %.2fx"
                         .format(
+                            Locale.US,
                             current
                         )
 
@@ -514,8 +541,9 @@ class SettingsActivity : ComponentActivity() {
                                 )
 
                             valueText.text =
-                                "سرعت: %.2fx"
+                                "${t("سرعت")}: %.2fx"
                                     .format(
+                                        Locale.US,
                                         speed
                                     )
                         }
@@ -552,8 +580,8 @@ class SettingsActivity : ComponentActivity() {
 
         val aspects =
             listOf(
-                "تطبیق" to 0,
-                "کامل" to 1,
+                t("تطبیق") to 0,
+                t("کامل") to 1,
                 "16:9" to 2,
                 "4:3" to 3
             )
@@ -640,7 +668,7 @@ class SettingsActivity : ComponentActivity() {
             TextView(this).apply {
 
                 text =
-                    "اندازه زیرنویس"
+                    t("اندازه زیرنویس")
 
                 textSize =
                     16f
@@ -703,8 +731,9 @@ class SettingsActivity : ComponentActivity() {
                             )
 
                 valueText.text =
-                    "اندازه: %.1f%%"
+                    "${t("اندازه زیرنویس")}: %.1f%%"
                         .format(
+                            Locale.US,
                             current * 100f
                         )
 
@@ -757,8 +786,9 @@ class SettingsActivity : ComponentActivity() {
                                 .apply()
 
                             valueText.text =
-                                "اندازه: %.1f%%"
+                                "${t("اندازه زیرنویس")}: %.1f%%"
                                     .format(
+                                        Locale.US,
                                         value * 100f
                                     )
                         }
@@ -787,7 +817,7 @@ class SettingsActivity : ComponentActivity() {
             TextView(this).apply {
 
                 text =
-                    "تأخیر زیرنویس برای ویدئوی فعلی"
+                    t("تأخیر زیرنویس برای ویدئوی فعلی")
 
                 textSize =
                     16f
@@ -807,7 +837,9 @@ class SettingsActivity : ComponentActivity() {
             TextView(this).apply {
 
                 text =
-                    "برای تغییر تأخیر، از کنترل زیرنویس داخل پخش‌کننده استفاده کنید."
+                    t(
+                        "برای تغییر تأخیر، از کنترل زیرنویس داخل پخش‌کننده استفاده کنید."
+                    )
 
                 textSize =
                     14f
@@ -833,12 +865,6 @@ class SettingsActivity : ComponentActivity() {
 
     private fun addLanguageSelector() {
 
-        val currentLanguage =
-            VidoraLanguageManager
-                .getSelectedLanguage(
-                    this
-                )
-
         val currentName =
             VidoraLanguageManager
                 .languageName(
@@ -849,7 +875,7 @@ class SettingsActivity : ComponentActivity() {
             Button(this).apply {
 
                 text =
-                    "زبان: $currentName"
+                    "${t("زبان")}: $currentName"
 
                 textSize =
                     16f
@@ -876,8 +902,8 @@ class SettingsActivity : ComponentActivity() {
 
         val languages =
             arrayOf(
-                "خودکار — زبان گوشی",
-                "فارسی",
+                t("خودکار — زبان گوشی"),
+                t("فارسی"),
                 "English"
             )
 
@@ -903,7 +929,7 @@ class SettingsActivity : ComponentActivity() {
             this
         )
             .setTitle(
-                "زبان برنامه"
+                t("زبان برنامه")
             )
             .setSingleChoiceItems(
                 languages,
@@ -944,7 +970,7 @@ class SettingsActivity : ComponentActivity() {
                 recreate()
             }
             .setNegativeButton(
-                "لغو",
+                t("لغو"),
                 null
             )
             .show()
@@ -992,7 +1018,9 @@ class SettingsActivity : ComponentActivity() {
                 playlists.isEmpty()
             ) {
 
-                "هنوز پلی‌لیستی ساخته نشده است."
+                t(
+                    "هنوز پلی‌لیستی ساخته نشده است."
+                )
 
             } else {
 
@@ -1000,21 +1028,21 @@ class SettingsActivity : ComponentActivity() {
                     separator = "\n"
                 ) {
 
-                    "• ${it.name} (${it.videos.size} ویدئو)"
+                    "• ${it.name} (${it.videos.size} ${
+                        t("ویدئو")
+                    })"
                 }
             }
 
-        android.app.AlertDialog.Builder(
-            this
-        )
+        android.app.AlertDialog.Builder(this)
             .setTitle(
-                "پلی‌لیست‌ها"
+                t("پلی‌لیست‌ها")
             )
             .setMessage(
                 message
             )
             .setPositiveButton(
-                "باشه",
+                t("باشه"),
                 null
             )
             .show()
