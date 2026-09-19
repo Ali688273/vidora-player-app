@@ -11,6 +11,8 @@ import android.os.Bundle
 import android.provider.MediaStore
 import android.text.Editable
 import android.text.TextWatcher
+import android.util.DisplayMetrics
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -652,33 +654,15 @@ class MainActivity : ComponentActivity() {
         folders: List<Pair<String, Int>>
     ) {
 
-        var row: LinearLayout? =
-            null
+        displayResponsiveGrid(
+            itemCount = folders.size
+        ) { row, index ->
 
-        folders.forEachIndexed { index, folder ->
-
-            if (index % 2 == 0) {
-
-                row =
-                    LinearLayout(this).apply {
-
-                        orientation =
-                            LinearLayout.HORIZONTAL
-
-                        layoutParams =
-                            LinearLayout.LayoutParams(
-                                ViewGroup.LayoutParams.MATCH_PARENT,
-                                ViewGroup.LayoutParams.WRAP_CONTENT
-                            )
-                    }
-
-                videoContainer.addView(
-                    row
-                )
-            }
+            val folder =
+                folders[index]
 
             addGridFolderItem(
-                row!!,
+                row,
                 folder.first,
                 folder.second
             )
@@ -783,12 +767,40 @@ class MainActivity : ComponentActivity() {
         videos: List<VideoItem>
     ) {
 
+        displayResponsiveGrid(
+            itemCount = videos.size
+        ) { row, index ->
+
+            addGridVideoItem(
+                row,
+                videos[index]
+            )
+        }
+    }
+
+    private fun displayResponsiveGrid(
+        itemCount: Int,
+        addItem: (
+            LinearLayout,
+            Int
+        ) -> Unit
+    ) {
+
+        if (itemCount <= 0) {
+            return
+        }
+
+        val columnCount =
+            calculateGridColumnCount()
+
         var row: LinearLayout? =
             null
 
-        videos.forEachIndexed { index, video ->
+        repeat(itemCount) { index ->
 
-            if (index % 2 == 0) {
+            if (
+                index % columnCount == 0
+            ) {
 
                 row =
                     LinearLayout(this).apply {
@@ -796,11 +808,21 @@ class MainActivity : ComponentActivity() {
                         orientation =
                             LinearLayout.HORIZONTAL
 
+                        gravity =
+                            Gravity.TOP
+
                         layoutParams =
                             LinearLayout.LayoutParams(
                                 ViewGroup.LayoutParams.MATCH_PARENT,
                                 ViewGroup.LayoutParams.WRAP_CONTENT
-                            )
+                            ).apply {
+
+                                topMargin =
+                                    dp(2)
+
+                                bottomMargin =
+                                    dp(2)
+                            }
                     }
 
                 videoContainer.addView(
@@ -808,11 +830,46 @@ class MainActivity : ComponentActivity() {
                 )
             }
 
-            addGridVideoItem(
+            addItem(
                 row!!,
-                video
+                index
             )
         }
+    }
+
+    private fun calculateGridColumnCount(): Int {
+
+        val widthPixels =
+            resources.displayMetrics.widthPixels
+
+        val density =
+            resources.displayMetrics.density
+
+        val widthDp =
+            widthPixels / density
+
+        val minimumItemWidthDp =
+            if (
+                widthDp >= 600f
+            ) {
+                180f
+            } else {
+                160f
+            }
+
+        val availableWidthDp =
+            widthDp - 16f
+
+        val calculated =
+            (
+                availableWidthDp /
+                    minimumItemWidthDp
+                ).toInt()
+
+        return calculated.coerceIn(
+            2,
+            4
+        )
     }
 
     private fun addFolderItem(
@@ -908,7 +965,14 @@ class MainActivity : ComponentActivity() {
                 0,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
                 1f
-            )
+            ).apply {
+
+                marginStart =
+                    dp(2)
+
+                marginEnd =
+                    dp(2)
+            }
 
         view.layoutParams =
             params
@@ -952,7 +1016,14 @@ class MainActivity : ComponentActivity() {
                 0,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
                 1f
-            )
+            ).apply {
+
+                marginStart =
+                    dp(2)
+
+                marginEnd =
+                    dp(2)
+            }
 
         view.layoutParams =
             params
@@ -975,11 +1046,13 @@ class MainActivity : ComponentActivity() {
 
                 thumbnail.layoutParams =
                     thumbnail.layoutParams.apply {
+
                         height =
-                            (width * 9 / 16)
-                                .coerceAtLeast(
-                                    dp(80)
-                                )
+                            (
+                                width * 9 / 16
+                            ).coerceAtLeast(
+                                dp(70)
+                            )
                     }
 
                 thumbnail.requestLayout()
@@ -1147,6 +1220,7 @@ class MainActivity : ComponentActivity() {
             imageView.post {
 
                 if (bitmap != null) {
+
                     imageView.setImageBitmap(
                         bitmap
                     )
@@ -1191,9 +1265,10 @@ class MainActivity : ComponentActivity() {
 
                 when (which) {
 
-                    0 -> openVideo(
-                        video
-                    )
+                    0 ->
+                        openVideo(
+                            video
+                        )
 
                     1 -> {
 
@@ -1301,7 +1376,9 @@ class MainActivity : ComponentActivity() {
             .setTitle(
                 "تغییر نام ویدئو"
             )
-            .setView(input)
+            .setView(
+                input
+            )
             .setNegativeButton(
                 "لغو",
                 null
@@ -1429,6 +1506,7 @@ class MainActivity : ComponentActivity() {
 
                 sortMode =
                     when (which) {
+
                         1 ->
                             SortMode.NAME
 
@@ -1475,7 +1553,7 @@ class MainActivity : ComponentActivity() {
             15f
 
         text.gravity =
-            android.view.Gravity.CENTER
+            Gravity.CENTER
 
         text.setTextColor(
             ContextCompat.getColor(
