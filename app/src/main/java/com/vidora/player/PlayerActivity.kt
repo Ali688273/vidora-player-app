@@ -22,6 +22,7 @@ import android.view.WindowManager
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.SeekBar
 import android.widget.TextView
 
 import androidx.activity.result.contract.ActivityResultContracts
@@ -72,6 +73,13 @@ class PlayerActivity : FragmentActivity() {
 
     private lateinit var topBar: View
     private lateinit var controlScroll: View
+    private lateinit var progressPanel: View
+    private lateinit var progressSeekBar: SeekBar
+
+    private lateinit var currentTimeText: TextView
+    private lateinit var remainingTimeText: TextView
+    private lateinit var totalTimeText: TextView
+
     private lateinit var gestureInfo: TextView
     private lateinit var lockedOverlay: TextView
 
@@ -90,7 +98,14 @@ class PlayerActivity : FragmentActivity() {
 
     private var controlsVisible = true
 
+    private var isExitingPlayer = false
+
+    private var progressUserSeeking = false
+
     private val controlsHandler =
+        Handler(Looper.getMainLooper())
+
+    private val progressHandler =
         Handler(Looper.getMainLooper())
 
     private val hideControlsRunnable =
@@ -100,6 +115,17 @@ class PlayerActivity : FragmentActivity() {
                 !isInPictureInPictureMode
             ) {
                 hidePlayerControls()
+            }
+        }
+
+    private val progressRunnable =
+        object : Runnable {
+            override fun run() {
+                updateProgress()
+                progressHandler.postDelayed(
+                    this,
+                    PROGRESS_UPDATE_INTERVAL
+                )
             }
         }
 
@@ -167,7 +193,6 @@ class PlayerActivity : FragmentActivity() {
                 getIncomingVideoUri()
 
             if (videoUri != null) {
-
                 SubtitleFileManager.setSubtitleUri(
                     this,
                     videoUri,
@@ -193,6 +218,22 @@ class PlayerActivity : FragmentActivity() {
                 }
 
                 updatePauseButton()
+                updateProgress()
+            }
+
+            override fun onIsPlayingChanged(
+                isPlaying: Boolean
+            ) {
+                updatePauseButton()
+                updateProgress()
+            }
+
+            override fun onMediaItemTransition(
+                mediaItem: MediaItem?,
+                reason: Int
+            ) {
+                updateProgress()
+                updateFavoriteButton()
             }
         }
 
@@ -214,6 +255,21 @@ class PlayerActivity : FragmentActivity() {
 
         topBar =
             findViewById(R.id.topBar)
+
+        progressPanel =
+            findViewById(R.id.progressPanel)
+
+        progressSeekBar =
+            findViewById(R.id.progressSeekBar)
+
+        currentTimeText =
+            findViewById(R.id.currentTimeText)
+
+        remainingTimeText =
+            findViewById(R.id.remainingTimeText)
+
+        totalTimeText =
+            findViewById(R.id.totalTimeText)
 
         previousButton =
             findViewById(R.id.previousButton)
@@ -291,6 +347,84 @@ class PlayerActivity : FragmentActivity() {
                 { isExternalVideo() }
             )
 
+        playerView.useController = false
+
+        progressSeekBar.setOnSeekBarChangeListener(
+            object : SeekBar.OnSeekBarChangeListener {
+
+                override fun onStartTrackingTouch(
+                    seekBar: SeekBar
+                ) {
+                    progressUserSeeking = true
+                }
+
+                override fun onStopTrackingTouch(
+                    seekBar: SeekBar
+                ) {
+
+                    val currentPlayer =
+                        player ?: return
+
+                    val duration =
+                        currentPlayer.duration
+
+                    if (duration <= 0L) {
+                        progressUserSeeking = false
+                        return
+                    }
+
+                    val target =
+                        (
+                            duration *
+                                seekBar.progress
+                            ).toLong() /
+                            1000L
+
+                    currentPlayer.seekTo(
+                        target.coerceIn(
+                            0L,
+                            duration
+                        )
+                    )
+
+                    progressUserSeeking = false
+                    updateProgress()
+                }
+
+                override fun onProgressChanged(
+                    seekBar: SeekBar,
+                    progress: Int,
+                    fromUser: Boolean
+                ) {
+                    if (!fromUser) {
+                        return
+                    }
+
+                    val duration =
+                        player?.duration
+                            ?: return
+
+                    if (duration <= 0L) {
+                        return
+                    }
+
+                    val position =
+                        duration *
+                            progress.toLong() /
+                            1000L
+
+                    currentTimeText.text =
+                        formatTime(position)
+
+                    remainingTimeText.text =
+                        "-${formatTime(
+                            (duration - position)
+                                .coerceAtLeast(0L)
+                        )}"
+                }
+            }
+        )
+
         loadSavedDisplaySettings()
 
         setupButtons()
@@ -303,6 +437,14 @@ class PlayerActivity : FragmentActivity() {
         enterFullscreen()
 
         playbackAutoSaveManager.start()
+
+        progressHandler.removeCallbacks(
+            progressRunnable
+        )
+
+        progressHandler.post(
+            progressRunnable
+        )
     }
 
     private fun loadSavedDisplaySettings() {
@@ -460,6 +602,7 @@ class PlayerActivity : FragmentActivity() {
                     initializePlayer()
 
                     updatePauseButton()
+                    updateProgress()
 
                     showPlayerControlsTemporarily()
 
@@ -481,10 +624,7 @@ class PlayerActivity : FragmentActivity() {
         backButton.setOnClickListener {
 
             if (!isLocked) {
-                playbackAutoSaveManager.saveNow()
-                savePosition()
-                saveDisplaySettings()
-                finish()
+                exitPlayer()
             }
         }
 
@@ -493,7 +633,8 @@ class PlayerActivity : FragmentActivity() {
             if (!isLocked) {
 
                 val currentPlayer =
-                    player ?: return@setOnClickListener
+                    player
+                        ?: return@setOnClickListener
 
                 if (currentPlayer.isPlaying) {
                     currentPlayer.pause()
@@ -703,6 +844,7 @@ class PlayerActivity : FragmentActivity() {
                         showQueue()
 
                     6 -> {
+
                         PlaybackQueueManager.clear(
                             this
                         )
@@ -821,9 +963,7 @@ class PlayerActivity : FragmentActivity() {
                         nextUri
                     )
 
-                    openVideo(
-                        nextUri
-                    )
+                    openVideo(nextUri)
 
                     showTemporaryMessage(
                         "ویدئوی بعدی صف"
@@ -1146,9 +1286,7 @@ class PlayerActivity : FragmentActivity() {
                         ""
                     }
 
-                "${index + 1}.$marker${
-                    getVideoName(uri)
-                }"
+                "${index + 1}.$marker${getVideoName(uri)}"
 
             }.toTypedArray()
 
@@ -1363,6 +1501,10 @@ class PlayerActivity : FragmentActivity() {
         amount: Float
     ) {
 
+        val uri =
+            getIncomingVideoUri()
+                ?: return
+
         currentSpeed =
             (
                 currentSpeed + amount
@@ -1378,8 +1520,9 @@ class PlayerActivity : FragmentActivity() {
                 currentSpeed
             ).toFloat()
 
-        PlaybackSettings.setDefaultSpeed(
+        VideoSpeedManager.setSpeed(
             this,
+            uri,
             currentSpeed
         )
 
@@ -1394,10 +1537,16 @@ class PlayerActivity : FragmentActivity() {
 
     private fun resetSpeed() {
 
-        currentSpeed = 1.0f
+        val uri =
+            getIncomingVideoUri()
+                ?: return
 
-        PlaybackSettings.setDefaultSpeed(
+        currentSpeed =
+            1.0f
+
+        VideoSpeedManager.setSpeed(
             this,
+            uri,
             currentSpeed
         )
 
@@ -1868,6 +2017,8 @@ class PlayerActivity : FragmentActivity() {
             newPosition
         )
 
+        updateProgress()
+
         showTemporaryMessage(
             if (
                 x <
@@ -1926,6 +2077,8 @@ class PlayerActivity : FragmentActivity() {
         showGestureInfo(
             "$sign${seconds}s"
         )
+
+        updateProgress()
     }
 
     private fun handleVolume(
@@ -2086,6 +2239,9 @@ class PlayerActivity : FragmentActivity() {
         topBar.visibility =
             visibility
 
+        progressPanel.visibility =
+            visibility
+
         backButton.visibility =
             visibility
 
@@ -2145,6 +2301,7 @@ class PlayerActivity : FragmentActivity() {
 
         if (visible) {
             updatePauseButton()
+            updateProgress()
         }
     }
 
@@ -2404,7 +2561,20 @@ class PlayerActivity : FragmentActivity() {
                         this,
                         videoUri
                     )
+                    .coerceAtLeast(0L)
             }
+
+        currentSpeed =
+            if (isExternalVideo()) {
+                1.0f
+            } else {
+                VideoSpeedManager.getSpeed(
+                    this,
+                    videoUri
+                )
+            }
+
+        currentPlayer.pause()
 
         currentPlayer.setMediaItem(
             mediaItem
@@ -2419,7 +2589,9 @@ class PlayerActivity : FragmentActivity() {
 
         currentPlayer.prepare()
 
-        if (savedPosition > 0L) {
+        if (
+            savedPosition > 0L
+        ) {
 
             currentPlayer.seekTo(
                 savedPosition
@@ -2431,6 +2603,8 @@ class PlayerActivity : FragmentActivity() {
                 currentSpeed
             )
 
+        updateSpeedText()
+
         currentPlayer.play()
 
         intent.putExtra(
@@ -2440,8 +2614,137 @@ class PlayerActivity : FragmentActivity() {
 
         updateFavoriteButton()
         updatePauseButton()
+        updateProgress()
 
         showPlayerControlsTemporarily()
+    }
+
+    private fun updateProgress() {
+
+        if (!::progressSeekBar.isInitialized) {
+            return
+        }
+
+        val currentPlayer =
+            player
+
+        if (currentPlayer == null) {
+
+            currentTimeText.text =
+                "00:00"
+
+            remainingTimeText.text =
+                "-00:00"
+
+            totalTimeText.text =
+                "/ 00:00"
+
+            progressSeekBar.progress =
+                0
+
+            return
+        }
+
+        val duration =
+            currentPlayer.duration
+
+        val position =
+            currentPlayer.currentPosition
+                .coerceAtLeast(0L)
+
+        if (
+            duration <= 0L ||
+            duration == C.TIME_UNSET
+        ) {
+
+            currentTimeText.text =
+                formatTime(position)
+
+            remainingTimeText.text =
+                "-00:00"
+
+            totalTimeText.text =
+                "/ 00:00"
+
+            if (!progressUserSeeking) {
+                progressSeekBar.progress = 0
+            }
+
+            return
+        }
+
+        val safePosition =
+            position.coerceIn(
+                0L,
+                duration
+            )
+
+        currentTimeText.text =
+            formatTime(safePosition)
+
+        remainingTimeText.text =
+            "-${formatTime(
+                (duration - safePosition)
+                    .coerceAtLeast(0L)
+            )}"
+
+        totalTimeText.text =
+            "/ ${formatTime(duration)}"
+
+        if (!progressUserSeeking) {
+
+            progressSeekBar.progress =
+                (
+                    safePosition * 1000L /
+                        duration
+                    ).toInt()
+                        .coerceIn(
+                            0,
+                            1000
+                        )
+        }
+    }
+
+    private fun formatTime(
+        milliseconds: Long
+    ): String {
+
+        val totalSeconds =
+            (
+                milliseconds.coerceAtLeast(0L) /
+                    1000L
+                )
+
+        val seconds =
+            totalSeconds % 60
+
+        val minutes =
+            (
+                totalSeconds / 60
+                ) % 60
+
+        val hours =
+            totalSeconds / 3600
+
+        return if (hours > 0L) {
+
+            String.format(
+                java.util.Locale.US,
+                "%02d:%02d:%02d",
+                hours,
+                minutes,
+                seconds
+            )
+
+        } else {
+
+            String.format(
+                java.util.Locale.US,
+                "%02d:%02d",
+                minutes,
+                seconds
+            )
+        }
     }
 
     private fun syncQueueCurrentVideo(
@@ -2591,9 +2894,7 @@ class PlayerActivity : FragmentActivity() {
                     previousUri
                 )
 
-                openVideo(
-                    previousUri
-                )
+                openVideo(previousUri)
 
                 showTemporaryMessage(
                     "ویدئوی قبلی صف"
@@ -2657,9 +2958,7 @@ class PlayerActivity : FragmentActivity() {
                     nextUri
                 )
 
-                openVideo(
-                    nextUri
-                )
+                openVideo(nextUri)
 
                 showTemporaryMessage(
                     "ویدئوی بعدی صف"
@@ -2810,6 +3109,52 @@ class PlayerActivity : FragmentActivity() {
         )
     }
 
+    private fun exitPlayer() {
+
+        if (isExitingPlayer) {
+            return
+        }
+
+        isExitingPlayer = true
+
+        wasPlayingBeforePause = false
+        enteringPictureInPicture = false
+
+        playbackAutoSaveManager.saveNow()
+        savePosition()
+        saveDisplaySettings()
+
+        progressHandler.removeCallbacks(
+            progressRunnable
+        )
+
+        controlsHandler.removeCallbacks(
+            hideControlsRunnable
+        )
+
+        val currentPlayer =
+            player
+
+        if (currentPlayer != null) {
+
+            currentPlayer.pause()
+
+            try {
+                currentPlayer.stop()
+            } catch (_: Exception) {
+            }
+
+            try {
+                currentPlayer.clearMediaItems()
+            } catch (_: Exception) {
+            }
+        }
+
+        playerView.player = null
+
+        finish()
+    }
+
     private fun shareCurrentVideo() {
 
         val uri =
@@ -2909,13 +3254,18 @@ class PlayerActivity : FragmentActivity() {
                         uri
                     )
 
+                    VideoSpeedManager.clear(
+                        this,
+                        uri
+                    )
+
                     showTemporaryMessage(
                         getString(
                             R.string.video_deleted
                         )
                     )
 
-                    finish()
+                    exitPlayer()
                 }
             }
 
@@ -2970,9 +3320,14 @@ class PlayerActivity : FragmentActivity() {
                     this,
                     uri
                 )
+
+                VideoSpeedManager.clear(
+                    this,
+                    uri
+                )
             }
 
-            finish()
+            exitPlayer()
         }
     }
 
@@ -3009,7 +3364,8 @@ class PlayerActivity : FragmentActivity() {
 
         if (
             Build.VERSION.SDK_INT >=
-            Build.VERSION_CODES.O
+            Build.VERSION_CODES.O &&
+            !isExitingPlayer
         ) {
             enterPictureInPictureModeIfPossible()
         }
@@ -3050,27 +3406,39 @@ class PlayerActivity : FragmentActivity() {
         }
     }
 
+    override fun onBackPressed() {
+
+        if (isLocked) {
+            return
+        }
+
+        exitPlayer()
+    }
+
     override fun onPause() {
 
-        playbackAutoSaveManager.saveNow()
-        savePosition()
-        saveDisplaySettings()
+        if (!isExitingPlayer) {
 
-        val currentPlayer =
-            player
+            playbackAutoSaveManager.saveNow()
+            savePosition()
+            saveDisplaySettings()
 
-        if (
-            currentPlayer != null &&
-            currentPlayer.isPlaying &&
-            !isInPictureInPictureMode &&
-            !enteringPictureInPicture
-        ) {
+            val currentPlayer =
+                player
 
-            wasPlayingBeforePause = true
+            if (
+                currentPlayer != null &&
+                currentPlayer.isPlaying &&
+                !isInPictureInPictureMode &&
+                !enteringPictureInPicture
+            ) {
 
-            currentPlayer.pause()
+                wasPlayingBeforePause = true
 
-            updatePauseButton()
+                currentPlayer.pause()
+
+                updatePauseButton()
+            }
         }
 
         super.onPause()
@@ -3082,7 +3450,10 @@ class PlayerActivity : FragmentActivity() {
 
         loadSavedDisplaySettings()
 
-        if (enteringPictureInPicture) {
+        if (
+            isExitingPlayer ||
+            enteringPictureInPicture
+        ) {
             return
         }
 
@@ -3119,14 +3490,21 @@ class PlayerActivity : FragmentActivity() {
 
     override fun onStop() {
 
-        playbackAutoSaveManager.saveNow()
-        savePosition()
-        saveDisplaySettings()
+        if (!isExitingPlayer) {
+
+            playbackAutoSaveManager.saveNow()
+            savePosition()
+            saveDisplaySettings()
+        }
 
         super.onStop()
     }
 
     override fun onDestroy() {
+
+        progressHandler.removeCallbacks(
+            progressRunnable
+        )
 
         controlsHandler.removeCallbacks(
             hideControlsRunnable
@@ -3138,10 +3516,13 @@ class PlayerActivity : FragmentActivity() {
 
         sleepTimerRunnable = null
 
-        playbackAutoSaveManager.release()
-
-        savePosition()
-        saveDisplaySettings()
+        if (!isExitingPlayer) {
+            playbackAutoSaveManager.release()
+            savePosition()
+            saveDisplaySettings()
+        } else {
+            playbackAutoSaveManager.release()
+        }
 
         player?.removeListener(
             playbackListener
@@ -3181,5 +3562,8 @@ class PlayerActivity : FragmentActivity() {
 
         private const val CONTROL_HIDE_DELAY =
             4000L
+
+        private const val PROGRESS_UPDATE_INTERVAL =
+            500L
     }
 }
