@@ -211,10 +211,10 @@ class SettingsActivity : ComponentActivity() {
         addSubtitleDelay()
 
         addSection(
-            "زبان"
+            "زبان برنامه"
         )
 
-        addLanguageSwitch()
+        addLanguageSelector()
 
         addSection(
             "امکانات"
@@ -265,6 +265,7 @@ class SettingsActivity : ComponentActivity() {
         addButton(
             "📋 مدیریت پلی‌لیست‌ها"
         ) {
+
             showPlaylists()
         }
 
@@ -289,6 +290,7 @@ class SettingsActivity : ComponentActivity() {
         addButton(
             "🔄 بازگردانی تنظیمات"
         ) {
+
             resetSettings()
         }
     }
@@ -829,46 +831,123 @@ class SettingsActivity : ComponentActivity() {
         )
     }
 
-    private fun addLanguageSwitch() {
+    private fun addLanguageSelector() {
 
-        val languageSwitch =
-            Switch(this).apply {
+        val currentLanguage =
+            VidoraLanguageManager
+                .getSelectedLanguage(
+                    this
+                )
+
+        val currentName =
+            VidoraLanguageManager
+                .languageName(
+                    this
+                )
+
+        val languageButton =
+            Button(this).apply {
 
                 text =
-                    "English"
+                    "زبان: $currentName"
 
                 textSize =
                     16f
 
-                isChecked =
-                    VidoraSettings.getLanguage(
-                        this@SettingsActivity
-                    ) == "en"
+                isAllCaps =
+                    false
 
-                setTextColor(
-                    getColor(
-                        R.color.vidora_text
-                    )
-                )
+                setOnClickListener {
 
-                setOnCheckedChangeListener {
-                        _,
-                        checked ->
-
-                    VidoraSettings.setLanguage(
-                        this@SettingsActivity,
-                        if (checked) {
-                            "en"
-                        } else {
-                            "fa"
-                        }
+                    showLanguageDialog(
+                        this
                     )
                 }
             }
 
         root.addView(
-            languageSwitch
+            languageButton
         )
+    }
+
+    private fun showLanguageDialog(
+        button: Button
+    ) {
+
+        val languages =
+            arrayOf(
+                "خودکار — زبان گوشی",
+                "فارسی",
+                "English"
+            )
+
+        val selected =
+            when (
+                VidoraLanguageManager
+                    .getSelectedLanguage(
+                        this
+                    )
+            ) {
+
+                VidoraLanguageManager.FA ->
+                    1
+
+                VidoraLanguageManager.EN ->
+                    2
+
+                else ->
+                    0
+            }
+
+        android.app.AlertDialog.Builder(
+            this
+        )
+            .setTitle(
+                "زبان برنامه"
+            )
+            .setSingleChoiceItems(
+                languages,
+                selected
+            ) { dialog, which ->
+
+                when (which) {
+
+                    0 -> {
+
+                        VidoraLanguageManager
+                            .useAutomaticLanguage(
+                                this
+                            )
+                    }
+
+                    1 -> {
+
+                        VidoraLanguageManager
+                            .setLanguage(
+                                this,
+                                VidoraLanguageManager.FA
+                            )
+                    }
+
+                    2 -> {
+
+                        VidoraLanguageManager
+                            .setLanguage(
+                                this,
+                                VidoraLanguageManager.EN
+                            )
+                    }
+                }
+
+                dialog.dismiss()
+
+                recreate()
+            }
+            .setNegativeButton(
+                "لغو",
+                null
+            )
+            .show()
     }
 
     private fun addButton(
