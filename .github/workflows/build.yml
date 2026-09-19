@@ -28,32 +28,6 @@ jobs:
         with:
           gradle-version: "8.13"
 
-      - name: Check Release Signing Secrets
-        id: signing
-        env:
-          KEYSTORE_BASE64: ${{ secrets.VIDORA_KEYSTORE_BASE64 }}
-          KEYSTORE_PASSWORD: ${{ secrets.VIDORA_KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.VIDORA_KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.VIDORA_KEY_PASSWORD }}
-        run: |
-          echo "Checking release signing secret configuration..."
-          echo "VIDORA_KEYSTORE_BASE64 length: $(printf '%s' "$KEYSTORE_BASE64" | wc -c)"
-          echo "VIDORA_KEYSTORE_PASSWORD length: $(printf '%s' "$KEYSTORE_PASSWORD" | wc -c)"
-          echo "VIDORA_KEY_ALIAS length: $(printf '%s' "$KEY_ALIAS" | wc -c)"
-          echo "VIDORA_KEY_PASSWORD length: $(printf '%s' "$KEY_PASSWORD" | wc -c)"
-
-          if [ -n "$KEYSTORE_BASE64" ] &&
-             [ -n "$KEYSTORE_PASSWORD" ] &&
-             [ -n "$KEY_ALIAS" ] &&
-             [ -n "$KEY_PASSWORD" ]; then
-            echo "configured=true" >> "$GITHUB_OUTPUT"
-            echo "Release signing secrets are configured."
-          else
-            echo "configured=false" >> "$GITHUB_OUTPUT"
-            echo "Release signing secrets are NOT fully configured."
-            echo "Debug build will continue normally."
-          fi
-
       - name: Build Debug APK
         run: gradle assembleDebug --no-daemon
 
@@ -63,12 +37,32 @@ jobs:
           name: VidoraPlayer-debug
           path: app/build/outputs/apk/debug/app-debug.apk
 
+      - name: Check Release Signing Secrets
+        id: signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ] &&
+             [ -n "$KEYSTORE_PASSWORD" ] &&
+             [ -n "$KEY_ALIAS" ] &&
+             [ -n "$KEY_PASSWORD" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+            echo "Release signing secrets are configured."
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "Release signing secrets are not fully configured."
+            echo "Debug build will continue normally."
+          fi
+
       - name: Prepare Release Keystore
         if: steps.signing.outputs.configured == 'true'
         env:
-          VIDORA_KEYSTORE_BASE64: ${{ secrets.VIDORA_KEYSTORE_BASE64 }}
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
-          echo "$VIDORA_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/vidora-release.jks"
+          echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/vidora-release.jks"
 
           if [ ! -s "$RUNNER_TEMP/vidora-release.jks" ]; then
             echo "Release keystore could not be created."
@@ -79,9 +73,9 @@ jobs:
         if: steps.signing.outputs.configured == 'true'
         env:
           VIDORA_KEYSTORE_PATH: ${{ runner.temp }}/vidora-release.jks
-          VIDORA_KEYSTORE_PASSWORD: ${{ secrets.VIDORA_KEYSTORE_PASSWORD }}
-          VIDORA_KEY_ALIAS: ${{ secrets.VIDORA_KEY_ALIAS }}
-          VIDORA_KEY_PASSWORD: ${{ secrets.VIDORA_KEY_PASSWORD }}
+          VIDORA_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          VIDORA_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          VIDORA_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           gradle assembleRelease --no-daemon
 
@@ -89,9 +83,9 @@ jobs:
         if: steps.signing.outputs.configured == 'true'
         env:
           VIDORA_KEYSTORE_PATH: ${{ runner.temp }}/vidora-release.jks
-          VIDORA_KEYSTORE_PASSWORD: ${{ secrets.VIDORA_KEYSTORE_PASSWORD }}
-          VIDORA_KEY_ALIAS: ${{ secrets.VIDORA_KEY_ALIAS }}
-          VIDORA_KEY_PASSWORD: ${{ secrets.VIDORA_KEY_PASSWORD }}
+          VIDORA_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          VIDORA_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          VIDORA_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           gradle bundleRelease --no-daemon
 
