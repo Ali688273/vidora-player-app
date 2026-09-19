@@ -13,6 +13,15 @@ object VidoraSettingsController {
         )
     }
 
+    fun getEffectiveLanguage(
+        context: Context
+    ): String {
+
+        return VidoraLanguageManager.getLanguage(
+            context
+        )
+    }
+
     fun getSelectedLanguage(
         context: Context
     ): String {
