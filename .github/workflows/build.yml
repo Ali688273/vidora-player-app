@@ -69,6 +69,25 @@ jobs:
             exit 1
           fi
 
+      - name: Verify Release Keystore Credentials
+        if: steps.signing.outputs.configured == 'true'
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          echo "Checking keystore type and alias..."
+
+          keytool -list \
+            -keystore "$RUNNER_TEMP/vidora-release.jks" \
+            -storetype PKCS12 \
+            -storepass "$KEYSTORE_PASSWORD" \
+            -alias "$KEY_ALIAS" \
+            -keypass "$KEY_PASSWORD" \
+            >/dev/null
+
+          echo "Keystore, alias, and private-key credentials verified successfully."
+
       - name: Build Release APK
         if: steps.signing.outputs.configured == 'true'
         env:
