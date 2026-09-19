@@ -144,7 +144,13 @@ class PlayerActivity : FragmentActivity() {
         AspectRatioFrameLayout.RESIZE_MODE_ZOOM
     )
 
-    private val aspectNames = arrayOf(
+    private val aspectNamesFa = arrayOf(
+        "تطبیق",
+        "کامل",
+        "بزرگ‌نمایی"
+    )
+
+    private val aspectNamesEn = arrayOf(
         "FIT",
         "FILL",
         "ZOOM"
@@ -264,6 +270,16 @@ class PlayerActivity : FragmentActivity() {
             }
         }
 
+    override fun attachBaseContext(
+        newBase: Context
+    ) {
+        super.attachBaseContext(
+            VidoraLocaleManager.apply(
+                newBase
+            )
+        )
+    }
+
     override fun onCreate(
         savedInstanceState: Bundle?
     ) {
@@ -376,6 +392,11 @@ class PlayerActivity : FragmentActivity() {
         lockedOverlay =
             findViewById(R.id.lockedOverlay)
 
+        VidoraLocaleManager.applyDirection(
+            window.decorView,
+            this
+        )
+
         audioManager =
             getSystemService(
                 Context.AUDIO_SERVICE
@@ -412,6 +433,23 @@ class PlayerActivity : FragmentActivity() {
         progressHandler.post(
             progressRunnable
         )
+    }
+
+    private fun isPersian(): Boolean {
+        return VidoraLanguageManager.isPersian(
+            this
+        )
+    }
+
+    private fun p(
+        persian: String,
+        english: String
+    ): String {
+        return if (isPersian()) {
+            persian
+        } else {
+            english
+        }
     }
 
     private fun setupProgressBar() {
@@ -599,19 +637,15 @@ class PlayerActivity : FragmentActivity() {
         } catch (_: Exception) {
 
             showTemporaryMessage(
-                "Cast در این دستگاه در دسترس نیست."
+                p(
+                    "Cast در این دستگاه در دسترس نیست.",
+                    "Cast is not available on this device."
+                )
             )
         }
     }
 
     private fun setupLockedOverlay() {
-
-        /*
-         * قفل باید همیشه یک کنترل کوچک در گوشه بالا-راست باشد.
-         * این تنظیمات را مستقیماً روی View اعمال می‌کنیم تا حتی
-         * اگر ترتیب Visibility کنترل‌ها تغییر کرد، موقعیت قفل
-         * تغییر نکند.
-         */
 
         lockedOverlay.layoutParams =
             (
@@ -642,7 +676,6 @@ class PlayerActivity : FragmentActivity() {
 
                     marginEnd =
                         dpToPx(12)
-
                 }
 
         lockedOverlay.layoutParams.let { params ->
@@ -675,8 +708,9 @@ class PlayerActivity : FragmentActivity() {
                 View.GONE
 
             lockButton.text =
-                getString(
-                    R.string.lock
+                p(
+                    "قفل",
+                    "Lock"
                 )
 
             showPlayerControlsTemporarily()
@@ -786,7 +820,10 @@ class PlayerActivity : FragmentActivity() {
                 } catch (_: Exception) {
 
                     showTemporaryMessage(
-                        "خطا در اتصال پخش‌کننده"
+                        p(
+                            "خطا در اتصال پخش‌کننده",
+                            "Player connection error."
+                        )
                     )
                 }
             },
@@ -905,7 +942,11 @@ class PlayerActivity : FragmentActivity() {
                 aspectModes[aspectIndex]
 
             aspectButton.text =
-                aspectNames[aspectIndex]
+                if (isPersian()) {
+                    aspectNamesFa[aspectIndex]
+                } else {
+                    aspectNamesEn[aspectIndex]
+                }
 
             showPlayerControlsTemporarily()
         }
@@ -999,17 +1040,43 @@ class PlayerActivity : FragmentActivity() {
 
         val options =
             arrayOf(
-                "تنظیمات سرعت و پخش",
-                "همگام‌سازی صدا",
-                "همگام‌سازی زیرنویس",
-                "تنظیمات تصویر",
-                "افزودن به صف پخش",
-                "نمایش صف پخش",
-                "پاک کردن صف پخش"
+                p(
+                    "تنظیمات سرعت و پخش",
+                    "Playback and speed settings"
+                ),
+                p(
+                    "همگام‌سازی صدا",
+                    "Audio synchronization"
+                ),
+                p(
+                    "همگام‌سازی زیرنویس",
+                    "Subtitle synchronization"
+                ),
+                p(
+                    "تنظیمات تصویر",
+                    "Video settings"
+                ),
+                p(
+                    "افزودن به صف پخش",
+                    "Add to playback queue"
+                ),
+                p(
+                    "نمایش صف پخش",
+                    "Show playback queue"
+                ),
+                p(
+                    "پاک کردن صف پخش",
+                    "Clear playback queue"
+                )
             )
 
         AlertDialog.Builder(this)
-            .setTitle("امکانات بیشتر")
+            .setTitle(
+                p(
+                    "امکانات بیشتر",
+                    "More options"
+                )
+            )
             .setItems(options) { _, which ->
 
                 when (which) {
@@ -1039,7 +1106,10 @@ class PlayerActivity : FragmentActivity() {
                         )
 
                         showTemporaryMessage(
-                            "صف پخش پاک شد."
+                            p(
+                                "صف پخش پاک شد.",
+                                "Playback queue cleared."
+                            )
                         )
                     }
                 }
@@ -1056,11 +1126,22 @@ class PlayerActivity : FragmentActivity() {
             VidoraSettings.autoResume(this)
 
         AlertDialog.Builder(this)
-            .setTitle("تنظیمات پخش")
+            .setTitle(
+                p(
+                    "تنظیمات پخش",
+                    "Playback settings"
+                )
+            )
             .setMultiChoiceItems(
                 arrayOf(
-                    "پخش خودکار ویدئوی بعدی",
-                    "ادامه پخش از آخرین موقعیت"
+                    p(
+                        "پخش خودکار ویدئوی بعدی",
+                        "Autoplay next video"
+                    ),
+                    p(
+                        "ادامه پخش از آخرین موقعیت",
+                        "Resume from last position"
+                    )
                 ),
                 booleanArrayOf(
                     currentAutoPlayNext,
@@ -1084,7 +1165,10 @@ class PlayerActivity : FragmentActivity() {
                 }
             }
             .setPositiveButton(
-                "باشه",
+                p(
+                    "باشه",
+                    "OK"
+                ),
                 null
             )
             .show()
@@ -1144,7 +1228,10 @@ class PlayerActivity : FragmentActivity() {
                     openVideo(nextUri)
 
                     showTemporaryMessage(
-                        "ویدئوی بعدی صف"
+                        p(
+                            "ویدئوی بعدی صف",
+                            "Next video in queue"
+                        )
                     )
 
                     return
@@ -1155,7 +1242,10 @@ class PlayerActivity : FragmentActivity() {
                 showPlayerControlsTemporarily()
 
                 showTemporaryMessage(
-                    "صف پخش به پایان رسید."
+                    p(
+                        "صف پخش به پایان رسید.",
+                        "Playback queue ended."
+                    )
                 )
 
                 return
@@ -1197,7 +1287,10 @@ class PlayerActivity : FragmentActivity() {
         )
 
         showTemporaryMessage(
-            "ویدئوی بعدی"
+            p(
+                "ویدئوی بعدی",
+                "Next video"
+            )
         )
     }
 
@@ -1224,21 +1317,39 @@ class PlayerActivity : FragmentActivity() {
                     current.toString()
                 )
 
-                hint = "میلی‌ثانیه"
+                hint =
+                    p(
+                        "میلی‌ثانیه",
+                        "Milliseconds"
+                    )
             }
 
         AlertDialog.Builder(this)
-            .setTitle("همگام‌سازی صدا")
+            .setTitle(
+                p(
+                    "همگام‌سازی صدا",
+                    "Audio synchronization"
+                )
+            )
             .setMessage(
-                "مقدار مثبت یعنی صدا جلوتر تنظیم شود."
+                p(
+                    "مقدار مثبت یعنی صدا جلوتر تنظیم شود.",
+                    "A positive value shifts the audio forward."
+                )
             )
             .setView(input)
             .setNegativeButton(
-                "لغو",
+                p(
+                    "لغو",
+                    "Cancel"
+                ),
                 null
             )
             .setNeutralButton(
-                "صفر"
+                p(
+                    "صفر",
+                    "Reset"
+                )
             ) { _, _ ->
 
                 AudioSyncManager.reset(
@@ -1247,7 +1358,10 @@ class PlayerActivity : FragmentActivity() {
                 )
             }
             .setPositiveButton(
-                "ذخیره"
+                p(
+                    "ذخیره",
+                    "Save"
+                )
             ) { _, _ ->
 
                 val value =
@@ -1263,7 +1377,10 @@ class PlayerActivity : FragmentActivity() {
                 )
 
                 showTemporaryMessage(
-                    "تنظیم همگام‌سازی ذخیره شد."
+                    p(
+                        "تنظیم همگام‌سازی ذخیره شد.",
+                        "Audio synchronization saved."
+                    )
                 )
             }
             .show()
@@ -1292,21 +1409,39 @@ class PlayerActivity : FragmentActivity() {
                     current.toString()
                 )
 
-                hint = "میلی‌ثانیه"
+                hint =
+                    p(
+                        "میلی‌ثانیه",
+                        "Milliseconds"
+                    )
             }
 
         AlertDialog.Builder(this)
-            .setTitle("همگام‌سازی زیرنویس")
+            .setTitle(
+                p(
+                    "همگام‌سازی زیرنویس",
+                    "Subtitle synchronization"
+                )
+            )
             .setMessage(
-                "مقدار مثبت یعنی زیرنویس دیرتر نمایش داده شود."
+                p(
+                    "مقدار مثبت یعنی زیرنویس دیرتر نمایش داده شود.",
+                    "A positive value delays the subtitle."
+                )
             )
             .setView(input)
             .setNegativeButton(
-                "لغو",
+                p(
+                    "لغو",
+                    "Cancel"
+                ),
                 null
             )
             .setNeutralButton(
-                "صفر"
+                p(
+                    "صفر",
+                    "Reset"
+                )
             ) { _, _ ->
 
                 SubtitleSyncManager.reset(
@@ -1315,7 +1450,10 @@ class PlayerActivity : FragmentActivity() {
                 )
             }
             .setPositiveButton(
-                "ذخیره"
+                p(
+                    "ذخیره",
+                    "Save"
+                )
             ) { _, _ ->
 
                 val value =
@@ -1331,7 +1469,10 @@ class PlayerActivity : FragmentActivity() {
                 )
 
                 showTemporaryMessage(
-                    "تنظیم زیرنویس ذخیره شد."
+                    p(
+                        "تنظیم زیرنویس ذخیره شد.",
+                        "Subtitle synchronization saved."
+                    )
                 )
             }
             .show()
@@ -1345,7 +1486,10 @@ class PlayerActivity : FragmentActivity() {
         if (currentPlayer == null) {
 
             showTemporaryMessage(
-                "پخش‌کننده هنوز آماده نیست."
+                p(
+                    "پخش‌کننده هنوز آماده نیست.",
+                    "The player is not ready yet."
+                )
             )
 
             return
@@ -1361,12 +1505,23 @@ class PlayerActivity : FragmentActivity() {
         if (videoGroups.isEmpty()) {
 
             AlertDialog.Builder(this)
-                .setTitle("کیفیت تصویر")
+                .setTitle(
+                    p(
+                        "کیفیت تصویر",
+                        "Video quality"
+                    )
+                )
                 .setMessage(
-                    "برای این ویدئو کیفیت‌های جداگانه قابل انتخاب نیست."
+                    p(
+                        "برای این ویدئو کیفیت‌های جداگانه قابل انتخاب نیست.",
+                        "Separate video quality options are not available."
+                    )
                 )
                 .setPositiveButton(
-                    "باشه",
+                    p(
+                        "باشه",
+                        "OK"
+                    ),
                     null
                 )
                 .show()
@@ -1378,7 +1533,10 @@ class PlayerActivity : FragmentActivity() {
 
             TrackSelectionDialogBuilder(
                 this,
-                "انتخاب کیفیت ویدئو",
+                p(
+                    "انتخاب کیفیت ویدئو",
+                    "Select video quality"
+                ),
                 currentPlayer,
                 C.TRACK_TYPE_VIDEO
             )
@@ -1390,7 +1548,10 @@ class PlayerActivity : FragmentActivity() {
         } catch (_: Exception) {
 
             showTemporaryMessage(
-                "انتخاب کیفیت برای این ویدئو در دسترس نیست."
+                p(
+                    "انتخاب کیفیت برای این ویدئو در دسترس نیست.",
+                    "Quality selection is not available for this video."
+                )
             )
         }
     }
@@ -1409,9 +1570,15 @@ class PlayerActivity : FragmentActivity() {
 
         showTemporaryMessage(
             if (added) {
-                "ویدئو به صف پخش اضافه شد."
+                p(
+                    "ویدئو به صف پخش اضافه شد.",
+                    "Video added to playback queue."
+                )
             } else {
-                "ویدئو از قبل در صف پخش بود."
+                p(
+                    "ویدئو از قبل در صف پخش بود.",
+                    "Video is already in the playback queue."
+                )
             }
         )
     }
@@ -1424,10 +1591,23 @@ class PlayerActivity : FragmentActivity() {
         if (queue.isEmpty()) {
 
             AlertDialog.Builder(this)
-                .setTitle("صف پخش")
-                .setMessage("صف پخش خالی است.")
+                .setTitle(
+                    p(
+                        "صف پخش",
+                        "Playback queue"
+                    )
+                )
+                .setMessage(
+                    p(
+                        "صف پخش خالی است.",
+                        "The playback queue is empty."
+                    )
+                )
                 .setPositiveButton(
-                    "باشه",
+                    p(
+                        "باشه",
+                        "OK"
+                    ),
                     null
                 )
                 .show()
@@ -1457,7 +1637,12 @@ class PlayerActivity : FragmentActivity() {
             }.toTypedArray()
 
         AlertDialog.Builder(this)
-            .setTitle("صف پخش")
+            .setTitle(
+                p(
+                    "صف پخش",
+                    "Playback queue"
+                )
+            )
             .setItems(names) { _, which ->
 
                 if (which !in queue.indices) {
@@ -1475,11 +1660,17 @@ class PlayerActivity : FragmentActivity() {
                 openVideo(selectedUri)
 
                 showTemporaryMessage(
-                    "در حال پخش از صف"
+                    p(
+                        "در حال پخش از صف",
+                        "Playing from queue"
+                    )
                 )
             }
             .setNegativeButton(
-                "بستن",
+                p(
+                    "بستن",
+                    "Close"
+                ),
                 null
             )
             .show()
@@ -1518,7 +1709,10 @@ class PlayerActivity : FragmentActivity() {
         if (isExternalVideo()) {
 
             showTemporaryMessage(
-                "برای ویدئوی خارجی قابل استفاده نیست"
+                p(
+                    "برای ویدئوی خارجی قابل استفاده نیست",
+                    "Not available for external videos."
+                )
             )
 
             return
@@ -1534,12 +1728,14 @@ class PlayerActivity : FragmentActivity() {
 
         showTemporaryMessage(
             if (favorite) {
-                getString(
-                    R.string.added_to_favorites
+                p(
+                    "به علاقه‌مندی‌ها اضافه شد.",
+                    "Added to favorites."
                 )
             } else {
-                getString(
-                    R.string.removed_from_favorites
+                p(
+                    "از علاقه‌مندی‌ها حذف شد.",
+                    "Removed from favorites."
                 )
             }
         )
@@ -1570,12 +1766,21 @@ class PlayerActivity : FragmentActivity() {
 
         favoriteButton.text =
             if (favorite) {
-                getString(
-                    R.string.favorite_on
+                "★"
+            } else {
+                "☆"
+            }
+
+        favoriteButton.contentDescription =
+            if (favorite) {
+                p(
+                    "حذف از علاقه‌مندی‌ها",
+                    "Remove from favorites"
                 )
             } else {
-                getString(
-                    R.string.favorite_off
+                p(
+                    "افزودن به علاقه‌مندی‌ها",
+                    "Add to favorites"
                 )
             }
     }
@@ -1596,13 +1801,22 @@ class PlayerActivity : FragmentActivity() {
 
             AlertDialog.Builder(this)
                 .setTitle(
-                    R.string.audio_track
+                    p(
+                        "صدا",
+                        "Audio"
+                    )
                 )
                 .setMessage(
-                    R.string.no_audio_tracks
+                    p(
+                        "هیچ ترک صوتی جداگانه‌ای وجود ندارد.",
+                        "No separate audio tracks are available."
+                    )
                 )
                 .setPositiveButton(
-                    R.string.ok,
+                    p(
+                        "باشه",
+                        "OK"
+                    ),
                     null
                 )
                 .show()
@@ -1612,8 +1826,9 @@ class PlayerActivity : FragmentActivity() {
 
         TrackSelectionDialogBuilder(
             this,
-            getString(
-                R.string.audio_track
+            p(
+                "ترک صوتی",
+                "Audio track"
             ),
             currentPlayer,
             C.TRACK_TYPE_AUDIO
@@ -1642,12 +1857,21 @@ class PlayerActivity : FragmentActivity() {
 
         repeatButton.text =
             if (repeatEnabled) {
-                getString(
-                    R.string.repeat_on
+                "🔁"
+            } else {
+                "↪"
+            }
+
+        repeatButton.contentDescription =
+            if (repeatEnabled) {
+                p(
+                    "تکرار فعال است",
+                    "Repeat is enabled"
                 )
             } else {
-                getString(
-                    R.string.repeat_off
+                p(
+                    "تکرار خاموش است",
+                    "Repeat is disabled"
                 )
             }
     }
@@ -1732,9 +1956,22 @@ class PlayerActivity : FragmentActivity() {
 
         pauseButton.text =
             if (player?.isPlaying == true) {
-                "⏸ توقف"
+                "⏸"
             } else {
-                "▶ پخش"
+                "▶"
+            }
+
+        pauseButton.contentDescription =
+            if (player?.isPlaying == true) {
+                p(
+                    "توقف",
+                    "Pause"
+                )
+            } else {
+                p(
+                    "پخش",
+                    "Play"
+                )
             }
     }
 
@@ -1747,8 +1984,9 @@ class PlayerActivity : FragmentActivity() {
             InputType.TYPE_CLASS_NUMBER
 
         input.hint =
-            getString(
-                R.string.sleep_timer_hint
+            p(
+                "دقیقه",
+                "Minutes"
             )
 
         input.setSingleLine(true)
@@ -1777,19 +2015,31 @@ class PlayerActivity : FragmentActivity() {
         val dialog =
             AlertDialog.Builder(this)
                 .setTitle(
-                    R.string.sleep_timer_title
+                    p(
+                        "زمان‌سنج خواب",
+                        "Sleep timer"
+                    )
                 )
                 .setView(container)
                 .setPositiveButton(
-                    R.string.sleep_timer_start,
+                    p(
+                        "شروع",
+                        "Start"
+                    ),
                     null
                 )
                 .setNegativeButton(
-                    R.string.cancel,
+                    p(
+                        "لغو",
+                        "Cancel"
+                    ),
                     null
                 )
                 .setNeutralButton(
-                    R.string.sleep_timer_cancel,
+                    p(
+                        "لغو زمان‌سنج",
+                        "Cancel timer"
+                    ),
                     null
                 )
                 .create()
@@ -1812,8 +2062,9 @@ class PlayerActivity : FragmentActivity() {
                 ) {
 
                     input.error =
-                        getString(
-                            R.string.sleep_timer_invalid
+                        p(
+                            "زمان نامعتبر است.",
+                            "Invalid time."
                         )
 
                     return@setOnClickListener
@@ -1857,18 +2108,20 @@ class PlayerActivity : FragmentActivity() {
                 updateCenterPlayButton()
 
                 sleepTimerButton.text =
-                    getString(
-                        R.string.sleep_timer
+                    p(
+                        "خواب",
+                        "Sleep"
                     )
 
                 sleepTimerRunnable = null
             }
 
         sleepTimerButton.text =
-            getString(
-                R.string.sleep_timer_active,
-                minutes
-            )
+            if (isPersian()) {
+                "خواب: ${minutes} دقیقه"
+            } else {
+                "Sleep: $minutes min"
+            }
 
         sleepHandler.postDelayed(
             sleepTimerRunnable!!,
@@ -1887,8 +2140,9 @@ class PlayerActivity : FragmentActivity() {
         if (::sleepTimerButton.isInitialized) {
 
             sleepTimerButton.text =
-                getString(
-                    R.string.sleep_timer
+                p(
+                    "خواب",
+                    "Sleep"
                 )
         }
     }
@@ -2173,12 +2427,14 @@ class PlayerActivity : FragmentActivity() {
                 x <
                 playerView.width / 2f
             ) {
-                getString(
-                    R.string.seek_backward
+                p(
+                    "⏪ ۱۰ ثانیه",
+                    "⏪ 10 seconds"
                 )
             } else {
-                getString(
-                    R.string.seek_forward
+                p(
+                    "۱۰ ثانیه ⏩",
+                    "10 seconds ⏩"
                 )
             }
         )
@@ -2280,9 +2536,9 @@ class PlayerActivity : FragmentActivity() {
             }
 
         showGestureInfo(
-            getString(
-                R.string.volume_percent,
-                percent
+            p(
+                "صدا $percent٪",
+                "Volume $percent%"
             )
         )
     }
@@ -2320,9 +2576,9 @@ class PlayerActivity : FragmentActivity() {
         saveDisplaySettings()
 
         showGestureInfo(
-            getString(
-                R.string.brightness_percent,
-                (newBrightness * 100).toInt()
+            p(
+                "روشنایی ${(newBrightness * 100).toInt()}٪",
+                "Brightness ${(newBrightness * 100).toInt()}%"
             )
         )
     }
@@ -2366,20 +2622,15 @@ class PlayerActivity : FragmentActivity() {
                 View.GONE
 
             lockButton.text =
-                getString(
-                    R.string.lock
+                p(
+                    "قفل",
+                    "Lock"
                 )
 
             showPlayerControlsTemporarily()
 
             return
         }
-
-        /*
-         * ابتدا وضعیت قفل را فعال می‌کنیم تا هیچ‌کدام از
-         * توابع نمایش کنترل‌ها نتوانند دوباره کنترل‌ها را
-         * روی صفحه برگردانند.
-         */
 
         isLocked = true
 
@@ -2391,19 +2642,14 @@ class PlayerActivity : FragmentActivity() {
             View.VISIBLE
 
         lockButton.text =
-            getString(
-                R.string.unlock
+            p(
+                "بازکردن قفل",
+                "Unlock"
             )
 
         setPlayerControlsVisibility(false)
 
         controlsVisible = false
-
-        /*
-         * مهم:
-         * قفل بعد از مخفی شدن تمام کنترل‌ها دوباره به بالاترین
-         * لایه منتقل می‌شود و موقعیت گوشه‌ای آن تثبیت می‌شود.
-         */
 
         lockedOverlay.visibility =
             View.VISIBLE
@@ -3091,7 +3337,10 @@ class PlayerActivity : FragmentActivity() {
                 openVideo(previousUri)
 
                 showTemporaryMessage(
-                    "ویدئوی قبلی صف"
+                    p(
+                        "ویدئوی قبلی صف",
+                        "Previous video in queue"
+                    )
                 )
 
                 return
@@ -3155,7 +3404,10 @@ class PlayerActivity : FragmentActivity() {
                 openVideo(nextUri)
 
                 showTemporaryMessage(
-                    "ویدئوی بعدی صف"
+                    p(
+                        "ویدئوی بعدی صف",
+                        "Next video in queue"
+                    )
                 )
 
                 return
@@ -3254,17 +3506,20 @@ class PlayerActivity : FragmentActivity() {
 
             if (cursor.moveToFirst()) {
                 cursor.getString(0)
-                    ?: getString(
-                        R.string.unknown_video
+                    ?: p(
+                        "ویدئوی ناشناس",
+                        "Unknown video"
                     )
             } else {
-                getString(
-                    R.string.unknown_video
+                p(
+                    "ویدئوی ناشناس",
+                    "Unknown video"
                 )
             }
 
-        } ?: getString(
-            R.string.unknown_video
+        } ?: p(
+            "ویدئوی ناشناس",
+            "Unknown video"
         )
     }
 
@@ -3384,17 +3639,29 @@ class PlayerActivity : FragmentActivity() {
 
         AlertDialog.Builder(this)
             .setTitle(
-                R.string.delete_video_title
+                p(
+                    "حذف ویدئو",
+                    "Delete video"
+                )
             )
             .setMessage(
-                R.string.delete_video_message
+                p(
+                    "آیا از حذف این ویدئو مطمئن هستید؟",
+                    "Are you sure you want to delete this video?"
+                )
             )
             .setNegativeButton(
-                R.string.cancel,
+                p(
+                    "لغو",
+                    "Cancel"
+                ),
                 null
             )
             .setPositiveButton(
-                R.string.delete_video
+                p(
+                    "حذف",
+                    "Delete"
+                )
             ) { _, _ ->
                 deleteVideo(uri)
             }
@@ -3460,8 +3727,9 @@ class PlayerActivity : FragmentActivity() {
                     )
 
                     showTemporaryMessage(
-                        getString(
-                            R.string.video_deleted
+                        p(
+                            "ویدئو حذف شد.",
+                            "Video deleted."
                         )
                     )
 
@@ -3472,7 +3740,10 @@ class PlayerActivity : FragmentActivity() {
         } catch (_: Exception) {
 
             showTemporaryMessage(
-                "حذف ویدئو انجام نشد."
+                p(
+                    "حذف ویدئو انجام نشد.",
+                    "Video deletion failed."
+                )
             )
         }
     }
