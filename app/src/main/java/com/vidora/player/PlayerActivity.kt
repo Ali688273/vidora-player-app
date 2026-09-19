@@ -2760,6 +2760,24 @@ class PlayerActivity : FragmentActivity() {
         }
     }
 
+    private fun isCurrentVideoInQueue(): Boolean {
+
+        if (isExternalVideo()) {
+            return false
+        }
+
+        val currentUri =
+            getIncomingVideoUri()
+                ?: return false
+
+        return PlaybackQueueManager
+            .getQueue(this)
+            .any {
+                it.toString() ==
+                    currentUri.toString()
+            }
+    }
+
     private fun getVideoUris(): List<Uri> {
 
         if (
