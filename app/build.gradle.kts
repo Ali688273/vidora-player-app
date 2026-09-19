@@ -19,7 +19,7 @@ android {
         buildConfigField(
             "String",
             "TAPSELL_KEY",
-            "\"hbnepqhlndllgpkhnsegfhinnarknqkcktcetkcejtesdoigpagnbbhegffsahpqtkgaqn\""
+            "\"hbnepqhlndllgpkhnsegfhinnarknqkcktcetkcetjtesdoigpagnbbhegffsahpqtkgaqn\""
         )
 
         buildConfigField(
@@ -74,6 +74,7 @@ android {
                 !keyPassword.isNullOrBlank()
             ) {
                 storeFile = file(keystorePath)
+                storeType = "PKCS12"
                 storePassword = keystorePassword
                 this.keyAlias = keyAlias
                 this.keyPassword = keyPassword
