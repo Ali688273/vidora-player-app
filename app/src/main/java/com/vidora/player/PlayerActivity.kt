@@ -16,8 +16,10 @@ import android.os.Looper
 import android.provider.MediaStore
 import android.text.InputType
 import android.util.Rational
+import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.Button
 import android.widget.EditText
@@ -603,22 +605,80 @@ class PlayerActivity : FragmentActivity() {
 
     private fun setupLockedOverlay() {
 
+        /*
+         * قفل باید همیشه یک کنترل کوچک در گوشه بالا-راست باشد.
+         * این تنظیمات را مستقیماً روی View اعمال می‌کنیم تا حتی
+         * اگر ترتیب Visibility کنترل‌ها تغییر کرد، موقعیت قفل
+         * تغییر نکند.
+         */
+
+        lockedOverlay.layoutParams =
+            (
+                lockedOverlay.layoutParams
+                    as? ViewGroup.MarginLayoutParams
+            )?.apply {
+
+                width =
+                    dpToPx(52)
+
+                height =
+                    dpToPx(52)
+
+                topMargin =
+                    dpToPx(64)
+
+                marginEnd =
+                    dpToPx(12)
+
+            }
+                ?: ViewGroup.MarginLayoutParams(
+                    dpToPx(52),
+                    dpToPx(52)
+                ).apply {
+
+                    topMargin =
+                        dpToPx(64)
+
+                    marginEnd =
+                        dpToPx(12)
+
+                }
+
+        lockedOverlay.layoutParams.let { params ->
+
+            if (params is FrameLayout.LayoutParams) {
+
+                params.gravity =
+                    Gravity.TOP or
+                        Gravity.END
+
+                lockedOverlay.layoutParams =
+                    params
+            }
+        }
+
+        lockedOverlay.elevation =
+            dpToPx(20).toFloat()
+
+        lockedOverlay.bringToFront()
+
         lockedOverlay.setOnClickListener {
 
-            if (isLocked) {
-
-                isLocked = false
-
-                lockedOverlay.visibility =
-                    View.GONE
-
-                lockButton.text =
-                    getString(
-                        R.string.lock
-                    )
-
-                showPlayerControlsTemporarily()
+            if (!isLocked) {
+                return@setOnClickListener
             }
+
+            isLocked = false
+
+            lockedOverlay.visibility =
+                View.GONE
+
+            lockButton.text =
+                getString(
+                    R.string.lock
+                )
+
+            showPlayerControlsTemporarily()
         }
     }
 
@@ -2055,6 +2115,13 @@ class PlayerActivity : FragmentActivity() {
         setPlayerControlsVisibility(false)
 
         controlsVisible = false
+
+        if (isLocked) {
+            lockedOverlay.visibility =
+                View.VISIBLE
+
+            lockedOverlay.bringToFront()
+        }
     }
 
     private fun handleDoubleTap(
@@ -2236,9 +2303,9 @@ class PlayerActivity : FragmentActivity() {
                 startBrightness +
                     change
                 ).coerceIn(
-                    0.05f,
-                    1.0f
-                )
+                0.05f,
+                1.0f
+            )
 
         val attributes =
             window.attributes
@@ -2290,22 +2357,9 @@ class PlayerActivity : FragmentActivity() {
 
     private fun toggleLock() {
 
-        isLocked =
-            !isLocked
-
         if (isLocked) {
 
-            lockedOverlay.visibility =
-                View.VISIBLE
-
-            lockButton.text =
-                getString(
-                    R.string.unlock
-                )
-
-            hidePlayerControls()
-
-        } else {
+            isLocked = false
 
             lockedOverlay.visibility =
                 View.GONE
@@ -2316,7 +2370,44 @@ class PlayerActivity : FragmentActivity() {
                 )
 
             showPlayerControlsTemporarily()
+
+            return
         }
+
+        /*
+         * ابتدا وضعیت قفل را فعال می‌کنیم تا هیچ‌کدام از
+         * توابع نمایش کنترل‌ها نتوانند دوباره کنترل‌ها را
+         * روی صفحه برگردانند.
+         */
+
+        isLocked = true
+
+        controlsHandler.removeCallbacks(
+            hideControlsRunnable
+        )
+
+        lockedOverlay.visibility =
+            View.VISIBLE
+
+        lockButton.text =
+            getString(
+                R.string.unlock
+            )
+
+        setPlayerControlsVisibility(false)
+
+        controlsVisible = false
+
+        /*
+         * مهم:
+         * قفل بعد از مخفی شدن تمام کنترل‌ها دوباره به بالاترین
+         * لایه منتقل می‌شود و موقعیت گوشه‌ای آن تثبیت می‌شود.
+         */
+
+        lockedOverlay.visibility =
+            View.VISIBLE
+
+        lockedOverlay.bringToFront()
     }
 
     private fun setPlayerControlsVisibility(
@@ -2366,6 +2457,23 @@ class PlayerActivity : FragmentActivity() {
             updateCenterPlayButton()
             updateProgress()
         }
+
+        if (isLocked) {
+            lockedOverlay.visibility =
+                View.VISIBLE
+
+            lockedOverlay.bringToFront()
+        }
+    }
+
+    private fun dpToPx(
+        value: Int
+    ): Int {
+
+        return (
+            value *
+                resources.displayMetrics.density
+            ).toInt()
     }
 
     private fun initializePlayer() {
@@ -3488,6 +3596,11 @@ class PlayerActivity : FragmentActivity() {
 
             if (!isLocked) {
                 showPlayerControlsTemporarily()
+            } else {
+                lockedOverlay.visibility =
+                    View.VISIBLE
+
+                lockedOverlay.bringToFront()
             }
         }
     }
@@ -3562,6 +3675,11 @@ class PlayerActivity : FragmentActivity() {
 
         if (!isLocked) {
             showPlayerControlsTemporarily()
+        } else {
+            lockedOverlay.visibility =
+                View.VISIBLE
+
+            lockedOverlay.bringToFront()
         }
     }
 
