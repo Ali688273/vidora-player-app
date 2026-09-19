@@ -71,6 +71,10 @@ class PlayerActivity : FragmentActivity() {
     private lateinit var backButton: Button
     private lateinit var pauseButton: Button
 
+    private lateinit var centerPreviousButton: Button
+    private lateinit var centerPlayButton: Button
+    private lateinit var centerNextButton: Button
+
     private lateinit var topBar: View
     private lateinit var controlScroll: View
     private lateinit var progressPanel: View
@@ -97,9 +101,7 @@ class PlayerActivity : FragmentActivity() {
     private var repeatEnabled = false
 
     private var controlsVisible = true
-
     private var isExitingPlayer = false
-
     private var progressUserSeeking = false
 
     private val controlsHandler =
@@ -218,6 +220,7 @@ class PlayerActivity : FragmentActivity() {
                 }
 
                 updatePauseButton()
+                updateCenterPlayButton()
                 updateProgress()
             }
 
@@ -225,6 +228,7 @@ class PlayerActivity : FragmentActivity() {
                 isPlaying: Boolean
             ) {
                 updatePauseButton()
+                updateCenterPlayButton()
                 updateProgress()
             }
 
@@ -274,6 +278,9 @@ class PlayerActivity : FragmentActivity() {
         previousButton =
             findViewById(R.id.previousButton)
 
+        pauseButton =
+            findViewById(R.id.pauseButton)
+
         nextButton =
             findViewById(R.id.nextButton)
 
@@ -322,8 +329,20 @@ class PlayerActivity : FragmentActivity() {
         backButton =
             findViewById(R.id.backButton)
 
-        pauseButton =
-            findViewById(R.id.pauseButton)
+        centerPreviousButton =
+            findViewById(
+                R.id.centerPreviousButton
+            )
+
+        centerPlayButton =
+            findViewById(
+                R.id.centerPlayButton
+            )
+
+        centerNextButton =
+            findViewById(
+                R.id.centerNextButton
+            )
 
         controlScroll =
             findViewById(R.id.controlScroll)
@@ -348,6 +367,31 @@ class PlayerActivity : FragmentActivity() {
             )
 
         playerView.useController = false
+
+        setupProgressBar()
+        loadSavedDisplaySettings()
+        setupButtons()
+        setupCenterButtons()
+        setupGestures()
+        setupCastButton()
+        setupLockedOverlay()
+
+        connectToPlaybackService()
+
+        enterFullscreen()
+
+        playbackAutoSaveManager.start()
+
+        progressHandler.removeCallbacks(
+            progressRunnable
+        )
+
+        progressHandler.post(
+            progressRunnable
+        )
+    }
+
+    private fun setupProgressBar() {
 
         progressSeekBar.setOnSeekBarChangeListener(
             object : SeekBar.OnSeekBarChangeListener {
@@ -396,6 +440,7 @@ class PlayerActivity : FragmentActivity() {
                     progress: Int,
                     fromUser: Boolean
                 ) {
+
                     if (!fromUser) {
                         return
                     }
@@ -423,27 +468,6 @@ class PlayerActivity : FragmentActivity() {
                         )}"
                 }
             }
-        )
-
-        loadSavedDisplaySettings()
-
-        setupButtons()
-        setupGestures()
-        setupCastButton()
-        setupLockedOverlay()
-
-        connectToPlaybackService()
-
-        enterFullscreen()
-
-        playbackAutoSaveManager.start()
-
-        progressHandler.removeCallbacks(
-            progressRunnable
-        )
-
-        progressHandler.post(
-            progressRunnable
         )
     }
 
@@ -564,6 +588,63 @@ class PlayerActivity : FragmentActivity() {
         }
     }
 
+    private fun setupCenterButtons() {
+
+        centerPreviousButton.setOnClickListener {
+
+            if (!isLocked) {
+
+                playPreviousVideo()
+
+                showPlayerControlsTemporarily()
+            }
+        }
+
+        centerPlayButton.setOnClickListener {
+
+            if (!isLocked) {
+
+                val currentPlayer =
+                    player
+                        ?: return@setOnClickListener
+
+                if (currentPlayer.isPlaying) {
+                    currentPlayer.pause()
+                } else {
+                    currentPlayer.play()
+                }
+
+                updatePauseButton()
+                updateCenterPlayButton()
+                showPlayerControlsTemporarily()
+            }
+        }
+
+        centerNextButton.setOnClickListener {
+
+            if (!isLocked) {
+
+                playNextVideo()
+
+                showPlayerControlsTemporarily()
+            }
+        }
+    }
+
+    private fun updateCenterPlayButton() {
+
+        if (!::centerPlayButton.isInitialized) {
+            return
+        }
+
+        centerPlayButton.text =
+            if (player?.isPlaying == true) {
+                "⏸"
+            } else {
+                "▶"
+            }
+    }
+
     private fun connectToPlaybackService() {
 
         val sessionToken =
@@ -602,6 +683,7 @@ class PlayerActivity : FragmentActivity() {
                     initializePlayer()
 
                     updatePauseButton()
+                    updateCenterPlayButton()
                     updateProgress()
 
                     showPlayerControlsTemporarily()
@@ -643,6 +725,7 @@ class PlayerActivity : FragmentActivity() {
                 }
 
                 updatePauseButton()
+                updateCenterPlayButton()
                 showPlayerControlsTemporarily()
             }
         }
@@ -792,14 +875,29 @@ class PlayerActivity : FragmentActivity() {
         }
 
         currentSpeed =
-            PlaybackSettings.getDefaultSpeed(
-                this
-            )
+            getCurrentVideoSpeed()
 
         updateSpeedText()
         updateRepeatButton()
         updateFavoriteButton()
         updatePauseButton()
+        updateCenterPlayButton()
+    }
+
+    private fun getCurrentVideoSpeed(): Float {
+
+        val uri =
+            getIncomingVideoUri()
+                ?: return 1.0f
+
+        if (isExternalVideo()) {
+            return 1.0f
+        }
+
+        return VideoSpeedManager.getSpeed(
+            this,
+            uri
+        )
     }
 
     private fun showMoreMenu() {
@@ -816,12 +914,8 @@ class PlayerActivity : FragmentActivity() {
             )
 
         AlertDialog.Builder(this)
-            .setTitle(
-                "امکانات بیشتر"
-            )
-            .setItems(
-                options
-            ) { _, which ->
+            .setTitle("امکانات بیشتر")
+            .setItems(options) { _, which ->
 
                 when (which) {
 
@@ -861,19 +955,13 @@ class PlayerActivity : FragmentActivity() {
     private fun showPlaybackSettings() {
 
         val currentAutoPlayNext =
-            PlaybackSettings.autoPlayNext(
-                this
-            )
+            PlaybackSettings.autoPlayNext(this)
 
         val currentAutoResume =
-            VidoraSettings.autoResume(
-                this
-            )
+            VidoraSettings.autoResume(this)
 
         AlertDialog.Builder(this)
-            .setTitle(
-                "تنظیمات پخش"
-            )
+            .setTitle("تنظیمات پخش")
             .setMultiChoiceItems(
                 arrayOf(
                     "پخش خودکار ویدئوی بعدی",
@@ -917,12 +1005,9 @@ class PlayerActivity : FragmentActivity() {
             return
         }
 
-        if (
-            !PlaybackSettings.autoPlayNext(
-                this
-            )
-        ) {
+        if (!PlaybackSettings.autoPlayNext(this)) {
             updatePauseButton()
+            updateCenterPlayButton()
             showPlayerControlsTemporarily()
             return
         }
@@ -933,9 +1018,7 @@ class PlayerActivity : FragmentActivity() {
         if (currentUri != null) {
 
             val queue =
-                PlaybackQueueManager.getQueue(
-                    this
-                )
+                PlaybackQueueManager.getQueue(this)
 
             val currentQueueIndex =
                 queue.indexOfFirst {
@@ -973,6 +1056,7 @@ class PlayerActivity : FragmentActivity() {
                 }
 
                 updatePauseButton()
+                updateCenterPlayButton()
                 showPlayerControlsTemporarily()
 
                 showTemporaryMessage(
@@ -988,6 +1072,7 @@ class PlayerActivity : FragmentActivity() {
 
         if (videos.isEmpty()) {
             updatePauseButton()
+            updateCenterPlayButton()
             return
         }
 
@@ -1044,14 +1129,11 @@ class PlayerActivity : FragmentActivity() {
                     current.toString()
                 )
 
-                hint =
-                    "میلی‌ثانیه"
+                hint = "میلی‌ثانیه"
             }
 
         AlertDialog.Builder(this)
-            .setTitle(
-                "همگام‌سازی صدا"
-            )
+            .setTitle("همگام‌سازی صدا")
             .setMessage(
                 "مقدار مثبت یعنی صدا جلوتر تنظیم شود."
             )
@@ -1115,14 +1197,11 @@ class PlayerActivity : FragmentActivity() {
                     current.toString()
                 )
 
-                hint =
-                    "میلی‌ثانیه"
+                hint = "میلی‌ثانیه"
             }
 
         AlertDialog.Builder(this)
-            .setTitle(
-                "همگام‌سازی زیرنویس"
-            )
+            .setTitle("همگام‌سازی زیرنویس")
             .setMessage(
                 "مقدار مثبت یعنی زیرنویس دیرتر نمایش داده شود."
             )
@@ -1187,9 +1266,7 @@ class PlayerActivity : FragmentActivity() {
         if (videoGroups.isEmpty()) {
 
             AlertDialog.Builder(this)
-                .setTitle(
-                    "کیفیت تصویر"
-                )
+                .setTitle("کیفیت تصویر")
                 .setMessage(
                     "برای این ویدئو کیفیت‌های جداگانه قابل انتخاب نیست."
                 )
@@ -1247,19 +1324,13 @@ class PlayerActivity : FragmentActivity() {
     private fun showQueue() {
 
         val queue =
-            PlaybackQueueManager.getQueue(
-                this
-            )
+            PlaybackQueueManager.getQueue(this)
 
         if (queue.isEmpty()) {
 
             AlertDialog.Builder(this)
-                .setTitle(
-                    "صف پخش"
-                )
-                .setMessage(
-                    "صف پخش خالی است."
-                )
+                .setTitle("صف پخش")
+                .setMessage("صف پخش خالی است.")
                 .setPositiveButton(
                     "باشه",
                     null
@@ -1291,16 +1362,10 @@ class PlayerActivity : FragmentActivity() {
             }.toTypedArray()
 
         AlertDialog.Builder(this)
-            .setTitle(
-                "صف پخش"
-            )
-            .setItems(
-                names
-            ) { _, which ->
+            .setTitle("صف پخش")
+            .setItems(names) { _, which ->
 
-                if (
-                    which !in queue.indices
-                ) {
+                if (which !in queue.indices) {
                     return@setItems
                 }
 
@@ -1312,9 +1377,7 @@ class PlayerActivity : FragmentActivity() {
                     which
                 )
 
-                openVideo(
-                    selectedUri
-                )
+                openVideo(selectedUri)
 
                 showTemporaryMessage(
                     "در حال پخش از صف"
@@ -1329,10 +1392,7 @@ class PlayerActivity : FragmentActivity() {
 
     private fun getIncomingVideoUri(): Uri? {
 
-        if (
-            intent.action ==
-            Intent.ACTION_VIEW
-        ) {
+        if (intent.action == Intent.ACTION_VIEW) {
             return intent.data
         }
 
@@ -1571,13 +1631,12 @@ class PlayerActivity : FragmentActivity() {
 
     private fun updatePauseButton() {
 
-        val currentPlayer =
-            player
+        if (!::pauseButton.isInitialized) {
+            return
+        }
 
         pauseButton.text =
-            if (
-                currentPlayer?.isPlaying == true
-            ) {
+            if (player?.isPlaying == true) {
                 "⏸ توقف"
             } else {
                 "▶ پخش"
@@ -1618,9 +1677,7 @@ class PlayerActivity : FragmentActivity() {
             0
         )
 
-        container.addView(
-            input
-        )
+        container.addView(input)
 
         val dialog =
             AlertDialog.Builder(this)
@@ -1667,10 +1724,7 @@ class PlayerActivity : FragmentActivity() {
                     return@setOnClickListener
                 }
 
-                startSleepTimer(
-                    minutes
-                )
-
+                startSleepTimer(minutes)
                 dialog.dismiss()
             }
 
@@ -1679,7 +1733,6 @@ class PlayerActivity : FragmentActivity() {
             ).setOnClickListener {
 
                 cancelSleepTimer()
-
                 dialog.dismiss()
             }
         }
@@ -1706,6 +1759,7 @@ class PlayerActivity : FragmentActivity() {
                 player?.pause()
 
                 updatePauseButton()
+                updateCenterPlayButton()
 
                 sleepTimerButton.text =
                     getString(
@@ -1735,9 +1789,7 @@ class PlayerActivity : FragmentActivity() {
 
         sleepTimerRunnable = null
 
-        if (
-            ::sleepTimerButton.isInitialized
-        ) {
+        if (::sleepTimerButton.isInitialized) {
 
             sleepTimerButton.text =
                 getString(
@@ -1950,9 +2002,7 @@ class PlayerActivity : FragmentActivity() {
             hideControlsRunnable
         )
 
-        setPlayerControlsVisibility(
-            true
-        )
+        setPlayerControlsVisibility(true)
 
         controlsVisible = true
 
@@ -1968,9 +2018,7 @@ class PlayerActivity : FragmentActivity() {
             hideControlsRunnable
         )
 
-        setPlayerControlsVisibility(
-            false
-        )
+        setPlayerControlsVisibility(false)
 
         controlsVisible = false
     }
@@ -2008,14 +2056,10 @@ class PlayerActivity : FragmentActivity() {
                 (
                     currentPlayer.currentPosition +
                         amount
-                    ).coerceAtMost(
-                        duration
-                    )
+                    ).coerceAtMost(duration)
             }
 
-        currentPlayer.seekTo(
-            newPosition
-        )
+        currentPlayer.seekTo(newPosition)
 
         updateProgress()
 
@@ -2064,9 +2108,7 @@ class PlayerActivity : FragmentActivity() {
                     duration
                 )
 
-        currentPlayer.seekTo(
-            newPosition
-        )
+        currentPlayer.seekTo(newPosition)
 
         val seconds =
             seekAmount.toLong() / 1000
@@ -2142,9 +2184,9 @@ class PlayerActivity : FragmentActivity() {
                 startBrightness +
                     change
                 ).coerceIn(
-                0.05f,
-                1.0f
-            )
+                    0.05f,
+                    1.0f
+                )
 
         val attributes =
             window.attributes
@@ -2189,7 +2231,6 @@ class PlayerActivity : FragmentActivity() {
     }
 
     private fun hideGestureInfo() {
-
         gestureInfo.visibility =
             View.GONE
     }
@@ -2236,71 +2277,40 @@ class PlayerActivity : FragmentActivity() {
                 View.GONE
             }
 
-        topBar.visibility =
+        topBar.visibility = visibility
+        progressPanel.visibility = visibility
+        backButton.visibility = visibility
+        pauseButton.visibility = visibility
+        previousButton.visibility = visibility
+        nextButton.visibility = visibility
+        repeatButton.visibility = visibility
+        audioButton.visibility = visibility
+        favoriteButton.visibility = visibility
+        speedMinusButton.visibility = visibility
+        speedButton.visibility = visibility
+        speedPlusButton.visibility = visibility
+        aspectButton.visibility = visibility
+        subtitleButton.visibility = visibility
+        sleepTimerButton.visibility = visibility
+        shareButton.visibility = visibility
+        deleteButton.visibility = visibility
+        lockButton.visibility = visibility
+        fullscreenButton.visibility = visibility
+        moreButton.visibility = visibility
+        controlScroll.visibility = visibility
+
+        centerPreviousButton.visibility =
             visibility
 
-        progressPanel.visibility =
+        centerPlayButton.visibility =
             visibility
 
-        backButton.visibility =
-            visibility
-
-        pauseButton.visibility =
-            visibility
-
-        previousButton.visibility =
-            visibility
-
-        nextButton.visibility =
-            visibility
-
-        repeatButton.visibility =
-            visibility
-
-        audioButton.visibility =
-            visibility
-
-        favoriteButton.visibility =
-            visibility
-
-        speedMinusButton.visibility =
-            visibility
-
-        speedButton.visibility =
-            visibility
-
-        speedPlusButton.visibility =
-            visibility
-
-        aspectButton.visibility =
-            visibility
-
-        subtitleButton.visibility =
-            visibility
-
-        sleepTimerButton.visibility =
-            visibility
-
-        shareButton.visibility =
-            visibility
-
-        deleteButton.visibility =
-            visibility
-
-        lockButton.visibility =
-            visibility
-
-        fullscreenButton.visibility =
-            visibility
-
-        moreButton.visibility =
-            visibility
-
-        controlScroll.visibility =
+        centerNextButton.visibility =
             visibility
 
         if (visible) {
             updatePauseButton()
+            updateCenterPlayButton()
             updateProgress()
         }
     }
@@ -2372,24 +2382,16 @@ class PlayerActivity : FragmentActivity() {
     ) {
 
         val subtitleMimeType =
-            getSubtitleMimeType(
-                subtitleUri
-            )
+            getSubtitleMimeType(subtitleUri)
 
         val subtitleLanguage =
-            detectSubtitleLanguage(
-                subtitleUri
-            )
+            detectSubtitleLanguage(subtitleUri)
 
         val subtitle =
             MediaItem.SubtitleConfiguration
                 .Builder(subtitleUri)
-                .setMimeType(
-                    subtitleMimeType
-                )
-                .setLanguage(
-                    subtitleLanguage
-                )
+                .setMimeType(subtitleMimeType)
+                .setLanguage(subtitleLanguage)
                 .setSelectionFlags(
                     C.SELECTION_FLAG_DEFAULT
                 )
@@ -2403,9 +2405,7 @@ class PlayerActivity : FragmentActivity() {
                 )
                 .build()
 
-        createPlayer(
-            mediaItem
-        )
+        createPlayer(mediaItem)
     }
 
     private fun getSubtitleMimeType(
@@ -2421,10 +2421,7 @@ class PlayerActivity : FragmentActivity() {
                 null
             }
 
-        if (
-            detectedType ==
-            MimeTypes.TEXT_VTT
-        ) {
+        if (detectedType == MimeTypes.TEXT_VTT) {
             return MimeTypes.TEXT_VTT
         }
 
@@ -2511,13 +2508,10 @@ class PlayerActivity : FragmentActivity() {
             )?.use { cursor ->
 
                 if (cursor.moveToFirst()) {
-
                     cursor.getString(0)
                         ?: uri.lastPathSegment
                         ?: "subtitle"
-
                 } else {
-
                     uri.lastPathSegment
                         ?: "subtitle"
                 }
@@ -2589,9 +2583,7 @@ class PlayerActivity : FragmentActivity() {
 
         currentPlayer.prepare()
 
-        if (
-            savedPosition > 0L
-        ) {
+        if (savedPosition > 0L) {
 
             currentPlayer.seekTo(
                 savedPosition
@@ -2614,6 +2606,7 @@ class PlayerActivity : FragmentActivity() {
 
         updateFavoriteButton()
         updatePauseButton()
+        updateCenterPlayButton()
         updateProgress()
 
         showPlayerControlsTemporarily()
@@ -2630,17 +2623,10 @@ class PlayerActivity : FragmentActivity() {
 
         if (currentPlayer == null) {
 
-            currentTimeText.text =
-                "00:00"
-
-            remainingTimeText.text =
-                "-00:00"
-
-            totalTimeText.text =
-                "/ 00:00"
-
-            progressSeekBar.progress =
-                0
+            currentTimeText.text = "00:00"
+            remainingTimeText.text = "-00:00"
+            totalTimeText.text = "/ 00:00"
+            progressSeekBar.progress = 0
 
             return
         }
@@ -2695,7 +2681,8 @@ class PlayerActivity : FragmentActivity() {
 
             progressSeekBar.progress =
                 (
-                    safePosition * 1000L /
+                    safePosition *
+                        1000L /
                         duration
                     ).toInt()
                         .coerceIn(
@@ -2710,18 +2697,14 @@ class PlayerActivity : FragmentActivity() {
     ): String {
 
         val totalSeconds =
-            (
-                milliseconds.coerceAtLeast(0L) /
-                    1000L
-                )
+            milliseconds.coerceAtLeast(0L) /
+                1000L
 
         val seconds =
             totalSeconds % 60
 
         val minutes =
-            (
-                totalSeconds / 60
-                ) % 60
+            (totalSeconds / 60) % 60
 
         val hours =
             totalSeconds / 3600
@@ -2756,9 +2739,7 @@ class PlayerActivity : FragmentActivity() {
         }
 
         val queue =
-            PlaybackQueueManager.getQueue(
-                this
-            )
+            PlaybackQueueManager.getQueue(this)
 
         if (queue.isEmpty()) {
             return
@@ -2779,27 +2760,13 @@ class PlayerActivity : FragmentActivity() {
         }
     }
 
-    private fun isCurrentVideoInQueue(): Boolean {
-
-        val uri =
-            getIncomingVideoUri()
-                ?: return false
-
-        return PlaybackQueueManager
-            .contains(
-                this,
-                uri
-            )
-    }
-
     private fun getVideoUris(): List<Uri> {
 
         if (
             ContextCompat.checkSelfPermission(
                 this,
                 requiredVideoPermission()
-            ) !=
-            PackageManager.PERMISSION_GRANTED
+            ) != PackageManager.PERMISSION_GRANTED
         ) {
             return emptyList()
         }
@@ -2812,14 +2779,11 @@ class PlayerActivity : FragmentActivity() {
                 Build.VERSION.SDK_INT >=
                 Build.VERSION_CODES.Q
             ) {
-
                 MediaStore.Video.Media
                     .getContentUri(
                         MediaStore.VOLUME_EXTERNAL
                     )
-
             } else {
-
                 MediaStore.Video.Media
                     .EXTERNAL_CONTENT_URI
             }
@@ -2844,9 +2808,7 @@ class PlayerActivity : FragmentActivity() {
                 result.add(
                     Uri.withAppendedPath(
                         collection,
-                        cursor.getLong(
-                            idColumn
-                        ).toString()
+                        cursor.getLong(idColumn).toString()
                     )
                 )
             }
@@ -3002,7 +2964,6 @@ class PlayerActivity : FragmentActivity() {
         uri: Uri
     ) {
 
-        playbackAutoSaveManager.saveNow()
         savePosition()
 
         intent.action =
@@ -3081,11 +3042,9 @@ class PlayerActivity : FragmentActivity() {
             return
         }
 
-        val uriString =
-            intent.getStringExtra(
-                EXTRA_VIDEO_URI
-            )
-            ?: return
+        val uri =
+            getIncomingVideoUri()
+                ?: return
 
         val currentPlayer =
             player
@@ -3097,13 +3056,16 @@ class PlayerActivity : FragmentActivity() {
         val duration =
             currentPlayer.duration
 
-        if (position <= 0L) {
+        if (
+            position <= 0L ||
+            duration == C.TIME_UNSET
+        ) {
             return
         }
 
         PlaybackHistoryManager.save(
             this,
-            Uri.parse(uriString),
+            uri,
             position,
             duration
         )
@@ -3120,8 +3082,8 @@ class PlayerActivity : FragmentActivity() {
         wasPlayingBeforePause = false
         enteringPictureInPicture = false
 
-        playbackAutoSaveManager.saveNow()
         savePosition()
+        playbackAutoSaveManager.stop()
         saveDisplaySettings()
 
         progressHandler.removeCallbacks(
@@ -3137,7 +3099,10 @@ class PlayerActivity : FragmentActivity() {
 
         if (currentPlayer != null) {
 
-            currentPlayer.pause()
+            try {
+                currentPlayer.pause()
+            } catch (_: Exception) {
+            }
 
             try {
                 currentPlayer.stop()
@@ -3146,6 +3111,11 @@ class PlayerActivity : FragmentActivity() {
 
             try {
                 currentPlayer.clearMediaItems()
+            } catch (_: Exception) {
+            }
+
+            try {
+                currentPlayer.stop()
             } catch (_: Exception) {
             }
         }
@@ -3173,14 +3143,9 @@ class PlayerActivity : FragmentActivity() {
             return
         }
 
-        val uriString =
-            intent.getStringExtra(
-                EXTRA_VIDEO_URI
-            )
-            ?: return
-
         val uri =
-            Uri.parse(uriString)
+            getIncomingVideoUri()
+                ?: return
 
         AlertDialog.Builder(this)
             .setTitle(
@@ -3296,15 +3261,10 @@ class PlayerActivity : FragmentActivity() {
             RESULT_OK
         ) {
 
-            val uriString =
-                intent.getStringExtra(
-                    EXTRA_VIDEO_URI
-                )
+            val uri =
+                getIncomingVideoUri()
 
-            if (uriString != null) {
-
-                val uri =
-                    Uri.parse(uriString)
+            if (uri != null) {
 
                 PlaybackHistoryManager.clear(
                     this,
@@ -3438,6 +3398,7 @@ class PlayerActivity : FragmentActivity() {
                 currentPlayer.pause()
 
                 updatePauseButton()
+                updateCenterPlayButton()
             }
         }
 
@@ -3470,6 +3431,7 @@ class PlayerActivity : FragmentActivity() {
             wasPlayingBeforePause = false
 
             updatePauseButton()
+            updateCenterPlayButton()
         }
 
         if (!isLocked) {
@@ -3521,7 +3483,7 @@ class PlayerActivity : FragmentActivity() {
             savePosition()
             saveDisplaySettings()
         } else {
-            playbackAutoSaveManager.release()
+            playbackAutoSaveManager.stop()
         }
 
         player?.removeListener(
