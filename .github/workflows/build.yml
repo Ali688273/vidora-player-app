@@ -69,6 +69,14 @@ jobs:
             exit 1
           fi
 
+          echo "Release keystore file created successfully."
+
+      - name: Check GitHub Keystore SHA-256
+        if: steps.signing.outputs.configured == 'true'
+        run: |
+          echo "GitHub decoded Keystore SHA-256:"
+          sha256sum "$RUNNER_TEMP/vidora-release.p12"
+
       - name: Verify Release Keystore
         if: steps.signing.outputs.configured == 'true'
         env:
