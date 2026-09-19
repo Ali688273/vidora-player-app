@@ -8,7 +8,6 @@ import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.provider.MediaStore
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.LayoutInflater
@@ -133,6 +132,51 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /*
+     * این سه متد برای android:onClick
+     * موجود در activity_main.xml هستند.
+     *
+     * قبلاً در MainActivity وجود نداشتند و
+     * همین موضوع باعث کرش هنگام کلیک روی
+     * دکمه‌های صفحه اصلی می‌شد.
+     */
+
+    fun openOnlinePlayer(
+        view: View
+    ) {
+
+        startActivity(
+            Intent(
+                this,
+                OnlineVideoActivity::class.java
+            )
+        )
+    }
+
+    fun openVidoraSettings(
+        view: View
+    ) {
+
+        startActivity(
+            Intent(
+                this,
+                SettingsActivity::class.java
+            )
+        )
+    }
+
+    fun openPrivateVault(
+        view: View
+    ) {
+
+        startActivity(
+            Intent(
+                this,
+                PrivateVaultActivity::class.java
+            )
+        )
+    }
+
     private fun restoreScreenState(
         savedInstanceState: Bundle?
     ) {
@@ -165,7 +209,9 @@ class MainActivity : ComponentActivity() {
             )
 
         if (!savedSearch.isNullOrEmpty()) {
-            searchInput?.setText(savedSearch)
+            searchInput.setText(
+                savedSearch
+            )
         }
     }
 
