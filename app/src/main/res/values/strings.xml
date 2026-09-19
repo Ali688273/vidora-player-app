@@ -4,6 +4,55 @@
     <!-- نام برنامه -->
     <string name="app_name">Vidora Player</string>
 
+    <!-- زبان -->
+    <string name="language_auto">خودکار</string>
+    <string name="language_persian">فارسی</string>
+    <string name="language_english">انگلیسی</string>
+
+    <!-- تنظیمات -->
+    <string name="settings">تنظیمات</string>
+    <string name="language">زبان برنامه</string>
+    <string name="dark_mode">حالت تاریک</string>
+    <string name="light_mode">حالت روشن</string>
+    <string name="system_default">پیش‌فرض سیستم</string>
+
+    <string name="auto_resume">ادامه پخش</string>
+    <string name="auto_play_next">پخش خودکار بعدی</string>
+    <string name="show_hidden">نمایش ویدئوهای مخفی</string>
+
+    <!-- کتابخانه -->
+    <string name="favorites">علاقه‌مندی‌ها</string>
+    <string name="history">تاریخچه</string>
+    <string name="hidden_videos">ویدئوهای مخفی</string>
+    <string name="playlists">پلی‌لیست‌ها</string>
+
+    <!-- کنترل عمومی -->
+    <string name="play">پخش</string>
+    <string name="pause">توقف</string>
+    <string name="back">بازگشت</string>
+    <string name="delete">حذف</string>
+    <string name="rename">تغییر نام</string>
+    <string name="share">اشتراک‌گذاری</string>
+    <string name="cancel">لغو</string>
+    <string name="save">ذخیره</string>
+    <string name="close">بستن</string>
+    <string name="ok">باشه</string>
+
+    <!-- پلی‌لیست -->
+    <string name="add_to_playlist">افزودن به پلی‌لیست</string>
+    <string name="new_playlist">پلی‌لیست جدید</string>
+    <string name="manage_playlists">مدیریت پلی‌لیست‌ها</string>
+
+    <!-- مرتب‌سازی -->
+    <string name="sort">مرتب‌سازی</string>
+    <string name="newest">جدیدترین</string>
+    <string name="name">نام</string>
+    <string name="size">حجم</string>
+
+    <!-- نمایش -->
+    <string name="grid_view">نمایش شبکه‌ای</string>
+    <string name="list_view">نمایش فهرستی</string>
+
     <!-- کنترل ویدئو -->
     <string name="previous_video">قبلی</string>
     <string name="next_video">بعدی</string>
@@ -24,6 +73,7 @@
 
     <string name="subtitle">زیرنویس</string>
 
+    <!-- تایمر خواب -->
     <string name="sleep_timer">تایمر</string>
     <string name="sleep_timer_hint">دقیقه</string>
     <string name="sleep_timer_title">تایمر خواب</string>
@@ -32,6 +82,7 @@
     <string name="sleep_timer_invalid">مقدار نامعتبر است</string>
     <string name="sleep_timer_active">تایمر %1$d دقیقه</string>
 
+    <!-- اشتراک و حذف -->
     <string name="share_video">اشتراک</string>
     <string name="delete_video">حذف</string>
     <string name="delete_video_title">حذف ویدئو</string>
@@ -44,7 +95,7 @@
     <string name="fullscreen">⛶</string>
     <string name="screen_locked">صفحه قفل است</string>
 
-    <!-- موارد اضافه شده برای activity_player -->
+    <!-- موارد پخش‌کننده -->
     <string name="more">بیشتر</string>
     <string name="player_locked">پخش‌کننده قفل است</string>
 
@@ -55,31 +106,15 @@
     <string name="brightness_percent">روشنایی %1$d%%</string>
 
     <!-- عمومی -->
-    <string name="cancel">لغو</string>
-    <string name="ok">باشه</string>
     <string name="unknown_video">ویدئوی ناشناس</string>
-
-    <!-- تنظیمات -->
-    <string name="settings">تنظیمات</string>
-    <string name="settings_title">تنظیمات Vidora Player</string>
-    <string name="dark_mode">حالت تاریک</string>
-    <string name="resume_playback">ادامه پخش از آخرین موقعیت</string>
-    <string name="show_hidden_videos">نمایش ویدئوهای مخفی</string>
-    <string name="language">زبان برنامه</string>
-    <string name="english">English</string>
-    <string name="playlist_management">مدیریت پلی‌لیست‌ها</string>
-    <string name="playlists">پلی‌لیست‌ها</string>
-    <string name="no_playlists">هنوز پلی‌لیستی ساخته نشده است.</string>
 
     <!-- مدیریت ویدئو -->
     <string name="hide_video">مخفی کردن</string>
     <string name="unhide_video">نمایش ویدئو</string>
     <string name="rename_video">تغییر نام</string>
-    <string name="add_to_playlist">افزودن به پلی‌لیست</string>
 
     <!-- جستجو و مرتب‌سازی -->
     <string name="search_videos">جستجوی ویدئو</string>
-    <string name="sort">مرتب‌سازی</string>
     <string name="sort_latest">آخرین دسترسی</string>
     <string name="sort_newest">جدیدترین</string>
     <string name="sort_name">نام</string>
