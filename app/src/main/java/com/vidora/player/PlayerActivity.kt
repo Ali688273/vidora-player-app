@@ -702,10 +702,15 @@ class PlayerActivity : FragmentActivity() {
                     5 ->
                         showQueue()
 
-                    6 ->
+                    6 -> {
                         PlaybackQueueManager.clear(
                             this
                         )
+
+                        showTemporaryMessage(
+                            "صف پخش پاک شد."
+                        )
+                    }
                 }
             }
             .show()
@@ -780,6 +785,64 @@ class PlayerActivity : FragmentActivity() {
             return
         }
 
+        val currentUri =
+            getIncomingVideoUri()
+
+        if (currentUri != null) {
+
+            val queue =
+                PlaybackQueueManager.getQueue(
+                    this
+                )
+
+            val currentQueueIndex =
+                queue.indexOfFirst {
+                    it.toString() ==
+                        currentUri.toString()
+                }
+
+            if (currentQueueIndex >= 0) {
+
+                PlaybackQueueManager.setCurrentIndex(
+                    this,
+                    currentQueueIndex
+                )
+
+                val nextUri =
+                    PlaybackQueueManager.getNext(
+                        this,
+                        false
+                    )
+
+                if (nextUri != null) {
+
+                    PlaybackQueueManager.setCurrentVideo(
+                        this,
+                        nextUri
+                    )
+
+                    openVideo(
+                        nextUri
+                    )
+
+                    showTemporaryMessage(
+                        "ویدئوی بعدی صف"
+                    )
+
+                    return
+                }
+
+                updatePauseButton()
+                showPlayerControlsTemporarily()
+
+                showTemporaryMessage(
+                    "صف پخش به پایان رسید."
+                )
+
+                return
+            }
+        }
+
         val videos =
             getVideoUris()
 
@@ -788,15 +851,13 @@ class PlayerActivity : FragmentActivity() {
             return
         }
 
-        val currentUri =
-            intent.getStringExtra(
-                EXTRA_VIDEO_URI
-            )
-
         val currentIndex =
-            videos.indexOfFirst {
-                it.toString() == currentUri
-            }
+            currentUri?.let { uri ->
+                videos.indexOfFirst {
+                    it.toString() ==
+                        uri.toString()
+                }
+            } ?: -1
 
         val nextIndex =
             when {
@@ -1028,24 +1089,18 @@ class PlayerActivity : FragmentActivity() {
             getIncomingVideoUri()
                 ?: return
 
-        PlaybackQueueManager.add(
-            this,
-            uri
-        )
-
-        val queue =
-            PlaybackQueueManager.getQueue(
-                this
+        val added =
+            PlaybackQueueManager.addAndSetCurrent(
+                this,
+                uri
             )
 
-        PlaybackQueueManager.setCurrentIndex(
-            this,
-            queue.indexOf(uri)
-                .coerceAtLeast(0)
-        )
-
         showTemporaryMessage(
-            "ویدئو به صف پخش اضافه شد."
+            if (added) {
+                "ویدئو به صف پخش اضافه شد."
+            } else {
+                "ویدئو از قبل در صف پخش بود."
+            }
         )
     }
 
@@ -1074,10 +1129,24 @@ class PlayerActivity : FragmentActivity() {
             return
         }
 
+        val currentUri =
+            getIncomingVideoUri()
+
         val names =
             queue.mapIndexed { index, uri ->
 
-                "${index + 1}. ${
+                val marker =
+                    if (
+                        currentUri != null &&
+                        currentUri.toString() ==
+                        uri.toString()
+                    ) {
+                        " ▶ "
+                    } else {
+                        ""
+                    }
+
+                "${index + 1}.$marker${
                     getVideoName(uri)
                 }"
 
@@ -1088,11 +1157,33 @@ class PlayerActivity : FragmentActivity() {
                 "صف پخش"
             )
             .setItems(
-                names,
-                null
-            )
-            .setPositiveButton(
-                "باشه",
+                names
+            ) { _, which ->
+
+                if (
+                    which !in queue.indices
+                ) {
+                    return@setItems
+                }
+
+                val selectedUri =
+                    queue[which]
+
+                PlaybackQueueManager.setCurrentIndex(
+                    this,
+                    which
+                )
+
+                openVideo(
+                    selectedUri
+                )
+
+                showTemporaryMessage(
+                    "در حال پخش از صف"
+                )
+            }
+            .setNegativeButton(
+                "بستن",
                 null
             )
             .show()
@@ -2075,6 +2166,8 @@ class PlayerActivity : FragmentActivity() {
             return
         }
 
+        syncQueueCurrentVideo(uri)
+
         val savedSubtitle =
             SubtitleFileManager.getSubtitleUri(
                 this,
@@ -2295,6 +2388,10 @@ class PlayerActivity : FragmentActivity() {
                 ?.uri
                 ?: return
 
+        if (!isExternalVideo()) {
+            syncQueueCurrentVideo(videoUri)
+        }
+
         val savedPosition =
             if (
                 isExternalVideo() ||
@@ -2345,6 +2442,51 @@ class PlayerActivity : FragmentActivity() {
         updatePauseButton()
 
         showPlayerControlsTemporarily()
+    }
+
+    private fun syncQueueCurrentVideo(
+        uri: Uri
+    ) {
+
+        if (isExternalVideo()) {
+            return
+        }
+
+        val queue =
+            PlaybackQueueManager.getQueue(
+                this
+            )
+
+        if (queue.isEmpty()) {
+            return
+        }
+
+        val index =
+            queue.indexOfFirst {
+                it.toString() ==
+                    uri.toString()
+            }
+
+        if (index >= 0) {
+
+            PlaybackQueueManager.setCurrentIndex(
+                this,
+                index
+            )
+        }
+    }
+
+    private fun isCurrentVideoInQueue(): Boolean {
+
+        val uri =
+            getIncomingVideoUri()
+                ?: return false
+
+        return PlaybackQueueManager
+            .contains(
+                this,
+                uri
+            )
     }
 
     private fun getVideoUris(): List<Uri> {
@@ -2428,6 +2570,39 @@ class PlayerActivity : FragmentActivity() {
             return
         }
 
+        val currentUri =
+            getIncomingVideoUri()
+
+        if (
+            currentUri != null &&
+            isCurrentVideoInQueue()
+        ) {
+
+            val previousUri =
+                PlaybackQueueManager.getPrevious(
+                    this,
+                    true
+                )
+
+            if (previousUri != null) {
+
+                PlaybackQueueManager.setCurrentVideo(
+                    this,
+                    previousUri
+                )
+
+                openVideo(
+                    previousUri
+                )
+
+                showTemporaryMessage(
+                    "ویدئوی قبلی صف"
+                )
+
+                return
+            }
+        }
+
         val videos =
             getVideoUris()
 
@@ -2435,15 +2610,13 @@ class PlayerActivity : FragmentActivity() {
             return
         }
 
-        val currentUri =
-            intent.getStringExtra(
-                EXTRA_VIDEO_URI
-            )
-
         val currentIndex =
-            videos.indexOfFirst {
-                it.toString() == currentUri
-            }
+            currentUri?.let { uri ->
+                videos.indexOfFirst {
+                    it.toString() ==
+                        uri.toString()
+                }
+            } ?: -1
 
         val previousIndex =
             if (currentIndex <= 0) {
@@ -2463,6 +2636,39 @@ class PlayerActivity : FragmentActivity() {
             return
         }
 
+        val currentUri =
+            getIncomingVideoUri()
+
+        if (
+            currentUri != null &&
+            isCurrentVideoInQueue()
+        ) {
+
+            val nextUri =
+                PlaybackQueueManager.getNext(
+                    this,
+                    true
+                )
+
+            if (nextUri != null) {
+
+                PlaybackQueueManager.setCurrentVideo(
+                    this,
+                    nextUri
+                )
+
+                openVideo(
+                    nextUri
+                )
+
+                showTemporaryMessage(
+                    "ویدئوی بعدی صف"
+                )
+
+                return
+            }
+        }
+
         val videos =
             getVideoUris()
 
@@ -2470,15 +2676,13 @@ class PlayerActivity : FragmentActivity() {
             return
         }
 
-        val currentUri =
-            intent.getStringExtra(
-                EXTRA_VIDEO_URI
-            )
-
         val currentIndex =
-            videos.indexOfFirst {
-                it.toString() == currentUri
-            }
+            currentUri?.let { uri ->
+                videos.indexOfFirst {
+                    it.toString() ==
+                        uri.toString()
+                }
+            } ?: -1
 
         val nextIndex =
             if (
@@ -2516,6 +2720,8 @@ class PlayerActivity : FragmentActivity() {
             EXTRA_VIDEO_NAME,
             getVideoName(uri)
         )
+
+        syncQueueCurrentVideo(uri)
 
         val savedSubtitle =
             SubtitleFileManager.getSubtitleUri(
@@ -2698,6 +2904,11 @@ class PlayerActivity : FragmentActivity() {
                         uri
                     )
 
+                    PlaybackQueueManager.remove(
+                        this,
+                        uri
+                    )
+
                     showTemporaryMessage(
                         getString(
                             R.string.video_deleted
@@ -2751,6 +2962,11 @@ class PlayerActivity : FragmentActivity() {
                 )
 
                 SubtitleFileManager.removeSubtitle(
+                    this,
+                    uri
+                )
+
+                PlaybackQueueManager.remove(
                     this,
                     uri
                 )
