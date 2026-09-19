@@ -102,6 +102,10 @@ class MainActivity : ComponentActivity() {
 
         loadSavedDisplayMode()
 
+        restoreScreenState(
+            savedInstanceState
+        )
+
         setupSearch()
 
         sortButton.setOnClickListener {
@@ -120,12 +124,73 @@ class MainActivity : ComponentActivity() {
         }
 
         updateViewModeButton()
+        updateSortButton()
 
         if (hasVideoPermission()) {
             loadVideos()
         } else {
             requestVideoPermission()
         }
+    }
+
+    private fun restoreScreenState(
+        savedInstanceState: Bundle?
+    ) {
+
+        if (savedInstanceState == null) {
+            return
+        }
+
+        currentFolder =
+            savedInstanceState.getString(
+                KEY_CURRENT_FOLDER
+            )
+
+        val savedSort =
+            savedInstanceState.getInt(
+                KEY_SORT_MODE,
+                SortMode.LAST_ACCESS.ordinal
+            )
+
+        sortMode =
+            SortMode.entries.getOrElse(
+                savedSort
+            ) {
+                SortMode.LAST_ACCESS
+            }
+
+        val savedSearch =
+            savedInstanceState.getString(
+                KEY_SEARCH_TEXT
+            )
+
+        if (!savedSearch.isNullOrEmpty()) {
+            searchInput?.setText(savedSearch)
+        }
+    }
+
+    override fun onSaveInstanceState(
+        outState: Bundle
+    ) {
+
+        outState.putString(
+            KEY_CURRENT_FOLDER,
+            currentFolder
+        )
+
+        outState.putInt(
+            KEY_SORT_MODE,
+            sortMode.ordinal
+        )
+
+        outState.putString(
+            KEY_SEARCH_TEXT,
+            searchInput.text.toString()
+        )
+
+        super.onSaveInstanceState(
+            outState
+        )
     }
 
     private fun loadSavedDisplayMode() {
@@ -169,6 +234,25 @@ class MainActivity : ComponentActivity() {
                 "نمایش فهرستی"
             } else {
                 "نمایش شبکه‌ای"
+            }
+    }
+
+    private fun updateSortButton() {
+
+        sortButton.text =
+            when (sortMode) {
+
+                SortMode.LAST_ACCESS ->
+                    "جدیدترین"
+
+                SortMode.NAME ->
+                    "نام"
+
+                SortMode.SIZE ->
+                    "حجم"
+
+                SortMode.FAVORITES ->
+                    "علاقه‌مندی‌ها"
             }
     }
 
@@ -385,9 +469,7 @@ class MainActivity : ComponentActivity() {
                     )
 
                 val folderName =
-                    if (
-                        folderColumn >= 0
-                    ) {
+                    if (folderColumn >= 0) {
                         cursor.getString(
                             folderColumn
                         ) ?: "سایر"
@@ -454,7 +536,9 @@ class MainActivity : ComponentActivity() {
                     }
                 )
 
-        var visibleFolderCount = 0
+        val visibleFolders =
+            mutableListOf<Pair<String, Int>>()
+
         var visibleVideoCount = 0
 
         folders.forEach { (folderName, videos) ->
@@ -477,29 +561,39 @@ class MainActivity : ComponentActivity() {
                 return@forEach
             }
 
-            visibleFolderCount++
+            visibleFolders.add(
+                folderName to matchingVideos.size
+            )
+
             visibleVideoCount +=
                 matchingVideos.size
-
-            addFolderItem(
-                folderName,
-                matchingVideos.size
-            )
         }
 
-        if (folders.isEmpty()) {
+        if (visibleFolders.isEmpty()) {
 
             showEmptyMessage(
-                "هیچ ویدئویی پیدا نشد."
+                if (folders.isEmpty()) {
+                    "هیچ ویدئویی پیدا نشد."
+                } else {
+                    "نتیجه‌ای برای جستجو پیدا نشد."
+                }
             )
 
-        } else if (
-            visibleFolderCount == 0
-        ) {
+        } else if (gridMode) {
 
-            showEmptyMessage(
-                "نتیجه‌ای برای جستجو پیدا نشد."
+            displayFolderGrid(
+                visibleFolders
             )
+
+        } else {
+
+            visibleFolders.forEach { item ->
+
+                addFolderItem(
+                    item.first,
+                    item.second
+                )
+            }
         }
 
         locationText.text =
@@ -512,8 +606,45 @@ class MainActivity : ComponentActivity() {
             if (query.isBlank()) {
                 "${folders.size} پوشه • ${allVideos.size} ویدئو"
             } else {
-                "$visibleFolderCount پوشه • $visibleVideoCount ویدئو"
+                "${visibleFolders.size} پوشه • $visibleVideoCount ویدئو"
             }
+    }
+
+    private fun displayFolderGrid(
+        folders: List<Pair<String, Int>>
+    ) {
+
+        var row: LinearLayout? =
+            null
+
+        folders.forEachIndexed { index, folder ->
+
+            if (index % 2 == 0) {
+
+                row =
+                    LinearLayout(this).apply {
+
+                        orientation =
+                            LinearLayout.HORIZONTAL
+
+                        layoutParams =
+                            LinearLayout.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT,
+                                ViewGroup.LayoutParams.WRAP_CONTENT
+                            )
+                    }
+
+                videoContainer.addView(
+                    row
+                )
+            }
+
+            addGridFolderItem(
+                row!!,
+                folder.first,
+                folder.second
+            )
+        }
     }
 
     private fun displayFolderVideos(
@@ -673,11 +804,9 @@ class MainActivity : ComponentActivity() {
             folderName
 
         infoText.text =
-            if (videoCount == 1) {
-                "۱ ویدئو"
-            } else {
-                "$videoCount ویدئو"
-            }
+            folderCountText(
+                videoCount
+            )
 
         view.setOnClickListener {
 
@@ -692,6 +821,74 @@ class MainActivity : ComponentActivity() {
         videoContainer.addView(
             view
         )
+    }
+
+    private fun addGridFolderItem(
+        parent: LinearLayout,
+        folderName: String,
+        videoCount: Int
+    ) {
+
+        val view =
+            LayoutInflater.from(this)
+                .inflate(
+                    R.layout.item_folder_grid,
+                    parent,
+                    false
+                )
+
+        val nameText =
+            view.findViewById<TextView>(
+                R.id.folderNameText
+            )
+
+        val infoText =
+            view.findViewById<TextView>(
+                R.id.folderInfoText
+            )
+
+        nameText.text =
+            folderName
+
+        infoText.text =
+            folderCountText(
+                videoCount
+            )
+
+        view.setOnClickListener {
+
+            currentFolder =
+                folderName
+
+            searchInput.text.clear()
+
+            displayVideos()
+        }
+
+        val params =
+            LinearLayout.LayoutParams(
+                0,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                1f
+            )
+
+        view.layoutParams =
+            params
+
+        parent.addView(
+            view
+        )
+    }
+
+    private fun folderCountText(
+        count: Int
+    ): String {
+
+        return if (count == 1) {
+            "۱ ویدئو"
+        } else {
+            "$count ویدئو"
+        }
     }
 
     private fun addGridVideoItem(
@@ -725,6 +922,31 @@ class MainActivity : ComponentActivity() {
         parent.addView(
             view
         )
+
+        val thumbnail =
+            view.findViewById<ImageView>(
+                R.id.thumbnailImage
+            )
+
+        view.post {
+
+            val width =
+                thumbnail.width
+
+            if (width > 0) {
+
+                thumbnail.layoutParams =
+                    thumbnail.layoutParams.apply {
+                        height =
+                            (width * 9 / 16)
+                                .coerceAtLeast(
+                                    dp(80)
+                                )
+                    }
+
+                thumbnail.requestLayout()
+            }
+        }
     }
 
     private fun addVideoItem(
@@ -931,26 +1153,9 @@ class MainActivity : ComponentActivity() {
 
                 when (which) {
 
-                    0 -> {
-
-                        val intent =
-                            Intent(
-                                this,
-                                PlayerActivity::class.java
-                            )
-
-                        intent.putExtra(
-                            PlayerActivity.EXTRA_VIDEO_URI,
-                            video.uri.toString()
-                        )
-
-                        intent.putExtra(
-                            PlayerActivity.EXTRA_VIDEO_NAME,
-                            video.name
-                        )
-
-                        startActivity(intent)
-                    }
+                    0 -> openVideo(
+                        video
+                    )
 
                     1 -> {
 
@@ -995,6 +1200,31 @@ class MainActivity : ComponentActivity() {
                 }
             }
             .show()
+    }
+
+    private fun openVideo(
+        video: VideoItem
+    ) {
+
+        val intent =
+            Intent(
+                this,
+                PlayerActivity::class.java
+            )
+
+        intent.putExtra(
+            PlayerActivity.EXTRA_VIDEO_URI,
+            video.uri.toString()
+        )
+
+        intent.putExtra(
+            PlayerActivity.EXTRA_VIDEO_NAME,
+            video.name
+        )
+
+        startActivity(
+            intent
+        )
     }
 
     private fun showPlaylistMenu(
@@ -1174,8 +1404,7 @@ class MainActivity : ComponentActivity() {
                             SortMode.LAST_ACCESS
                     }
 
-                sortButton.text =
-                    options[which]
+                updateSortButton()
 
                 dialog.dismiss()
 
@@ -1310,13 +1539,21 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun dp(
+        value: Int
+    ): Int {
+
+        return (
+            value *
+                resources.displayMetrics.density
+            ).toInt()
+    }
+
     override fun onResume() {
 
         super.onResume()
 
-        if (
-            hasVideoPermission()
-        ) {
+        if (hasVideoPermission()) {
             loadVideos()
         }
     }
@@ -1328,6 +1565,15 @@ class MainActivity : ComponentActivity() {
 
         private const val KEY_GRID_MODE =
             "grid_mode"
+
+        private const val KEY_CURRENT_FOLDER =
+            "current_folder"
+
+        private const val KEY_SORT_MODE =
+            "sort_mode"
+
+        private const val KEY_SEARCH_TEXT =
+            "search_text"
     }
 
     data class VideoItem(
