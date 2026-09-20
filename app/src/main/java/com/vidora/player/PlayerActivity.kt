@@ -31,40 +31,40 @@ class PlayerActivity : FragmentActivity() {
 
     internal lateinit var playerView: PlayerView
 
-    private lateinit var previousButton: Button
-    private lateinit var nextButton: Button
-    private lateinit var repeatButton: Button
-    private lateinit var audioButton: Button
-    private lateinit var favoriteButton: Button
-    private lateinit var speedMinusButton: Button
-    private lateinit var speedButton: Button
-    private lateinit var speedPlusButton: Button
-    private lateinit var aspectButton: Button
-    private lateinit var subtitleButton: Button
-    private lateinit var sleepTimerButton: Button
-    private lateinit var shareButton: Button
+    internal lateinit var previousButton: Button
+    internal lateinit var nextButton: Button
+    internal lateinit var repeatButton: Button
+    internal lateinit var audioButton: Button
+    internal lateinit var favoriteButton: Button
+    internal lateinit var speedMinusButton: Button
+    internal lateinit var speedButton: Button
+    internal lateinit var speedPlusButton: Button
+    internal lateinit var aspectButton: Button
+    internal lateinit var subtitleButton: Button
+    internal lateinit var sleepTimerButton: Button
+    internal lateinit var shareButton: Button
     internal lateinit var deleteButton: Button
-    private lateinit var lockButton: Button
-    private lateinit var fullscreenButton: Button
-    private lateinit var moreButton: Button
+    internal lateinit var lockButton: Button
+    internal lateinit var fullscreenButton: Button
+    internal lateinit var moreButton: Button
 
-    private lateinit var backButton: Button
-    private lateinit var pauseButton: Button
+    internal lateinit var backButton: Button
+    internal lateinit var pauseButton: Button
 
-    private lateinit var centerPreviousButton: Button
-    private lateinit var centerPlayButton: Button
-    private lateinit var centerNextButton: Button
+    internal lateinit var centerPreviousButton: Button
+    internal lateinit var centerPlayButton: Button
+    internal lateinit var centerNextButton: Button
 
-    private lateinit var topBar: View
-    private lateinit var controlScroll: View
-    private lateinit var progressPanel: View
-    private lateinit var progressSeekBar: SeekBar
+    internal lateinit var topBar: View
+    internal lateinit var controlScroll: View
+    internal lateinit var progressPanel: View
+    internal lateinit var progressSeekBar: SeekBar
 
-    private lateinit var currentTimeText: TextView
-    private lateinit var remainingTimeText: TextView
-    private lateinit var totalTimeText: TextView
+    internal lateinit var currentTimeText: TextView
+    internal lateinit var remainingTimeText: TextView
+    internal lateinit var totalTimeText: TextView
 
-    private lateinit var gestureInfo: TextView
+    internal lateinit var gestureInfo: TextView
     internal lateinit var lockedOverlay: TextView
 
     internal var player: Player? = null
@@ -604,6 +604,94 @@ class PlayerActivity : FragmentActivity() {
                 }
             }
         )
+    }
+
+    internal fun updateProgress() {
+
+        if (!::progressSeekBar.isInitialized) {
+            return
+        }
+
+        if (!::currentTimeText.isInitialized) {
+            return
+        }
+
+        if (!::remainingTimeText.isInitialized) {
+            return
+        }
+
+        if (!::totalTimeText.isInitialized) {
+            return
+        }
+
+        val currentPlayer =
+            player ?: return
+
+        val duration =
+            currentPlayer.duration
+
+        if (
+            duration <= 0L ||
+            duration ==
+            androidx.media3.common.C.TIME_UNSET
+        ) {
+
+            if (!progressUserSeeking) {
+                progressSeekBar.progress = 0
+            }
+
+            currentTimeText.text =
+                formatTime(0L)
+
+            remainingTimeText.text =
+                "-${formatTime(0L)}"
+
+            totalTimeText.text =
+                formatTime(0L)
+
+            return
+        }
+
+        val position =
+            currentPlayer.currentPosition
+                .coerceIn(
+                    0L,
+                    duration
+                )
+
+        if (!progressUserSeeking) {
+
+            progressSeekBar.progress =
+                (
+                    position.toDouble() /
+                        duration.toDouble() *
+                        1000.0
+                    ).toInt()
+                        .coerceIn(
+                            0,
+                            1000
+                        )
+        }
+
+        currentTimeText.text =
+            formatTime(
+                position
+            )
+
+        remainingTimeText.text =
+            "-${
+                formatTime(
+                    (
+                        duration -
+                            position
+                        ).coerceAtLeast(0L)
+                )
+            }"
+
+        totalTimeText.text =
+            formatTime(
+                duration
+            )
     }
 
     internal fun loadSavedDisplaySettings() {
