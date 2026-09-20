@@ -1,12 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-
 <resources>
 
-    <!-- Light theme -->
-    <color name="vidora_background">#F7F8FA</color>
-    <color name="vidora_surface">#FFFFFF</color>
-    <color name="vidora_primary">#3F6FE5</color>
-    <color name="vidora_text">#17191D</color>
-    <color name="vidora_text_secondary">#626875</color>
+    <style name="Theme.Vidora" parent="android:style/Theme.Material.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowActionModeOverlay">true</item>
+
+        <item name="android:windowLightStatusBar">true</item>
+
+        <item name="android:statusBarColor">@color/vidora_background</item>
+        <item name="android:navigationBarColor">@color/vidora_background</item>
+        <item name="android:windowBackground">@color/vidora_background</item>
+        <item name="android:colorAccent">@color/vidora_primary</item>
+    </style>
 
 </resources>
