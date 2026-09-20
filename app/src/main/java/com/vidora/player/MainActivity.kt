@@ -153,6 +153,16 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onBackPressed() {
+
+        if (currentFolder != null) {
+            openRoot()
+            return
+        }
+
+        super.onBackPressed()
+    }
+
     private fun t(
         text: String
     ): String {
@@ -1271,24 +1281,8 @@ class MainActivity : ComponentActivity() {
 
         view.setOnClickListener {
 
-            val intent =
-                Intent(
-                    this,
-                    PlayerActivity::class.java
-                )
-
-            intent.putExtra(
-                PlayerActivity.EXTRA_VIDEO_URI,
-                video.uri.toString()
-            )
-
-            intent.putExtra(
-                PlayerActivity.EXTRA_VIDEO_NAME,
-                video.name
-            )
-
-            startActivity(
-                intent
+            openVideo(
+                video
             )
         }
 
@@ -1451,6 +1445,11 @@ class MainActivity : ComponentActivity() {
         intent.putExtra(
             PlayerActivity.EXTRA_VIDEO_NAME,
             video.name
+        )
+
+        intent.putExtra(
+            EXTRA_VIDEO_FOLDER,
+            video.folderName
         )
 
         startActivity(
@@ -1810,6 +1809,9 @@ class MainActivity : ComponentActivity() {
 
         private const val KEY_SEARCH_TEXT =
             "search_text"
+
+        const val EXTRA_VIDEO_FOLDER =
+            "com.vidora.player.EXTRA_VIDEO_FOLDER"
     }
 
     data class VideoItem(
