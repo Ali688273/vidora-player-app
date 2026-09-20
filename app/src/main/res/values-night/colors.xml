@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<resources>
+
+    <color name="vidora_background">#101114</color>
+
+    <color name="vidora_surface">#191B20</color>
+
+    <color name="vidora_primary">#5B8CFF</color>
+
+    <color name="vidora_text">#FFFFFF</color>
+
+    <color name="vidora_text_secondary">#AEB2BC</color>
+
+</resources>
