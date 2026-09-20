@@ -1,24 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="0dp"
     android:layout_height="wrap_content"
-    android:layout_margin="5dp"
+    android:layout_margin="2dp"
     android:background="@drawable/bg_video_item"
     android:clickable="true"
     android:focusable="true"
     android:gravity="center"
     android:orientation="vertical"
-    android:padding="10dp">
+    android:padding="4dp">
 
     <TextView
         android:id="@+id/folderIcon"
         android:layout_width="match_parent"
-        android:layout_height="70dp"
+        android:layout_height="38dp"
         android:gravity="center"
         android:text="📁"
-        android:textSize="42sp" />
+        android:textSize="25sp" />
 
     <TextView
         android:id="@+id/folderNameText"
@@ -28,17 +27,17 @@
         android:gravity="center"
         android:maxLines="2"
         android:textColor="@color/vidora_text"
-        android:textSize="14sp"
+        android:textSize="11sp"
         android:textStyle="bold" />
 
     <TextView
         android:id="@+id/folderInfoText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
+        android:layout_marginTop="1dp"
         android:gravity="center"
         android:maxLines="1"
         android:textColor="@color/vidora_text_secondary"
-        android:textSize="11sp" />
+        android:textSize="8sp" />
 
 </LinearLayout>
