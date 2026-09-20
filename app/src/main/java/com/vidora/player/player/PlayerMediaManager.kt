@@ -4,7 +4,6 @@ import android.Manifest
 import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
@@ -28,9 +27,11 @@ internal fun PlayerActivity.handlePlaybackEnded() {
     }
 
     if (!PlaybackSettings.autoPlayNext(this)) {
+
         updatePauseButton()
         updateCenterPlayButton()
         showPlayerControlsTemporarily()
+
         return
     }
 
@@ -40,7 +41,9 @@ internal fun PlayerActivity.handlePlaybackEnded() {
     if (currentUri != null) {
 
         val queue =
-            PlaybackQueueManager.getQueue(this)
+            PlaybackQueueManager.getQueue(
+                this
+            )
 
         val currentQueueIndex =
             queue.indexOfFirst {
@@ -99,8 +102,10 @@ internal fun PlayerActivity.handlePlaybackEnded() {
         getVideoUris()
 
     if (videos.isEmpty()) {
+
         updatePauseButton()
         updateCenterPlayButton()
+
         return
     }
 
@@ -118,7 +123,8 @@ internal fun PlayerActivity.handlePlaybackEnded() {
             currentIndex < 0 ->
                 0
 
-            currentIndex >= videos.lastIndex ->
+            currentIndex >=
+                videos.lastIndex ->
                 0
 
             else ->
@@ -139,7 +145,10 @@ internal fun PlayerActivity.handlePlaybackEnded() {
 
 internal fun PlayerActivity.getIncomingVideoUri(): Uri? {
 
-    if (intent.action == Intent.ACTION_VIEW) {
+    if (
+        intent.action ==
+        Intent.ACTION_VIEW
+    ) {
         return intent.data
     }
 
@@ -156,7 +165,6 @@ internal fun PlayerActivity.getIncomingVideoUri(): Uri? {
 }
 
 internal fun PlayerActivity.isExternalVideo(): Boolean {
-
     return intent.action ==
         Intent.ACTION_VIEW
 }
@@ -228,16 +236,25 @@ internal fun PlayerActivity.createPlayerWithSubtitle(
 ) {
 
     val subtitleMimeType =
-        getSubtitleMimeType(subtitleUri)
+        getSubtitleMimeType(
+            subtitleUri
+        )
 
     val subtitleLanguage =
-        detectSubtitleLanguage(subtitleUri)
+        detectSubtitleLanguage(
+            subtitleUri
+        )
 
     val subtitle =
-        MediaItem.SubtitleConfiguration
-            .Builder(subtitleUri)
-            .setMimeType(subtitleMimeType)
-            .setLanguage(subtitleLanguage)
+        MediaItem.SubtitleConfiguration.Builder(
+            subtitleUri
+        )
+            .setMimeType(
+                subtitleMimeType
+            )
+            .setLanguage(
+                subtitleLanguage
+            )
             .setSelectionFlags(
                 C.SELECTION_FLAG_DEFAULT
             )
@@ -251,7 +268,9 @@ internal fun PlayerActivity.createPlayerWithSubtitle(
             )
             .build()
 
-    createPlayer(mediaItem)
+    createPlayer(
+        mediaItem
+    )
 }
 
 internal fun PlayerActivity.getSubtitleMimeType(
@@ -267,7 +286,10 @@ internal fun PlayerActivity.getSubtitleMimeType(
             null
         }
 
-    if (detectedType == MimeTypes.TEXT_VTT) {
+    if (
+        detectedType ==
+        MimeTypes.TEXT_VTT
+    ) {
         return MimeTypes.TEXT_VTT
     }
 
@@ -354,10 +376,13 @@ internal fun PlayerActivity.getDisplayName(
         )?.use { cursor ->
 
             if (cursor.moveToFirst()) {
+
                 cursor.getString(0)
                     ?: uri.lastPathSegment
                     ?: "subtitle"
+
             } else {
+
                 uri.lastPathSegment
                     ?: "subtitle"
             }
@@ -387,16 +412,25 @@ internal fun PlayerActivity.createPlayer(
             ?: return
 
     if (!isExternalVideo()) {
-        syncQueueCurrentVideo(videoUri)
+        syncQueueCurrentVideo(
+            videoUri
+        )
     }
 
+    /*
+     * موقعیت Resume قبل از setMediaItem مشخص می‌شود.
+     * onMediaItemTransition دیگر این مقدار را پاک نمی‌کند.
+     */
     pendingResumePosition =
         if (
             isExternalVideo() ||
             !VidoraSettings.autoResume(this)
         ) {
+
             0L
+
         } else {
+
             PlaybackHistoryManager
                 .getPosition(
                     this,
@@ -410,8 +444,11 @@ internal fun PlayerActivity.createPlayer(
 
     currentSpeed =
         if (isExternalVideo()) {
+
             1.0f
+
         } else {
+
             VideoSpeedManager.getSpeed(
                 this,
                 videoUri
@@ -426,8 +463,11 @@ internal fun PlayerActivity.createPlayer(
 
     currentPlayer.repeatMode =
         if (repeatEnabled) {
+
             Player.REPEAT_MODE_ONE
+
         } else {
+
             Player.REPEAT_MODE_OFF
         }
 
@@ -450,9 +490,13 @@ internal fun PlayerActivity.createPlayer(
     updateCenterPlayButton()
     updateProgress()
 
+    applyAspectMode()
+
     showPlayerControlsTemporarily()
 
-    if (pendingResumePosition <= 0L) {
+    if (
+        pendingResumePosition <= 0L
+    ) {
         currentPlayer.play()
     }
 }
@@ -464,17 +508,25 @@ internal fun PlayerActivity.applyPendingResumePosition() {
     }
 
     val currentPlayer =
-        player
-            ?: return
+        player ?: return
 
     val position =
         pendingResumePosition
 
-    resumePositionApplied = true
-    pendingResumePosition = 0L
+    /*
+     * قبل از تغییر وضعیت، پرچم را set می‌کنیم
+     * تا callbackهای متعدد دوباره Resume را اجرا نکنند.
+     */
+    resumePositionApplied =
+        true
+
+    pendingResumePosition =
+        0L
 
     if (position <= 0L) {
+
         currentPlayer.play()
+
         return
     }
 
@@ -486,19 +538,26 @@ internal fun PlayerActivity.applyPendingResumePosition() {
             duration > 0L &&
             duration != C.TIME_UNSET
         ) {
+
             position.coerceIn(
                 0L,
-                (duration - 500L)
-                    .coerceAtLeast(0L)
+                (
+                    duration -
+                        500L
+                    ).coerceAtLeast(0L)
             )
+
         } else {
+
             position
         }
 
     try {
+
         currentPlayer.seekTo(
             safePosition
         )
+
     } catch (_: Exception) {
     }
 
@@ -518,7 +577,9 @@ internal fun PlayerActivity.syncQueueCurrentVideo(
     }
 
     val queue =
-        PlaybackQueueManager.getQueue(this)
+        PlaybackQueueManager.getQueue(
+            this
+        )
 
     if (queue.isEmpty()) {
         return
@@ -563,7 +624,8 @@ internal fun PlayerActivity.getVideoUris(): List<Uri> {
         ContextCompat.checkSelfPermission(
             this,
             requiredVideoPermission()
-        ) != PackageManager.PERMISSION_GRANTED
+        ) !=
+        PackageManager.PERMISSION_GRANTED
     ) {
         return emptyList()
     }
@@ -576,11 +638,14 @@ internal fun PlayerActivity.getVideoUris(): List<Uri> {
             Build.VERSION.SDK_INT >=
             Build.VERSION_CODES.Q
         ) {
+
             MediaStore.Video.Media
                 .getContentUri(
                     MediaStore.VOLUME_EXTERNAL
                 )
+
         } else {
+
             MediaStore.Video.Media
                 .EXTERNAL_CONTENT_URI
         }
@@ -605,7 +670,9 @@ internal fun PlayerActivity.getVideoUris(): List<Uri> {
             result.add(
                 Uri.withAppendedPath(
                     collection,
-                    cursor.getLong(idColumn).toString()
+                    cursor.getLong(
+                        idColumn
+                    ).toString()
                 )
             )
         }
@@ -620,8 +687,11 @@ internal fun PlayerActivity.requiredVideoPermission(): String {
         Build.VERSION.SDK_INT >=
         Build.VERSION_CODES.TIRAMISU
     ) {
+
         Manifest.permission.READ_MEDIA_VIDEO
+
     } else {
+
         Manifest.permission.READ_EXTERNAL_STORAGE
     }
 }
@@ -653,7 +723,9 @@ internal fun PlayerActivity.playPreviousVideo() {
                 previousUri
             )
 
-            openVideo(previousUri)
+            openVideo(
+                previousUri
+            )
 
             showTemporaryMessage(
                 p(
@@ -720,7 +792,9 @@ internal fun PlayerActivity.playNextVideo() {
                 nextUri
             )
 
-            openVideo(nextUri)
+            openVideo(
+                nextUri
+            )
 
             showTemporaryMessage(
                 p(
@@ -751,10 +825,14 @@ internal fun PlayerActivity.playNextVideo() {
     val nextIndex =
         if (
             currentIndex < 0 ||
-            currentIndex >= videos.lastIndex
+            currentIndex >=
+                videos.lastIndex
         ) {
+
             0
+
         } else {
+
             currentIndex + 1
         }
 
@@ -767,12 +845,16 @@ internal fun PlayerActivity.openVideo(
     uri: Uri
 ) {
 
+    /*
+     * قبل از تغییر URI، موقعیت ویدئوی فعلی ذخیره می‌شود.
+     */
     savePosition()
 
     intent.action =
         Intent.ACTION_MAIN
 
-    intent.data = null
+    intent.data =
+        null
 
     intent.putExtra(
         PlayerActivity.EXTRA_VIDEO_URI,
@@ -824,12 +906,15 @@ internal fun PlayerActivity.getVideoName(
     )?.use { cursor ->
 
         if (cursor.moveToFirst()) {
+
             cursor.getString(0)
                 ?: p(
                     "ویدئوی ناشناس",
                     "Unknown video"
                 )
+
         } else {
+
             p(
                 "ویدئوی ناشناس",
                 "Unknown video"
@@ -901,18 +986,21 @@ internal fun PlayerActivity.deleteCurrentVideo() {
             ?: return
 
     AlertDialog.Builder(this)
+
         .setTitle(
             p(
                 "حذف ویدئو",
                 "Delete video"
             )
         )
+
         .setMessage(
             p(
                 "آیا از حذف این ویدئو مطمئن هستید؟",
                 "Are you sure you want to delete this video?"
             )
         )
+
         .setNegativeButton(
             p(
                 "لغو",
@@ -920,14 +1008,17 @@ internal fun PlayerActivity.deleteCurrentVideo() {
             ),
             null
         )
+
         .setPositiveButton(
             p(
                 "حذف",
                 "Delete"
             )
         ) { _, _ ->
+
             deleteVideo(uri)
         }
+
         .show()
 }
 
@@ -969,7 +1060,9 @@ internal fun PlayerActivity.deleteVideo(
 
             if (deleted > 0) {
 
-                clearDeletedVideoData(uri)
+                clearDeletedVideoData(
+                    uri
+                )
 
                 showTemporaryMessage(
                     p(
@@ -1034,7 +1127,10 @@ internal fun PlayerActivity.handleDeleteResult(
             getIncomingVideoUri()
 
         if (uri != null) {
-            clearDeletedVideoData(uri)
+
+            clearDeletedVideoData(
+                uri
+            )
         }
 
         exitPlayer()
