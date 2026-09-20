@@ -16,7 +16,6 @@ import android.widget.TextView
 
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.OptIn
-import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 
 import androidx.media3.common.MediaItem
@@ -30,7 +29,7 @@ import com.google.common.util.concurrent.ListenableFuture
 @OptIn(androidx.media3.common.util.UnstableApi::class)
 class PlayerActivity : FragmentActivity() {
 
-    private lateinit var playerView: PlayerView
+    internal lateinit var playerView: PlayerView
 
     private lateinit var previousButton: Button
     private lateinit var nextButton: Button
@@ -44,7 +43,7 @@ class PlayerActivity : FragmentActivity() {
     private lateinit var subtitleButton: Button
     private lateinit var sleepTimerButton: Button
     private lateinit var shareButton: Button
-    private lateinit var deleteButton: Button
+    internal lateinit var deleteButton: Button
     private lateinit var lockButton: Button
     private lateinit var fullscreenButton: Button
     private lateinit var moreButton: Button
@@ -66,14 +65,14 @@ class PlayerActivity : FragmentActivity() {
     private lateinit var totalTimeText: TextView
 
     private lateinit var gestureInfo: TextView
-    private lateinit var lockedOverlay: TextView
+    internal lateinit var lockedOverlay: TextView
 
     internal var player: Player? = null
 
     internal var controllerFuture:
         ListenableFuture<MediaController>? = null
 
-    private lateinit var playbackAutoSaveManager:
+    internal lateinit var playbackAutoSaveManager:
         PlaybackAutoSaveManager
 
     internal var isLocked = false
@@ -154,12 +153,6 @@ class PlayerActivity : FragmentActivity() {
         BRIGHTNESS
     }
 
-    /*
-     * Subtitle picker
-     *
-     * این Launcher خصوصی است و فقط همین Activity
-     * مستقیماً به آن دسترسی دارد.
-     */
     private val subtitlePicker =
         registerForActivityResult(
             ActivityResultContracts.OpenDocument()
@@ -194,12 +187,6 @@ class PlayerActivity : FragmentActivity() {
             loadVideoWithSubtitle(uri)
         }
 
-    /*
-     * این تابع برای PlayerControlsManager است.
-     *
-     * دیگر لازم نیست فایل دیگر مستقیماً به
-     * subtitlePicker خصوصی دسترسی داشته باشد.
-     */
     internal fun subtitlePickerInternalLaunch() {
 
         subtitlePicker.launch(
@@ -301,10 +288,6 @@ class PlayerActivity : FragmentActivity() {
             this
         )
 
-        /*
-         * باید قبل از اتصال PlaybackService ساخته شود،
-         * چون callback سرویس ممکن است سریع اجرا شود.
-         */
         playbackAutoSaveManager =
             PlaybackAutoSaveManager(
                 this,
