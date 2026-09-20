@@ -1,8 +1,8 @@
 package com.vidora.player
 
 import android.view.View
-import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.common.Player
+import androidx.media3.ui.AspectRatioFrameLayout
 import java.util.Locale
 
 internal val PlayerActivity.aspectModes: IntArray
@@ -255,10 +255,6 @@ private fun PlayerActivity.subtitlePickerLaunch() {
 
 internal fun PlayerActivity.updateCenterPlayButton() {
 
-    if (!::centerPlayButton.isInitialized) {
-        return
-    }
-
     centerPlayButton.text =
         if (player?.isPlaying == true) {
             "⏸"
@@ -268,10 +264,6 @@ internal fun PlayerActivity.updateCenterPlayButton() {
 }
 
 internal fun PlayerActivity.updatePauseButton() {
-
-    if (!::pauseButton.isInitialized) {
-        return
-    }
 
     pauseButton.text =
         if (player?.isPlaying == true) {
