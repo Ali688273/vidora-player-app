@@ -21,9 +21,14 @@ internal fun PlayerActivity.setupPlayerGestures() {
                         ?: 0L
 
                 startVolume =
-                    audioManager.getStreamVolume(
-                        android.media.AudioManager.STREAM_MUSIC
-                    )
+                    player?.volume
+                        ?.let {
+                            (
+                                it * 100f
+                            )
+                                .toInt()
+                        }
+                        ?: 100
 
                 startBrightness =
                     window.attributes.screenBrightness
@@ -222,7 +227,9 @@ internal fun PlayerActivity.handleDoubleTap(
                 ).coerceAtMost(duration)
         }
 
-    currentPlayer.seekTo(newPosition)
+    currentPlayer.seekTo(
+        newPosition
+    )
 
     updateProgress()
 
@@ -280,7 +287,9 @@ internal fun PlayerActivity.handleSeek(
                 duration
             )
 
-    currentPlayer.seekTo(newPosition)
+    currentPlayer.seekTo(
+        newPosition
+    )
 
     val seconds =
         seekAmount.toLong() / 1000
@@ -299,10 +308,8 @@ internal fun PlayerActivity.handleVolume(
     deltaY: Float
 ) {
 
-    val maxVolume =
-        audioManager.getStreamMaxVolume(
-            android.media.AudioManager.STREAM_MUSIC
-        )
+    val currentPlayer =
+        player ?: return
 
     val height =
         playerView.height
@@ -312,7 +319,7 @@ internal fun PlayerActivity.handleVolume(
         (
             -deltaY /
                 height *
-                maxVolume
+                100f
             ).toInt()
 
     val newVolume =
@@ -321,28 +328,18 @@ internal fun PlayerActivity.handleVolume(
                 volumeChange
             ).coerceIn(
                 0,
-                maxVolume
+                100
             )
 
-    audioManager.setStreamVolume(
-        android.media.AudioManager.STREAM_MUSIC,
-        newVolume,
-        0
-    )
+    currentPlayer.volume =
+        newVolume / 100f
 
     saveDisplaySettings()
 
-    val percent =
-        if (maxVolume > 0) {
-            newVolume * 100 / maxVolume
-        } else {
-            0
-        }
-
     showGestureInfo(
         p(
-            "صدا $percent٪",
-            "Volume $percent%"
+            "صدا $newVolume٪",
+            "Volume $newVolume%"
         )
     )
 }
@@ -364,9 +361,9 @@ internal fun PlayerActivity.handleBrightness(
             startBrightness +
                 change
             ).coerceIn(
-            0.05f,
-            1.0f
-        )
+                0.05f,
+                1.0f
+            )
 
     val attributes =
         window.attributes
@@ -402,7 +399,9 @@ internal fun PlayerActivity.showTemporaryMessage(
     text: String
 ) {
 
-    showGestureInfo(text)
+    showGestureInfo(
+        text
+    )
 
     gestureInfo.postDelayed(
         {
