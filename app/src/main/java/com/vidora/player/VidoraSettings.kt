@@ -1,5 +1,6 @@
 package com.vidora.player
 
+import android.app.Activity
 import android.content.Context
 
 object VidoraSettings {
@@ -55,6 +56,26 @@ object VidoraSettings {
             context,
             value
         )
+
+        /*
+         * SettingsActivity رابط را به صورت
+         * programmatic می‌سازد.
+         *
+         * بنابراین بعد از تغییر حالت تاریک،
+         * Activity باید دوباره ساخته شود تا
+         * colors-night و Theme دوباره resolve شوند.
+         */
+        if (context is Activity) {
+
+            context.window.decorView.post {
+                if (
+                    !context.isFinishing &&
+                    !context.isDestroyed
+                ) {
+                    context.recreate()
+                }
+            }
+        }
     }
 
     fun getLanguage(
