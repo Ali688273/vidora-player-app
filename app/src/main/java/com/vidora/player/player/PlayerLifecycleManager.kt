@@ -2,7 +2,6 @@ package com.vidora.player
 
 import android.app.PictureInPictureParams
 import android.content.ComponentName
-import android.graphics.Rect
 import android.os.Build
 import android.util.Rational
 
@@ -25,72 +24,71 @@ internal fun PlayerActivity.connectToPlaybackService() {
         MediaController.Builder(
             this,
             sessionToken
-        )
-            .buildAsync()
+        ).buildAsync()
 
-    controllerFuture?.addListener(
-        {
-            try {
+    controllerFuture?.addListener({
 
-                val controller =
-                    controllerFuture?.get()
-                        ?: return@addListener
+        try {
 
-                player = controller
+            val controller =
+                controllerFuture?.get()
+                    ?: return@addListener
 
-                controller.addListener(
-                    playbackListener
+            player =
+                controller
+
+            controller.addListener(
+                playbackListener
+            )
+
+            playerView.player =
+                controller
+
+            initializePlayer()
+
+            updatePauseButton()
+            updateCenterPlayButton()
+            updateProgress()
+
+            applyAspectMode()
+
+            showPlayerControlsTemporarily()
+
+        } catch (_: Exception) {
+
+            showTemporaryMessage(
+                p(
+                    "خطا در اتصال پخش‌کننده",
+                    "Player connection error."
                 )
+            )
+        }
 
-                playerView.player =
-                    controller
-
-                initializePlayer()
-
-                updatePauseButton()
-                updateCenterPlayButton()
-                updateProgress()
-
-                showPlayerControlsTemporarily()
-
-            } catch (_: Exception) {
-
-                showTemporaryMessage(
-                    p(
-                        "خطا در اتصال پخش‌کننده",
-                        "Player connection error."
-                    )
-                )
-            }
-        },
-        ContextCompat.getMainExecutor(
-            this
-        )
-    )
+    }, ContextCompat.getMainExecutor(this))
 }
 
+/**
+ * هنگام خروج از Player فقط پخش را متوقف می‌کنیم.
+ *
+ * قبلاً clearMediaItems() اجرا می‌شد که باعث می‌شد
+ * قبل از بسته‌شدن Activity تصویر ویدئو به ابتدای آن
+ * برگردد و کاربر احساس کند Back ویدئو را Reset کرده است.
+ */
 internal fun PlayerActivity.stopPlaybackCompletely() {
 
     val currentPlayer =
-        player
-            ?: return
+        player ?: return
 
     try {
         currentPlayer.pause()
     } catch (_: Exception) {
     }
 
-    try {
-        currentPlayer.stop()
-    } catch (_: Exception) {
-    }
+    wasPlayingBeforePause =
+        false
 
-    try {
-        currentPlayer.clearMediaItems()
-    } catch (_: Exception) {
-    }
-
-    wasPlayingBeforePause = false
+    wasPlayingBeforeWindowFocusLoss =
+        false
 }
 
 internal fun PlayerActivity.exitPlayer() {
@@ -99,11 +97,21 @@ internal fun PlayerActivity.exitPlayer() {
         return
     }
 
-    isExitingPlayer = true
+    isExitingPlayer =
+        true
 
-    wasPlayingBeforePause = false
-    enteringPictureInPicture = false
+    wasPlayingBeforePause =
+        false
 
+    wasPlayingBeforeWindowFocusLoss =
+        false
+
+    enteringPictureInPicture =
+        false
+
+    /*
+     * قبل از هرگونه توقف، موقعیت فعلی ذخیره می‌شود.
+     */
     savePosition()
 
     playbackAutoSaveManager.stop()
@@ -120,7 +128,12 @@ internal fun PlayerActivity.exitPlayer() {
 
     stopPlaybackCompletely()
 
-    playerView.player = null
+    /*
+     * MediaItem را پاک نمی‌کنیم.
+     * فقط View را از Player جدا می‌کنیم و Activity را می‌بندیم.
+     */
+    playerView.player =
+        null
 
     finish()
 }
@@ -142,12 +155,16 @@ internal fun PlayerActivity.enterPictureInPictureModeIfPossible() {
         return
     }
 
-    enteringPictureInPicture = true
+    enteringPictureInPicture =
+        true
 
     val params =
         PictureInPictureParams.Builder()
             .setAspectRatio(
-                Rational(16, 9)
+                Rational(
+                    16,
+                    9
+                )
             )
             .build()
 
@@ -159,14 +176,17 @@ internal fun PlayerActivity.enterPictureInPictureModeIfPossible() {
 
     } catch (_: Exception) {
 
-        enteringPictureInPicture = false
+        enteringPictureInPicture =
+            false
     }
 }
 
 internal fun PlayerActivity.handlePlayerPause() {
 
     playbackAutoSaveManager.saveNow()
+
     savePosition()
+
     saveDisplaySettings()
 
     val currentPlayer =
@@ -179,7 +199,8 @@ internal fun PlayerActivity.handlePlayerPause() {
         !enteringPictureInPicture
     ) {
 
-        wasPlayingBeforePause = true
+        wasPlayingBeforePause =
+            true
 
         currentPlayer.pause()
 
@@ -209,14 +230,17 @@ internal fun PlayerActivity.handlePlayerResume() {
 
         currentPlayer.play()
 
-        wasPlayingBeforePause = false
+        wasPlayingBeforePause =
+            false
 
         updatePauseButton()
         updateCenterPlayButton()
     }
 
     if (!isLocked) {
+
         showPlayerControlsTemporarily()
+
     } else {
 
         lockedOverlay.visibility =
@@ -229,7 +253,9 @@ internal fun PlayerActivity.handlePlayerResume() {
 internal fun PlayerActivity.handlePlayerStop() {
 
     playbackAutoSaveManager.saveNow()
+
     savePosition()
+
     saveDisplaySettings()
 }
 
@@ -247,13 +273,15 @@ internal fun PlayerActivity.handlePlayerDestroy() {
         sleepHandler.removeCallbacks(it)
     }
 
-    sleepTimerRunnable = null
+    sleepTimerRunnable =
+        null
 
     if (!isExitingPlayer) {
 
         playbackAutoSaveManager.release()
 
         savePosition()
+
         saveDisplaySettings()
 
     } else {
@@ -265,12 +293,16 @@ internal fun PlayerActivity.handlePlayerDestroy() {
         playbackListener
     )
 
-    playerView.player = null
+    playerView.player =
+        null
 
     controllerFuture?.let {
         MediaController.releaseFuture(it)
     }
 
-    controllerFuture = null
-    player = null
+    controllerFuture =
+        null
+
+    player =
+        null
 }
