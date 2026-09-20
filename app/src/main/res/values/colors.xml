@@ -2,14 +2,11 @@
 
 <resources>
 
-    <color name="vidora_background">#101114</color>
-
-    <color name="vidora_surface">#191B20</color>
-
-    <color name="vidora_primary">#5B8CFF</color>
-
-    <color name="vidora_text">#FFFFFF</color>
-
-    <color name="vidora_text_secondary">#AEB2BC</color>
+    <!-- Light theme -->
+    <color name="vidora_background">#F7F8FA</color>
+    <color name="vidora_surface">#FFFFFF</color>
+    <color name="vidora_primary">#3F6FE5</color>
+    <color name="vidora_text">#17191D</color>
+    <color name="vidora_text_secondary">#626875</color>
 
 </resources>
