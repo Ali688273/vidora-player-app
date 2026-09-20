@@ -963,9 +963,9 @@ class MainActivity : ComponentActivity() {
             if (
                 widthDp >= 600f
             ) {
-                180f
+                110f
             } else {
-                160f
+                68f
             }
 
         val availableWidthDp =
@@ -979,7 +979,7 @@ class MainActivity : ComponentActivity() {
 
         return calculated.coerceIn(
             2,
-            4
+            5
         )
     }
 
@@ -1179,7 +1179,7 @@ class MainActivity : ComponentActivity() {
                             (
                                 width * 9 / 16
                             ).coerceAtLeast(
-                                dp(70)
+                                dp(40)
                             )
                     }
 
