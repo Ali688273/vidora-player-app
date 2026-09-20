@@ -16,6 +16,9 @@ import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 
+private const val VIDEO_FOLDER_EXTRA =
+    "com.vidora.player.EXTRA_VIDEO_FOLDER"
+
 internal fun PlayerActivity.handlePlaybackEnded() {
 
     if (isExternalVideo()) {
@@ -82,29 +85,32 @@ internal fun PlayerActivity.handlePlaybackEnded() {
 
                 return
             }
-
-            updatePauseButton()
-            updateCenterPlayButton()
-            showPlayerControlsTemporarily()
-
-            showTemporaryMessage(
-                p(
-                    "صف پخش به پایان رسید.",
-                    "Playback queue ended."
-                )
-            )
-
-            return
         }
     }
 
+    /*
+     * اگر صف پلی‌لیست به پایان رسیده باشد،
+     * دیگر نباید وارد کل MediaStore شود.
+     *
+     * فقط ویدئوهای همان پوشه بررسی می‌شوند.
+     */
+    val folder =
+        getIncomingVideoFolder()
+
     val videos =
-        getVideoUris()
+        if (folder.isNullOrBlank()) {
+            emptyList()
+        } else {
+            getFolderVideoUris(
+                folder
+            )
+        }
 
     if (videos.isEmpty()) {
 
         updatePauseButton()
         updateCenterPlayButton()
+        showPlayerControlsTemporarily()
 
         return
     }
@@ -117,19 +123,31 @@ internal fun PlayerActivity.handlePlaybackEnded() {
             }
         } ?: -1
 
+    /*
+     * آخرین ویدئوی پوشه:
+     * پخش خودکار متوقف می‌شود و به پوشه دیگری نمی‌رود.
+     */
+    if (
+        currentIndex < 0 ||
+        currentIndex >= videos.lastIndex
+    ) {
+
+        updatePauseButton()
+        updateCenterPlayButton()
+        showPlayerControlsTemporarily()
+
+        showTemporaryMessage(
+            p(
+                "پخش این پوشه به پایان رسید.",
+                "This folder's playback has ended."
+            )
+        )
+
+        return
+    }
+
     val nextIndex =
-        when {
-
-            currentIndex < 0 ->
-                0
-
-            currentIndex >=
-                videos.lastIndex ->
-                0
-
-            else ->
-                currentIndex + 1
-        }
+        currentIndex + 1
 
     openVideo(
         videos[nextIndex]
@@ -162,6 +180,20 @@ internal fun PlayerActivity.getIncomingVideoUri(): Uri? {
     }
 
     return Uri.parse(uriString)
+}
+
+internal fun PlayerActivity.getIncomingVideoFolder(): String? {
+
+    val folder =
+        intent.getStringExtra(
+            VIDEO_FOLDER_EXTRA
+        )
+
+    return folder
+        ?.trim()
+        ?.takeIf {
+            it.isNotEmpty()
+        }
 }
 
 internal fun PlayerActivity.isExternalVideo(): Boolean {
@@ -417,10 +449,6 @@ internal fun PlayerActivity.createPlayer(
         )
     }
 
-    /*
-     * موقعیت Resume قبل از setMediaItem مشخص می‌شود.
-     * onMediaItemTransition دیگر این مقدار را پاک نمی‌کند.
-     */
     pendingResumePosition =
         if (
             isExternalVideo() ||
@@ -513,10 +541,6 @@ internal fun PlayerActivity.applyPendingResumePosition() {
     val position =
         pendingResumePosition
 
-    /*
-     * قبل از تغییر وضعیت، پرچم را set می‌کنیم
-     * تا callbackهای متعدد دوباره Resume را اجرا نکنند.
-     */
     resumePositionApplied =
         true
 
@@ -681,6 +705,110 @@ internal fun PlayerActivity.getVideoUris(): List<Uri> {
     return result
 }
 
+internal fun PlayerActivity.getFolderVideoUris(
+    folderName: String
+): List<Uri> {
+
+    if (
+        ContextCompat.checkSelfPermission(
+            this,
+            requiredVideoPermission()
+        ) !=
+        PackageManager.PERMISSION_GRANTED
+    ) {
+        return emptyList()
+    }
+
+    val result =
+        mutableListOf<Uri>()
+
+    val collection =
+        if (
+            Build.VERSION.SDK_INT >=
+            Build.VERSION_CODES.Q
+        ) {
+
+            MediaStore.Video.Media
+                .getContentUri(
+                    MediaStore.VOLUME_EXTERNAL
+                )
+
+        } else {
+
+            MediaStore.Video.Media
+                .EXTERNAL_CONTENT_URI
+        }
+
+    val projection =
+        arrayOf(
+            MediaStore.Video.Media._ID,
+            MediaStore.Video.Media.BUCKET_DISPLAY_NAME
+        )
+
+    contentResolver.query(
+        collection,
+        projection,
+        "${MediaStore.Video.Media.BUCKET_DISPLAY_NAME} = ?",
+        arrayOf(folderName),
+        "${MediaStore.Video.Media.DATE_ADDED} DESC"
+    )?.use { cursor ->
+
+        val idColumn =
+            cursor.getColumnIndexOrThrow(
+                MediaStore.Video.Media._ID
+            )
+
+        val folderColumn =
+            cursor.getColumnIndex(
+                MediaStore.Video.Media.BUCKET_DISPLAY_NAME
+            )
+
+        while (cursor.moveToNext()) {
+
+            val currentFolder =
+                if (folderColumn >= 0) {
+                    cursor.getString(
+                        folderColumn
+                    )
+                } else {
+                    null
+                }
+
+            if (
+                currentFolder != folderName
+            ) {
+                continue
+            }
+
+            val uri =
+                Uri.withAppendedPath(
+                    collection,
+                    cursor.getLong(
+                        idColumn
+                    ).toString()
+                )
+
+            if (
+                HiddenVideoManager.isHidden(
+                    this,
+                    uri
+                ) &&
+                !VidoraSettings.showHidden(
+                    this
+                )
+            ) {
+                continue
+            }
+
+            result.add(
+                uri
+            )
+        }
+    }
+
+    return result
+}
+
 internal fun PlayerActivity.requiredVideoPermission(): String {
 
     return if (
@@ -738,8 +866,17 @@ internal fun PlayerActivity.playPreviousVideo() {
         }
     }
 
+    val folder =
+        getIncomingVideoFolder()
+
     val videos =
-        getVideoUris()
+        if (folder.isNullOrBlank()) {
+            emptyList()
+        } else {
+            getFolderVideoUris(
+                folder
+            )
+        }
 
     if (videos.isEmpty()) {
         return
@@ -753,15 +890,22 @@ internal fun PlayerActivity.playPreviousVideo() {
             }
         } ?: -1
 
-    val previousIndex =
-        if (currentIndex <= 0) {
-            videos.lastIndex
-        } else {
-            currentIndex - 1
-        }
+    if (
+        currentIndex <= 0
+    ) {
+
+        showTemporaryMessage(
+            p(
+                "اولین ویدئوی این پوشه است.",
+                "This is the first video in this folder."
+            )
+        )
+
+        return
+    }
 
     openVideo(
-        videos[previousIndex]
+        videos[currentIndex - 1]
     )
 }
 
@@ -807,8 +951,17 @@ internal fun PlayerActivity.playNextVideo() {
         }
     }
 
+    val folder =
+        getIncomingVideoFolder()
+
     val videos =
-        getVideoUris()
+        if (folder.isNullOrBlank()) {
+            emptyList()
+        } else {
+            getFolderVideoUris(
+                folder
+            )
+        }
 
     if (videos.isEmpty()) {
         return
@@ -822,22 +975,24 @@ internal fun PlayerActivity.playNextVideo() {
             }
         } ?: -1
 
-    val nextIndex =
-        if (
-            currentIndex < 0 ||
-            currentIndex >=
-                videos.lastIndex
-        ) {
+    if (
+        currentIndex < 0 ||
+        currentIndex >=
+            videos.lastIndex
+    ) {
 
-            0
+        showTemporaryMessage(
+            p(
+                "آخرین ویدئوی این پوشه است.",
+                "This is the last video in this folder."
+            )
+        )
 
-        } else {
-
-            currentIndex + 1
-        }
+        return
+    }
 
     openVideo(
-        videos[nextIndex]
+        videos[currentIndex + 1]
     )
 }
 
@@ -845,9 +1000,6 @@ internal fun PlayerActivity.openVideo(
     uri: Uri
 ) {
 
-    /*
-     * قبل از تغییر URI، موقعیت ویدئوی فعلی ذخیره می‌شود.
-     */
     savePosition()
 
     intent.action =
