@@ -44,6 +44,10 @@ internal fun PlayerActivity.connectToPlaybackService() {
             playerView.player =
                 controller
 
+            VidoraAudioRouteManager.register(
+                this
+            )
+
             initializePlayer()
 
             updatePauseButton()
@@ -115,6 +119,10 @@ internal fun PlayerActivity.exitPlayer() {
     savePosition()
 
     playbackAutoSaveManager.stop()
+
+    VidoraAudioRouteManager.unregister(
+        this
+    )
 
     saveDisplaySettings()
 
@@ -213,6 +221,10 @@ internal fun PlayerActivity.handlePlayerResume() {
 
     loadSavedDisplaySettings()
 
+    VidoraAudioRouteManager.applyCurrentRouteVolume(
+        this
+    )
+
     if (
         isExitingPlayer ||
         enteringPictureInPicture
@@ -275,6 +287,10 @@ internal fun PlayerActivity.handlePlayerDestroy() {
 
     sleepTimerRunnable =
         null
+
+    VidoraAudioRouteManager.unregister(
+        this
+    )
 
     if (!isExitingPlayer) {
 
