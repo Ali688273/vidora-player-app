@@ -35,6 +35,9 @@ internal object VidoraAudioRouteManager {
     private const val KEY_USB =
         "usb"
 
+    private const val KEY_MIGRATION =
+        "route_volume_migration_v2"
+
     private var registered =
         false
 
@@ -88,6 +91,8 @@ internal object VidoraAudioRouteManager {
                 ?: return
 
         if (!registered) {
+
+            migrateBrokenRouteVolumes(context)
 
             registered =
                 true
@@ -190,14 +195,11 @@ internal object VidoraAudioRouteManager {
                 route
             )
 
-        if (saved != null) {
-
-            currentPlayer.volume =
-                saved.coerceIn(
-                    0f,
-                    1f
-                )
-        }
+        currentPlayer.volume =
+            (saved ?: 1f).coerceIn(
+                0f,
+                1f
+            )
     }
 
     private fun handleRouteChanged() {
@@ -246,14 +248,39 @@ internal object VidoraAudioRouteManager {
                 newRoute
             )
 
-        if (saved != null) {
+        currentPlayer.volume =
+            (saved ?: 1f).coerceIn(
+                0f,
+                1f
+            )
+    }
 
-            currentPlayer.volume =
-                saved.coerceIn(
-                    0f,
-                    1f
-                )
+    private fun migrateBrokenRouteVolumes(
+        context: Context
+    ) {
+
+        val prefs =
+            context.getSharedPreferences(
+                PREFS_NAME,
+                Context.MODE_PRIVATE
+            )
+
+        if (
+            prefs.getBoolean(
+                KEY_MIGRATION,
+                false
+            )
+        ) {
+            return
         }
+
+        prefs.edit()
+            .clear()
+            .putBoolean(
+                KEY_MIGRATION,
+                true
+            )
+            .apply()
     }
 
     private fun detectRoute(
