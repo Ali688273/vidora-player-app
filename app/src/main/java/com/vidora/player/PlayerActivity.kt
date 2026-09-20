@@ -1,6 +1,7 @@
 package com.vidora.player
 
 import android.content.Context
+import android.content.res.Configuration
 import android.media.AudioManager
 import android.os.Bundle
 import android.os.Handler
@@ -21,7 +22,6 @@ import androidx.fragment.app.FragmentActivity
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
-import androidx.media3.session.SessionToken
 import androidx.media3.ui.PlayerView
 
 import com.google.common.util.concurrent.ListenableFuture
@@ -107,7 +107,6 @@ class PlayerActivity : FragmentActivity() {
         object : Runnable {
 
             override fun run() {
-
                 updateProgress()
 
                 progressHandler.postDelayed(
@@ -118,7 +117,6 @@ class PlayerActivity : FragmentActivity() {
         }
 
     internal val audioManager: AudioManager by lazy {
-
         getSystemService(
             Context.AUDIO_SERVICE
         ) as AudioManager
@@ -136,6 +134,14 @@ class PlayerActivity : FragmentActivity() {
 
     internal var wasPlayingBeforePause = false
     internal var enteringPictureInPicture = false
+
+    /**
+     * وقتی پنجره تبلیغ روی Activity می‌آید،
+     * بعضی SDKها Activity را pause نمی‌کنند ولی focus پنجره را می‌گیرند.
+     * این متغیر اجازه می‌دهد بعد از بسته‌شدن تبلیغ فقط در صورتی
+     * که ویدئو قبل از تبلیغ در حال پخش بوده، دوباره پخش شود.
+     */
+    internal var wasPlayingBeforeWindowFocusLoss = false
 
     internal var downX = 0f
     internal var downY = 0f
@@ -163,12 +169,10 @@ class PlayerActivity : FragmentActivity() {
             }
 
             try {
-
                 contentResolver.takePersistableUriPermission(
                     uri,
                     android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
                 )
-
             } catch (_: Exception) {
             }
 
@@ -176,7 +180,6 @@ class PlayerActivity : FragmentActivity() {
                 getIncomingVideoUri()
 
             if (videoUri != null) {
-
                 SubtitleFileManager.setSubtitleUri(
                     this,
                     videoUri,
@@ -188,7 +191,6 @@ class PlayerActivity : FragmentActivity() {
         }
 
     internal fun subtitlePickerInternalLaunch() {
-
         subtitlePicker.launch(
             arrayOf(
                 "text/*",
@@ -227,7 +229,6 @@ class PlayerActivity : FragmentActivity() {
             override fun onIsPlayingChanged(
                 isPlaying: Boolean
             ) {
-
                 updatePauseButton()
                 updateCenterPlayButton()
                 updateProgress()
@@ -238,9 +239,16 @@ class PlayerActivity : FragmentActivity() {
                 reason: Int
             ) {
 
-                resumePositionApplied = false
-                pendingResumePosition = 0L
-
+                /*
+                 * مهم:
+                 * قبلاً اینجا pendingResumePosition صفر می‌شد.
+                 * چون Media3 هنگام setMediaItem/prepare می‌تواند
+                 * همین callback را قبل از STATE_READY صدا بزند،
+                 * موقعیت ذخیره‌شده از بین می‌رفت.
+                 *
+                 * createPlayer() مسئول تعیین موقعیت Resume است
+                 * و applyPendingResumePosition() آن را اعمال می‌کند.
+                 */
                 val uri =
                     mediaItem
                         ?.localConfiguration
@@ -257,7 +265,6 @@ class PlayerActivity : FragmentActivity() {
     override fun attachBaseContext(
         newBase: Context
     ) {
-
         super.attachBaseContext(
             VidoraLocaleManager.apply(
                 newBase
@@ -323,173 +330,107 @@ class PlayerActivity : FragmentActivity() {
     private fun bindViews() {
 
         playerView =
-            findViewById(
-                R.id.playerView
-            )
+            findViewById(R.id.playerView)
 
         topBar =
-            findViewById(
-                R.id.topBar
-            )
+            findViewById(R.id.topBar)
 
         progressPanel =
-            findViewById(
-                R.id.progressPanel
-            )
+            findViewById(R.id.progressPanel)
 
         progressSeekBar =
-            findViewById(
-                R.id.progressSeekBar
-            )
+            findViewById(R.id.progressSeekBar)
 
         currentTimeText =
-            findViewById(
-                R.id.currentTimeText
-            )
+            findViewById(R.id.currentTimeText)
 
         remainingTimeText =
-            findViewById(
-                R.id.remainingTimeText
-            )
+            findViewById(R.id.remainingTimeText)
 
         totalTimeText =
-            findViewById(
-                R.id.totalTimeText
-            )
+            findViewById(R.id.totalTimeText)
 
         previousButton =
-            findViewById(
-                R.id.previousButton
-            )
+            findViewById(R.id.previousButton)
 
         pauseButton =
-            findViewById(
-                R.id.pauseButton
-            )
+            findViewById(R.id.pauseButton)
 
         nextButton =
-            findViewById(
-                R.id.nextButton
-            )
+            findViewById(R.id.nextButton)
 
         repeatButton =
-            findViewById(
-                R.id.repeatButton
-            )
+            findViewById(R.id.repeatButton)
 
         audioButton =
-            findViewById(
-                R.id.audioButton
-            )
+            findViewById(R.id.audioButton)
 
         favoriteButton =
-            findViewById(
-                R.id.favoriteButton
-            )
+            findViewById(R.id.favoriteButton)
 
         speedMinusButton =
-            findViewById(
-                R.id.speedMinusButton
-            )
+            findViewById(R.id.speedMinusButton)
 
         speedButton =
-            findViewById(
-                R.id.speedButton
-            )
+            findViewById(R.id.speedButton)
 
         speedPlusButton =
-            findViewById(
-                R.id.speedPlusButton
-            )
+            findViewById(R.id.speedPlusButton)
 
         aspectButton =
-            findViewById(
-                R.id.aspectButton
-            )
+            findViewById(R.id.aspectButton)
 
         subtitleButton =
-            findViewById(
-                R.id.subtitleButton
-            )
+            findViewById(R.id.subtitleButton)
 
         sleepTimerButton =
-            findViewById(
-                R.id.sleepTimerButton
-            )
+            findViewById(R.id.sleepTimerButton)
 
         shareButton =
-            findViewById(
-                R.id.shareButton
-            )
+            findViewById(R.id.shareButton)
 
         deleteButton =
-            findViewById(
-                R.id.deleteButton
-            )
+            findViewById(R.id.deleteButton)
 
         lockButton =
-            findViewById(
-                R.id.lockButton
-            )
+            findViewById(R.id.lockButton)
 
         fullscreenButton =
-            findViewById(
-                R.id.fullscreenButton
-            )
+            findViewById(R.id.fullscreenButton)
 
         moreButton =
-            findViewById(
-                R.id.moreButton
-            )
+            findViewById(R.id.moreButton)
 
         backButton =
-            findViewById(
-                R.id.backButton
-            )
+            findViewById(R.id.backButton)
 
         centerPreviousButton =
-            findViewById(
-                R.id.centerPreviousButton
-            )
+            findViewById(R.id.centerPreviousButton)
 
         centerPlayButton =
-            findViewById(
-                R.id.centerPlayButton
-            )
+            findViewById(R.id.centerPlayButton)
 
         centerNextButton =
-            findViewById(
-                R.id.centerNextButton
-            )
+            findViewById(R.id.centerNextButton)
 
         controlScroll =
-            findViewById(
-                R.id.controlScroll
-            )
+            findViewById(R.id.controlScroll)
 
         gestureInfo =
-            findViewById(
-                R.id.gestureInfo
-            )
+            findViewById(R.id.gestureInfo)
 
         lockedOverlay =
-            findViewById(
-                R.id.lockedOverlay
-            )
+            findViewById(R.id.lockedOverlay)
     }
 
     internal fun isPersian(): Boolean {
-
-        return VidoraLanguageManager.isPersian(
-            this
-        )
+        return VidoraLanguageManager.isPersian(this)
     }
 
     internal fun p(
         persian: String,
         english: String
     ): String {
-
         return if (isPersian()) {
             persian
         } else {
@@ -506,7 +447,6 @@ class PlayerActivity : FragmentActivity() {
                 override fun onStartTrackingTouch(
                     seekBar: SeekBar
                 ) {
-
                     progressUserSeeking = true
                 }
 
@@ -516,10 +456,7 @@ class PlayerActivity : FragmentActivity() {
 
                     val currentPlayer =
                         player ?: run {
-
-                            progressUserSeeking =
-                                false
-
+                            progressUserSeeking = false
                             return
                         }
 
@@ -531,10 +468,7 @@ class PlayerActivity : FragmentActivity() {
                         duration ==
                         androidx.media3.common.C.TIME_UNSET
                     ) {
-
-                        progressUserSeeking =
-                            false
-
+                        progressUserSeeking = false
                         return
                     }
 
@@ -542,7 +476,7 @@ class PlayerActivity : FragmentActivity() {
                         (
                             duration *
                                 seekBar.progress
-                            ).toLong() /
+                        ).toLong() /
                             1000L
 
                     currentPlayer.seekTo(
@@ -552,8 +486,7 @@ class PlayerActivity : FragmentActivity() {
                         )
                     )
 
-                    progressUserSeeking =
-                        false
+                    progressUserSeeking = false
 
                     updateProgress()
 
@@ -588,9 +521,7 @@ class PlayerActivity : FragmentActivity() {
                             1000L
 
                     currentTimeText.text =
-                        formatTime(
-                            position
-                        )
+                        formatTime(position)
 
                     remainingTimeText.text =
                         "-${
@@ -598,7 +529,9 @@ class PlayerActivity : FragmentActivity() {
                                 (
                                     duration -
                                         position
-                                    ).coerceAtLeast(0L)
+                                ).coerceAtLeast(
+                                    0L
+                                )
                             )
                         }"
                 }
@@ -666,17 +599,16 @@ class PlayerActivity : FragmentActivity() {
                     position.toDouble() /
                         duration.toDouble() *
                         1000.0
-                    ).toInt()
-                        .coerceIn(
-                            0,
-                            1000
-                        )
+                )
+                    .toInt()
+                    .coerceIn(
+                        0,
+                        1000
+                    )
         }
 
         currentTimeText.text =
-            formatTime(
-                position
-            )
+            formatTime(position)
 
         remainingTimeText.text =
             "-${
@@ -684,14 +616,65 @@ class PlayerActivity : FragmentActivity() {
                     (
                         duration -
                             position
-                        ).coerceAtLeast(0L)
+                    ).coerceAtLeast(0L)
                 )
             }"
 
         totalTimeText.text =
-            formatTime(
-                duration
-            )
+            formatTime(duration)
+    }
+
+    /**
+     * اعمال مجدد حالت FIT/FILL/ZOOM.
+     *
+     * چون PlayerActivity با configChanges کار می‌کند،
+     * هنگام چرخش Activity دوباره ساخته نمی‌شود.
+     * بنابراین باید resizeMode را صریحاً بعد از Rotation
+     * دوباره اعمال کنیم.
+     */
+    internal fun applyAspectMode() {
+
+        val mode =
+            when (aspectIndex) {
+
+                1 ->
+                    androidx.media3.ui.AspectRatioFrameLayout
+                        .RESIZE_MODE_FILL
+
+                2 ->
+                    androidx.media3.ui.AspectRatioFrameLayout
+                        .RESIZE_MODE_ZOOM
+
+                else ->
+                    androidx.media3.ui.AspectRatioFrameLayout
+                        .RESIZE_MODE_FIT
+            }
+
+        playerView.resizeMode = mode
+        playerView.requestLayout()
+        playerView.invalidate()
+    }
+
+    override fun onConfigurationChanged(
+        newConfig: Configuration
+    ) {
+
+        super.onConfigurationChanged(
+            newConfig
+        )
+
+        window.decorView.post {
+            applyAspectMode()
+
+            if (!isLocked) {
+                showPlayerControlsTemporarily()
+            } else {
+                lockedOverlay.visibility =
+                    View.VISIBLE
+
+                lockedOverlay.bringToFront()
+            }
+        }
     }
 
     internal fun loadSavedDisplaySettings() {
@@ -700,10 +683,11 @@ class PlayerActivity : FragmentActivity() {
             getSharedPreferences(
                 DISPLAY_PREFS,
                 Context.MODE_PRIVATE
-            ).getInt(
-                KEY_VOLUME,
-                -1
             )
+                .getInt(
+                    KEY_VOLUME,
+                    -1
+                )
 
         if (savedVolume >= 0) {
 
@@ -726,10 +710,11 @@ class PlayerActivity : FragmentActivity() {
             getSharedPreferences(
                 DISPLAY_PREFS,
                 Context.MODE_PRIVATE
-            ).getFloat(
-                KEY_BRIGHTNESS,
-                -1f
             )
+                .getFloat(
+                    KEY_BRIGHTNESS,
+                    -1f
+                )
 
         if (savedBrightness >= 0f) {
 
@@ -827,21 +812,22 @@ class PlayerActivity : FragmentActivity() {
                         dpToPx(12)
                 }
 
-        lockedOverlay.layoutParams
-            .let { params ->
+        lockedOverlay.layoutParams.let {
+            params ->
 
-                if (
-                    params is FrameLayout.LayoutParams
-                ) {
+            if (
+                params
+                    is FrameLayout.LayoutParams
+            ) {
 
-                    params.gravity =
-                        Gravity.TOP or
-                            Gravity.END
+                params.gravity =
+                    Gravity.TOP or
+                        Gravity.END
 
-                    lockedOverlay.layoutParams =
-                        params
-                }
+                lockedOverlay.layoutParams =
+                    params
             }
+        }
 
         lockedOverlay.elevation =
             dpToPx(20).toFloat()
@@ -872,7 +858,6 @@ class PlayerActivity : FragmentActivity() {
     internal fun dpToPx(
         value: Int
     ): Int {
-
         return (
             value *
                 resources.displayMetrics.density
@@ -944,6 +929,74 @@ class PlayerActivity : FragmentActivity() {
 
                 lockedOverlay.bringToFront()
             }
+        }
+    }
+
+    /**
+     * بعض تبلیغات Activity را Pause نمی‌کنند
+     * ولی Focus پنجره را می‌گیرند.
+     *
+     * فقط در صورتی که قبل از از دست رفتن Focus
+     * ویدئو در حال پخش بوده باشد، بعد از برگشت Focus
+     * دوباره آن را اجرا می‌کنیم.
+     */
+    override fun onWindowFocusChanged(
+        hasFocus: Boolean
+    ) {
+
+        super.onWindowFocusChanged(
+            hasFocus
+        )
+
+        if (isExitingPlayer) {
+            return
+        }
+
+        if (
+            !hasFocus &&
+            !isInPictureInPictureMode &&
+            !enteringPictureInPicture
+        ) {
+
+            val currentPlayer =
+                player
+
+            if (
+                currentPlayer != null &&
+                currentPlayer.isPlaying
+            ) {
+
+                wasPlayingBeforeWindowFocusLoss =
+                    true
+
+                currentPlayer.pause()
+
+                updatePauseButton()
+                updateCenterPlayButton()
+            }
+
+            return
+        }
+
+        if (
+            hasFocus &&
+            wasPlayingBeforeWindowFocusLoss &&
+            !isInPictureInPictureMode &&
+            !enteringPictureInPicture
+        ) {
+
+            val currentPlayer =
+                player
+
+            if (currentPlayer != null) {
+                currentPlayer.play()
+            }
+
+            wasPlayingBeforeWindowFocusLoss =
+                false
+
+            updatePauseButton()
+            updateCenterPlayButton()
         }
     }
 
