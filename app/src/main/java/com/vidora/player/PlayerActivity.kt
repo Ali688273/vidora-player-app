@@ -1,6 +1,5 @@
 package com.vidora.player
 
-import android.content.ComponentName
 import android.content.Context
 import android.media.AudioManager
 import android.os.Bundle
@@ -15,11 +14,11 @@ import android.widget.FrameLayout
 import android.widget.SeekBar
 import android.widget.TextView
 
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.OptIn
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 
-import androidx.media3.cast.MediaRouteButtonViewProvider
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
@@ -31,50 +30,50 @@ import com.google.common.util.concurrent.ListenableFuture
 @OptIn(androidx.media3.common.util.UnstableApi::class)
 class PlayerActivity : FragmentActivity() {
 
-    internal lateinit var playerView: PlayerView
+    private lateinit var playerView: PlayerView
 
-    internal lateinit var previousButton: Button
-    internal lateinit var nextButton: Button
-    internal lateinit var repeatButton: Button
-    internal lateinit var audioButton: Button
-    internal lateinit var favoriteButton: Button
-    internal lateinit var speedMinusButton: Button
-    internal lateinit var speedButton: Button
-    internal lateinit var speedPlusButton: Button
-    internal lateinit var aspectButton: Button
-    internal lateinit var subtitleButton: Button
-    internal lateinit var sleepTimerButton: Button
-    internal lateinit var shareButton: Button
-    internal lateinit var deleteButton: Button
-    internal lateinit var lockButton: Button
-    internal lateinit var fullscreenButton: Button
-    internal lateinit var moreButton: Button
+    private lateinit var previousButton: Button
+    private lateinit var nextButton: Button
+    private lateinit var repeatButton: Button
+    private lateinit var audioButton: Button
+    private lateinit var favoriteButton: Button
+    private lateinit var speedMinusButton: Button
+    private lateinit var speedButton: Button
+    private lateinit var speedPlusButton: Button
+    private lateinit var aspectButton: Button
+    private lateinit var subtitleButton: Button
+    private lateinit var sleepTimerButton: Button
+    private lateinit var shareButton: Button
+    private lateinit var deleteButton: Button
+    private lateinit var lockButton: Button
+    private lateinit var fullscreenButton: Button
+    private lateinit var moreButton: Button
 
-    internal lateinit var backButton: Button
-    internal lateinit var pauseButton: Button
+    private lateinit var backButton: Button
+    private lateinit var pauseButton: Button
 
-    internal lateinit var centerPreviousButton: Button
-    internal lateinit var centerPlayButton: Button
-    internal lateinit var centerNextButton: Button
+    private lateinit var centerPreviousButton: Button
+    private lateinit var centerPlayButton: Button
+    private lateinit var centerNextButton: Button
 
-    internal lateinit var topBar: View
-    internal lateinit var controlScroll: View
-    internal lateinit var progressPanel: View
-    internal lateinit var progressSeekBar: SeekBar
+    private lateinit var topBar: View
+    private lateinit var controlScroll: View
+    private lateinit var progressPanel: View
+    private lateinit var progressSeekBar: SeekBar
 
-    internal lateinit var currentTimeText: TextView
-    internal lateinit var remainingTimeText: TextView
-    internal lateinit var totalTimeText: TextView
+    private lateinit var currentTimeText: TextView
+    private lateinit var remainingTimeText: TextView
+    private lateinit var totalTimeText: TextView
 
-    internal lateinit var gestureInfo: TextView
-    internal lateinit var lockedOverlay: TextView
+    private lateinit var gestureInfo: TextView
+    private lateinit var lockedOverlay: TextView
 
     internal var player: Player? = null
 
     internal var controllerFuture:
         ListenableFuture<MediaController>? = null
 
-    internal lateinit var playbackAutoSaveManager:
+    private lateinit var playbackAutoSaveManager:
         PlaybackAutoSaveManager
 
     internal var isLocked = false
@@ -107,7 +106,9 @@ class PlayerActivity : FragmentActivity() {
 
     internal val progressRunnable =
         object : Runnable {
+
             override fun run() {
+
                 updateProgress()
 
                 progressHandler.postDelayed(
@@ -118,6 +119,7 @@ class PlayerActivity : FragmentActivity() {
         }
 
     internal val audioManager: AudioManager by lazy {
+
         getSystemService(
             Context.AUDIO_SERVICE
         ) as AudioManager
@@ -152,9 +154,15 @@ class PlayerActivity : FragmentActivity() {
         BRIGHTNESS
     }
 
+    /*
+     * Subtitle picker
+     *
+     * این Launcher خصوصی است و فقط همین Activity
+     * مستقیماً به آن دسترسی دارد.
+     */
     private val subtitlePicker =
         registerForActivityResult(
-            androidx.activity.result.contract.ActivityResultContracts.OpenDocument()
+            ActivityResultContracts.OpenDocument()
         ) { uri ->
 
             if (uri == null) {
@@ -162,10 +170,12 @@ class PlayerActivity : FragmentActivity() {
             }
 
             try {
+
                 contentResolver.takePersistableUriPermission(
                     uri,
                     android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
                 )
+
             } catch (_: Exception) {
             }
 
@@ -173,6 +183,7 @@ class PlayerActivity : FragmentActivity() {
                 getIncomingVideoUri()
 
             if (videoUri != null) {
+
                 SubtitleFileManager.setSubtitleUri(
                     this,
                     videoUri,
@@ -182,6 +193,23 @@ class PlayerActivity : FragmentActivity() {
 
             loadVideoWithSubtitle(uri)
         }
+
+    /*
+     * این تابع برای PlayerControlsManager است.
+     *
+     * دیگر لازم نیست فایل دیگر مستقیماً به
+     * subtitlePicker خصوصی دسترسی داشته باشد.
+     */
+    internal fun subtitlePickerInternalLaunch() {
+
+        subtitlePicker.launch(
+            arrayOf(
+                "text/*",
+                "application/x-subrip",
+                "text/vtt"
+            )
+        )
+    }
 
     internal val playbackListener =
         object : Player.Listener {
@@ -212,6 +240,7 @@ class PlayerActivity : FragmentActivity() {
             override fun onIsPlayingChanged(
                 isPlaying: Boolean
             ) {
+
                 updatePauseButton()
                 updateCenterPlayButton()
                 updateProgress()
@@ -221,11 +250,14 @@ class PlayerActivity : FragmentActivity() {
                 mediaItem: MediaItem?,
                 reason: Int
             ) {
+
                 resumePositionApplied = false
                 pendingResumePosition = 0L
 
                 val uri =
-                    mediaItem?.localConfiguration?.uri
+                    mediaItem
+                        ?.localConfiguration
+                        ?.uri
 
                 if (uri != null) {
                     updateFavoriteButton()
@@ -238,6 +270,7 @@ class PlayerActivity : FragmentActivity() {
     override fun attachBaseContext(
         newBase: Context
     ) {
+
         super.attachBaseContext(
             VidoraLocaleManager.apply(
                 newBase
@@ -248,7 +281,10 @@ class PlayerActivity : FragmentActivity() {
     override fun onCreate(
         savedInstanceState: Bundle?
     ) {
-        super.onCreate(savedInstanceState)
+
+        super.onCreate(
+            savedInstanceState
+        )
 
         window.addFlags(
             WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
@@ -265,20 +301,10 @@ class PlayerActivity : FragmentActivity() {
             this
         )
 
-        setupProgressBar()
-        loadSavedDisplaySettings()
-
-        setupPlayerButtons()
-        setupPlayerCenterButtons()
-        setupPlayerGestures()
-        setupLockedOverlay()
-
-        setupCastButton()
-
-        connectToPlaybackService()
-
-        enterFullscreen()
-
+        /*
+         * باید قبل از اتصال PlaybackService ساخته شود،
+         * چون callback سرویس ممکن است سریع اجرا شود.
+         */
         playbackAutoSaveManager =
             PlaybackAutoSaveManager(
                 this,
@@ -286,6 +312,19 @@ class PlayerActivity : FragmentActivity() {
                 { getIncomingVideoUri() },
                 { isExternalVideo() }
             )
+
+        setupProgressBar()
+        loadSavedDisplaySettings()
+
+        setupPlayerButtons()
+        setupPlayerCenterButtons()
+        setupPlayerGestures()
+        setupLockedOverlay()
+        setupCastButton()
+
+        connectToPlaybackService()
+
+        enterFullscreen()
 
         playbackAutoSaveManager.start()
 
@@ -301,100 +340,163 @@ class PlayerActivity : FragmentActivity() {
     private fun bindViews() {
 
         playerView =
-            findViewById(R.id.playerView)
+            findViewById(
+                R.id.playerView
+            )
 
         topBar =
-            findViewById(R.id.topBar)
+            findViewById(
+                R.id.topBar
+            )
 
         progressPanel =
-            findViewById(R.id.progressPanel)
+            findViewById(
+                R.id.progressPanel
+            )
 
         progressSeekBar =
-            findViewById(R.id.progressSeekBar)
+            findViewById(
+                R.id.progressSeekBar
+            )
 
         currentTimeText =
-            findViewById(R.id.currentTimeText)
+            findViewById(
+                R.id.currentTimeText
+            )
 
         remainingTimeText =
-            findViewById(R.id.remainingTimeText)
+            findViewById(
+                R.id.remainingTimeText
+            )
 
         totalTimeText =
-            findViewById(R.id.totalTimeText)
+            findViewById(
+                R.id.totalTimeText
+            )
 
         previousButton =
-            findViewById(R.id.previousButton)
+            findViewById(
+                R.id.previousButton
+            )
 
         pauseButton =
-            findViewById(R.id.pauseButton)
+            findViewById(
+                R.id.pauseButton
+            )
 
         nextButton =
-            findViewById(R.id.nextButton)
+            findViewById(
+                R.id.nextButton
+            )
 
         repeatButton =
-            findViewById(R.id.repeatButton)
+            findViewById(
+                R.id.repeatButton
+            )
 
         audioButton =
-            findViewById(R.id.audioButton)
+            findViewById(
+                R.id.audioButton
+            )
 
         favoriteButton =
-            findViewById(R.id.favoriteButton)
+            findViewById(
+                R.id.favoriteButton
+            )
 
         speedMinusButton =
-            findViewById(R.id.speedMinusButton)
+            findViewById(
+                R.id.speedMinusButton
+            )
 
         speedButton =
-            findViewById(R.id.speedButton)
+            findViewById(
+                R.id.speedButton
+            )
 
         speedPlusButton =
-            findViewById(R.id.speedPlusButton)
+            findViewById(
+                R.id.speedPlusButton
+            )
 
         aspectButton =
-            findViewById(R.id.aspectButton)
+            findViewById(
+                R.id.aspectButton
+            )
 
         subtitleButton =
-            findViewById(R.id.subtitleButton)
+            findViewById(
+                R.id.subtitleButton
+            )
 
         sleepTimerButton =
-            findViewById(R.id.sleepTimerButton)
+            findViewById(
+                R.id.sleepTimerButton
+            )
 
         shareButton =
-            findViewById(R.id.shareButton)
+            findViewById(
+                R.id.shareButton
+            )
 
         deleteButton =
-            findViewById(R.id.deleteButton)
+            findViewById(
+                R.id.deleteButton
+            )
 
         lockButton =
-            findViewById(R.id.lockButton)
+            findViewById(
+                R.id.lockButton
+            )
 
         fullscreenButton =
-            findViewById(R.id.fullscreenButton)
+            findViewById(
+                R.id.fullscreenButton
+            )
 
         moreButton =
-            findViewById(R.id.moreButton)
+            findViewById(
+                R.id.moreButton
+            )
 
         backButton =
-            findViewById(R.id.backButton)
+            findViewById(
+                R.id.backButton
+            )
 
         centerPreviousButton =
-            findViewById(R.id.centerPreviousButton)
+            findViewById(
+                R.id.centerPreviousButton
+            )
 
         centerPlayButton =
-            findViewById(R.id.centerPlayButton)
+            findViewById(
+                R.id.centerPlayButton
+            )
 
         centerNextButton =
-            findViewById(R.id.centerNextButton)
+            findViewById(
+                R.id.centerNextButton
+            )
 
         controlScroll =
-            findViewById(R.id.controlScroll)
+            findViewById(
+                R.id.controlScroll
+            )
 
         gestureInfo =
-            findViewById(R.id.gestureInfo)
+            findViewById(
+                R.id.gestureInfo
+            )
 
         lockedOverlay =
-            findViewById(R.id.lockedOverlay)
+            findViewById(
+                R.id.lockedOverlay
+            )
     }
 
     internal fun isPersian(): Boolean {
+
         return VidoraLanguageManager.isPersian(
             this
         )
@@ -404,6 +506,7 @@ class PlayerActivity : FragmentActivity() {
         persian: String,
         english: String
     ): String {
+
         return if (isPersian()) {
             persian
         } else {
@@ -414,11 +517,13 @@ class PlayerActivity : FragmentActivity() {
     internal fun setupProgressBar() {
 
         progressSeekBar.setOnSeekBarChangeListener(
-            object : SeekBar.OnSeekBarChangeListener {
+            object :
+                SeekBar.OnSeekBarChangeListener {
 
                 override fun onStartTrackingTouch(
                     seekBar: SeekBar
                 ) {
+
                     progressUserSeeking = true
                 }
 
@@ -428,7 +533,10 @@ class PlayerActivity : FragmentActivity() {
 
                     val currentPlayer =
                         player ?: run {
-                            progressUserSeeking = false
+
+                            progressUserSeeking =
+                                false
+
                             return
                         }
 
@@ -440,7 +548,10 @@ class PlayerActivity : FragmentActivity() {
                         duration ==
                         androidx.media3.common.C.TIME_UNSET
                     ) {
-                        progressUserSeeking = false
+
+                        progressUserSeeking =
+                            false
+
                         return
                     }
 
@@ -458,7 +569,8 @@ class PlayerActivity : FragmentActivity() {
                         )
                     )
 
-                    progressUserSeeking = false
+                    progressUserSeeking =
+                        false
 
                     updateProgress()
 
@@ -493,15 +605,19 @@ class PlayerActivity : FragmentActivity() {
                             1000L
 
                     currentTimeText.text =
-                        formatTime(position)
+                        formatTime(
+                            position
+                        )
 
                     remainingTimeText.text =
-                        "-${formatTime(
-                            (
-                                duration -
-                                    position
-                                ).coerceAtLeast(0L)
-                        )}"
+                        "-${
+                            formatTime(
+                                (
+                                    duration -
+                                        position
+                                    ).coerceAtLeast(0L)
+                            )
+                        }"
                 }
             }
         )
@@ -563,7 +679,8 @@ class PlayerActivity : FragmentActivity() {
     internal fun saveDisplaySettings() {
 
         val currentBrightness =
-            window.attributes.screenBrightness
+            window.attributes
+                .screenBrightness
                 .takeIf {
                     it >= 0f
                 }
@@ -592,7 +709,7 @@ class PlayerActivity : FragmentActivity() {
         try {
 
             playerView.setMediaRouteButtonViewProvider(
-                MediaRouteButtonViewProvider()
+                androidx.media3.cast.MediaRouteButtonViewProvider()
             )
 
         } catch (_: Exception) {
@@ -612,21 +729,21 @@ class PlayerActivity : FragmentActivity() {
             (
                 lockedOverlay.layoutParams
                     as? ViewGroup.MarginLayoutParams
-            )?.apply {
+                )?.apply {
 
-                width =
-                    dpToPx(52)
+                    width =
+                        dpToPx(52)
 
-                height =
-                    dpToPx(52)
+                    height =
+                        dpToPx(52)
 
-                topMargin =
-                    dpToPx(64)
+                    topMargin =
+                        dpToPx(64)
 
-                marginEnd =
-                    dpToPx(12)
+                    marginEnd =
+                        dpToPx(12)
 
-            }
+                }
                 ?: ViewGroup.MarginLayoutParams(
                     dpToPx(52),
                     dpToPx(52)
@@ -639,18 +756,21 @@ class PlayerActivity : FragmentActivity() {
                         dpToPx(12)
                 }
 
-        lockedOverlay.layoutParams.let { params ->
+        lockedOverlay.layoutParams
+            .let { params ->
 
-            if (params is FrameLayout.LayoutParams) {
+                if (
+                    params is FrameLayout.LayoutParams
+                ) {
 
-                params.gravity =
-                    Gravity.TOP or
-                        Gravity.END
+                    params.gravity =
+                        Gravity.TOP or
+                            Gravity.END
 
-                lockedOverlay.layoutParams =
-                    params
+                    lockedOverlay.layoutParams =
+                        params
+                }
             }
-        }
 
         lockedOverlay.elevation =
             dpToPx(20).toFloat()
@@ -681,6 +801,7 @@ class PlayerActivity : FragmentActivity() {
     internal fun dpToPx(
         value: Int
     ): Int {
+
         return (
             value *
                 resources.displayMetrics.density
@@ -692,6 +813,7 @@ class PlayerActivity : FragmentActivity() {
         resultCode: Int,
         data: android.content.Intent?
     ) {
+
         super.onActivityResult(
             requestCode,
             resultCode,
@@ -705,6 +827,7 @@ class PlayerActivity : FragmentActivity() {
     }
 
     override fun onUserLeaveHint() {
+
         super.onUserLeaveHint()
 
         enterPictureInPictureModeIfPossible()
@@ -740,8 +863,11 @@ class PlayerActivity : FragmentActivity() {
                 View.VISIBLE
 
             if (!isLocked) {
+
                 showPlayerControlsTemporarily()
+
             } else {
+
                 lockedOverlay.visibility =
                     View.VISIBLE
 
