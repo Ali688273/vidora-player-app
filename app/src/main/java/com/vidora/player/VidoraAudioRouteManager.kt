@@ -7,8 +7,16 @@ import android.media.AudioManager
 import androidx.media3.common.Player
 
 /**
- * صدای داخلی Vidora را برای هر مسیر خروجی به‌صورت جداگانه نگه می‌دارد.
- * این کلاس volume سیستم را تغییر نمی‌دهد و فقط player.volume را مدیریت می‌کند.
+ * مدیریت حجم صدای داخلی Vidora برای مسیرهای مختلف خروجی.
+ *
+ * صدای سیستم را تغییر نمی‌دهد.
+ * فقط player.volume را برای هر مسیر خروجی جداگانه نگه می‌دارد.
+ *
+ * مسیرها:
+ * - speaker
+ * - wired
+ * - bluetooth
+ * - usb
  */
 internal object VidoraAudioRouteManager {
 
@@ -218,11 +226,16 @@ internal object VidoraAudioRouteManager {
             return
         }
 
-        saveVolume(
-            context,
-            lastRoute,
-            currentPlayer.volume
-        )
+        if (
+            lastRoute.isNotBlank()
+        ) {
+
+            saveVolume(
+                context,
+                lastRoute,
+                currentPlayer.volume
+            )
+        }
 
         lastRoute =
             newRoute
@@ -266,21 +279,15 @@ internal object VidoraAudioRouteManager {
             when (device.type) {
 
                 AudioDeviceInfo.TYPE_BLUETOOTH_A2DP,
-                AudioDeviceInfo.TYPE_BLUETOOTH_SCO,
-                AudioDeviceInfo.TYPE_BLUETOOTH_LE ->
-                    hasBluetooth =
-                        true
+                AudioDeviceInfo.TYPE_BLUETOOTH_SCO ->
+                    hasBluetooth = true
 
                 AudioDeviceInfo.TYPE_WIRED_HEADPHONES,
                 AudioDeviceInfo.TYPE_WIRED_HEADSET ->
-                    hasWired =
-                        true
+                    hasWired = true
 
-                AudioDeviceInfo.TYPE_USB_HEADSET,
-                AudioDeviceInfo.TYPE_USB_DEVICE,
-                AudioDeviceInfo.TYPE_USB_ACCESSORY ->
-                    hasUsb =
-                        true
+                AudioDeviceInfo.TYPE_USB_HEADSET ->
+                    hasUsb = true
             }
         }
 
