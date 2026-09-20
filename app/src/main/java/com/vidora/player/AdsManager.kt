@@ -398,6 +398,8 @@ object AdsManager {
             !responseId.isNullOrBlank()
         ) {
 
+            pausePlayerForAd(activity)
+
             showingAd = true
 
             try {
@@ -423,6 +425,10 @@ object AdsManager {
                             activity
                         )
 
+                        resumePlayerAfterAd(
+                            activity
+                        )
+
                         Log.d(
                             TAG,
                             "Tapsell interstitial closed"
@@ -434,6 +440,10 @@ object AdsManager {
 
                         tapsellInterstitialResponseId =
                             null
+
+                        resumePlayerAfterAd(
+                            activity
+                        )
 
                         Log.e(
                             TAG,
@@ -463,6 +473,8 @@ object AdsManager {
             }
         }
 
+        pausePlayerForAd(activity)
+
         showAdiveryInterstitial(
             activity
         )
@@ -491,6 +503,8 @@ object AdsManager {
             !responseId.isNullOrBlank()
         ) {
 
+            pausePlayerForAd(activity)
+
             showingAd = true
 
             try {
@@ -516,6 +530,10 @@ object AdsManager {
                             activity
                         )
 
+                        resumePlayerAfterAd(
+                            activity
+                        )
+
                         Log.d(
                             TAG,
                             "Tapsell rewarded closed"
@@ -536,6 +554,10 @@ object AdsManager {
 
                         tapsellRewardedResponseId =
                             null
+
+                        resumePlayerAfterAd(
+                            activity
+                        )
 
                         Log.e(
                             TAG,
@@ -566,10 +588,67 @@ object AdsManager {
             }
         }
 
+        pausePlayerForAd(activity)
+
         showAdiveryRewarded(
             activity,
             onRewarded
         )
+    }
+
+    private fun pausePlayerForAd(
+        activity: Activity
+    ) {
+
+        if (activity !is PlayerActivity) {
+            return
+        }
+
+        val currentPlayer =
+            activity.player
+
+        if (
+            currentPlayer != null &&
+            currentPlayer.isPlaying
+        ) {
+
+            activity.wasPlayingBeforeWindowFocusLoss =
+                true
+
+            currentPlayer.pause()
+
+            activity.updatePauseButton()
+            activity.updateCenterPlayButton()
+        }
+    }
+
+    private fun resumePlayerAfterAd(
+        activity: Activity
+    ) {
+
+        if (activity !is PlayerActivity) {
+            return
+        }
+
+        if (
+            activity.isExitingPlayer ||
+            activity.isInPictureInPictureMode
+        ) {
+            return
+        }
+
+        if (
+            activity.wasPlayingBeforeWindowFocusLoss
+        ) {
+
+            activity.player?.play()
+
+            activity.wasPlayingBeforeWindowFocusLoss =
+                false
+
+            activity.updatePauseButton()
+            activity.updateCenterPlayButton()
+        }
     }
 
     private fun showAdiveryInterstitial(
