@@ -6,8 +6,6 @@ import android.widget.EditText
 import android.widget.LinearLayout
 
 import androidx.media3.common.C
-import androidx.media3.common.PlaybackParameters
-import androidx.media3.common.Player
 import androidx.media3.ui.TrackSelectionDialogBuilder
 
 internal fun PlayerActivity.showMoreMenu() {
@@ -745,12 +743,9 @@ internal fun PlayerActivity.cancelSleepTimer() {
 
     sleepTimerRunnable = null
 
-    if (::sleepTimerButton.isInitialized) {
-
-        sleepTimerButton.text =
-            p(
-                "خواب",
-                "Sleep"
-            )
-    }
+    sleepTimerButton.text =
+        p(
+            "خواب",
+            "Sleep"
+        )
 }
