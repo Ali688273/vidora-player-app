@@ -749,7 +749,8 @@ class MainActivity : ComponentActivity() {
     ) {
 
         displayResponsiveGrid(
-            itemCount = folders.size
+            itemCount = folders.size,
+            columnCount = calculateFolderGridColumnCount()
         ) { row, index ->
 
             val folder =
@@ -879,7 +880,8 @@ class MainActivity : ComponentActivity() {
     ) {
 
         displayResponsiveGrid(
-            itemCount = videos.size
+            itemCount = videos.size,
+            columnCount = calculateVideoGridColumnCount()
         ) { row, index ->
 
             addGridVideoItem(
@@ -891,6 +893,7 @@ class MainActivity : ComponentActivity() {
 
     private fun displayResponsiveGrid(
         itemCount: Int,
+        columnCount: Int,
         addItem: (
             LinearLayout,
             Int
@@ -901,8 +904,11 @@ class MainActivity : ComponentActivity() {
             return
         }
 
-        val columnCount =
-            calculateGridColumnCount()
+        val safeColumnCount =
+            columnCount.coerceIn(
+                1,
+                5
+            )
 
         var row: LinearLayout? =
             null
@@ -910,7 +916,7 @@ class MainActivity : ComponentActivity() {
         repeat(itemCount) { index ->
 
             if (
-                index % columnCount == 0
+                index % safeColumnCount == 0
             ) {
 
                 row =
@@ -948,39 +954,28 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun calculateGridColumnCount(): Int {
+    private fun isLandscape(): Boolean {
 
-        val widthPixels =
-            resources.displayMetrics.widthPixels
+        return resources.configuration.orientation ==
+            android.content.res.Configuration.ORIENTATION_LANDSCAPE
+    }
 
-        val density =
-            resources.displayMetrics.density
+    private fun calculateFolderGridColumnCount(): Int {
 
-        val widthDp =
-            widthPixels / density
-
-        val minimumItemWidthDp =
-            if (
-                widthDp >= 600f
-            ) {
-                110f
-            } else {
-                68f
-            }
-
-        val availableWidthDp =
-            widthDp - 16f
-
-        val calculated =
-            (
-                availableWidthDp /
-                    minimumItemWidthDp
-                ).toInt()
-
-        return calculated.coerceIn(
-            2,
+        return if (isLandscape()) {
             5
-        )
+        } else {
+            3
+        }
+    }
+
+    private fun calculateVideoGridColumnCount(): Int {
+
+        return if (isLandscape()) {
+            3
+        } else {
+            2
+        }
     }
 
     private fun addFolderItem(
