@@ -1027,7 +1027,7 @@ internal fun PlayerActivity.handleDeleteResult(
         requestCode ==
         PlayerActivity.DELETE_REQUEST_CODE &&
         resultCode ==
-        RESULT_OK
+        android.app.Activity.RESULT_OK
     ) {
 
         val uri =
