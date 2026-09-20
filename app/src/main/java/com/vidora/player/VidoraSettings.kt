@@ -34,7 +34,7 @@ object VidoraSettings {
         return preferences(context)
             .getBoolean(
                 KEY_DARK_MODE,
-                true
+                false
             )
     }
 
@@ -50,6 +50,11 @@ object VidoraSettings {
                 value
             )
             .apply()
+
+        VidoraThemeManager.apply(
+            context,
+            value
+        )
     }
 
     fun getLanguage(
