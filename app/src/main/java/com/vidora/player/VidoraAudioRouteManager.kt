@@ -35,8 +35,10 @@ internal object VidoraAudioRouteManager {
     private const val KEY_USB =
         "usb"
 
+    private const val DEFAULT_VOLUME = 0.30f
+
     private const val KEY_MIGRATION =
-        "route_volume_migration_v2"
+        "route_volume_migration_v3"
 
     private var registered =
         false
@@ -196,7 +198,7 @@ internal object VidoraAudioRouteManager {
             )
 
         currentPlayer.volume =
-            (saved ?: 0.35f).coerceIn(
+            (saved ?: DEFAULT_VOLUME).coerceIn(
                 0f,
                 1f
             )
@@ -249,7 +251,7 @@ internal object VidoraAudioRouteManager {
             )
 
         currentPlayer.volume =
-            (saved ?: 1f).coerceIn(
+            (saved ?: DEFAULT_VOLUME).coerceIn(
                 0f,
                 1f
             )
