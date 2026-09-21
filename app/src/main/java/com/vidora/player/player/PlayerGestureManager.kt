@@ -390,8 +390,12 @@ internal fun PlayerActivity.handleVolume(
                 100
             )
 
-    currentPlayer.volume =
+    val volume =
         newVolume / 100f
+
+    VidoraAudioRouteManager.onUserVolumeChanged(
+        volume
+    )
 
     saveDisplaySettings()
 
