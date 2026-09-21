@@ -196,7 +196,7 @@ internal object VidoraAudioRouteManager {
             )
 
         currentPlayer.volume =
-            (saved ?: 1f).coerceIn(
+            (saved ?: 0.35f).coerceIn(
                 0f,
                 1f
             )
