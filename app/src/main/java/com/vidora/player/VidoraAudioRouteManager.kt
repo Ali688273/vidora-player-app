@@ -38,7 +38,7 @@ internal object VidoraAudioRouteManager {
     private const val DEFAULT_VOLUME = 0.30f
 
     private const val KEY_MIGRATION =
-        "route_volume_migration_v5"
+        "route_volume_migration_v6"
 
     private var registered =
         false
@@ -353,10 +353,20 @@ internal object VidoraAudioRouteManager {
             return null
         }
 
-        return prefs.getFloat(
-            route,
-            1f
-        )
+        val value =
+            prefs.getFloat(
+                route,
+                DEFAULT_VOLUME
+            )
+
+        return if (
+            value.isFinite() &&
+            value in 0f..1f
+        ) {
+            value
+        } else {
+            null
+        }
     }
 
     private fun saveVolume(
