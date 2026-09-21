@@ -61,7 +61,7 @@ internal fun PlayerActivity.setupPlayerGestures() {
                         player?.playbackParameters =
                             androidx.media3.common.PlaybackParameters(2.0f)
 
-                        hideGestureInfo()
+                        showSpeedIndicator(2.0f)
                     }
                 }
 
@@ -96,7 +96,7 @@ internal fun PlayerActivity.setupPlayerGestures() {
                     player?.playbackParameters =
                         androidx.media3.common.PlaybackParameters(speed)
 
-                    hideGestureInfo()
+                    showSpeedIndicator(speed)
 
                     return@setOnTouchListener true
                 }
@@ -167,7 +167,7 @@ internal fun PlayerActivity.setupPlayerGestures() {
                         )
 
                     longPressSpeedActive = false
-                    hideGestureInfo()
+                    hideSpeedIndicator()
                     gestureMode =
                         PlayerActivity.GestureMode.NONE
 
@@ -231,6 +231,7 @@ internal fun PlayerActivity.setupPlayerGestures() {
                             longPressOriginalSpeed
                         )
                     longPressSpeedActive = false
+                    hideSpeedIndicator()
                 }
 
                 gestureMode =
@@ -472,5 +473,23 @@ internal fun PlayerActivity.showTemporaryMessage(
 internal fun PlayerActivity.hideGestureInfo() {
 
     gestureInfo.visibility =
+        View.GONE
+}
+
+
+internal fun PlayerActivity.showSpeedIndicator(
+    speed: Float
+) {
+
+    speedIndicator.text =
+        "⏩ %.1f×".format(speed)
+
+    speedIndicator.visibility =
+        View.VISIBLE
+}
+
+internal fun PlayerActivity.hideSpeedIndicator() {
+
+    speedIndicator.visibility =
         View.GONE
 }
