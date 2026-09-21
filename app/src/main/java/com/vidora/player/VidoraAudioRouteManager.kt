@@ -224,11 +224,18 @@ internal object VidoraAudioRouteManager {
                 route
             )
 
-        currentPlayer.volume =
+        val targetVolume =
             (saved ?: DEFAULT_VOLUME).coerceIn(
                 0f,
                 1f
             )
+
+        applySystemMediaVolume(
+            manager,
+            targetVolume
+        )
+
+        currentPlayer.volume = 1f
     }
 
     /**
@@ -263,8 +270,18 @@ internal object VidoraAudioRouteManager {
                 1f
             )
 
+        val manager =
+            audioManager
+
+        if (manager != null) {
+            applySystemMediaVolume(
+                manager,
+                safeVolume
+            )
+        }
+
         currentPlayer.volume =
-            safeVolume
+            if (safeVolume > 0f) 1f else 0f
 
         saveVolume(
             context,
@@ -381,11 +398,48 @@ internal object VidoraAudioRouteManager {
                 newRoute
             )
 
-        currentPlayer.volume =
+        val targetVolume =
             (saved ?: DEFAULT_VOLUME).coerceIn(
                 0f,
                 1f
             )
+
+        applySystemMediaVolume(
+            manager,
+            targetVolume
+        )
+
+        currentPlayer.volume = 1f
+    }
+
+
+    /**
+     * صدای واقعی Media در اندروید با STREAM_MUSIC کنترل می‌شود.
+     * player.volume فقط gain داخلی Media3 است.
+     */
+    private fun applySystemMediaVolume(
+        manager: AudioManager,
+        fraction: Float
+    ) {
+        val maxVolume =
+            manager.getStreamMaxVolume(
+                AudioManager.STREAM_MUSIC
+            )
+
+        if (maxVolume <= 0) {
+            return
+        }
+
+        val target =
+            (fraction.coerceIn(0f, 1f) * maxVolume)
+                .toInt()
+                .coerceIn(0, maxVolume)
+
+        manager.setStreamVolume(
+            AudioManager.STREAM_MUSIC,
+            target,
+            0
+        )
     }
 
     private fun isHeadphoneRoute(
