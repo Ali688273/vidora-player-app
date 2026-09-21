@@ -9,75 +9,38 @@ import android.os.Looper
 import androidx.media3.common.Player
 
 /**
- * مدیریت مستقل صدای خروجی‌های مختلف Vidora.
+ * مدیریت مسیر صدای Vidora.
  *
- * حجم هر مسیر جداگانه ذخیره می‌شود:
- * - speaker
- * - wired
- * - bluetooth
- * - usb
+ * ولوم واقعی خروجی توسط STREAM_MUSIC خود Android کنترل می‌شود.
+ * player.volume فقط روی 1.0 نگه داشته می‌شود تا دو ولوم روی هم ضرب نشوند.
  *
- * نکته مهم:
- * حذف هندزفری نباید حجم ذخیره‌شده هندزفری را به بلندگو منتقل کند.
- * همچنین بعد از جدا شدن هندزفری، پخش خودکار از بلندگو انجام نمی‌شود.
- * در این حالت فقط صدای player موقتاً صفر می‌شود و با تغییر دستی صدا دوباره فعال می‌شود.
+ * کلیدهای فیزیکی گوشی و ژست ولوم سمت راست Vidora بنابراین یک ولوم واقعی
+ * را کنترل می‌کنند.
+ *
+ * بعد از جدا شدن هندزفری، برای جلوگیری از پخش ناخواسته روی اسپیکر،
+ * فقط player موقتاً mute می‌شود و با تغییر دستی ولوم دوباره فعال می‌شود.
  */
 internal object VidoraAudioRouteManager {
 
-    private const val PREFS_NAME =
-        "vidora_audio_routes"
-
-    private const val KEY_SPEAKER =
-        "speaker"
-
-    private const val KEY_WIRED =
-        "wired"
-
-    private const val KEY_BLUETOOTH =
-        "bluetooth"
-
-    private const val KEY_USB =
-        "usb"
-
-    private const val DEFAULT_VOLUME = 0.30f
-
-    private const val KEY_MIGRATION =
-        "route_volume_migration_v7"
-
-    private var registered =
-        false
-
-    private var lastRoute =
-        ""
-
-    private var mutedAfterHeadphoneRemoval =
-        false
-
-    private var player:
-        Player? = null
-
-    private var audioManager:
-        AudioManager? = null
-
-    private var applicationContext:
-        Context? = null
+    private var registered = false
+    private var lastRoute = ""
+    private var mutedAfterHeadphoneRemoval = false
+    private var player: Player? = null
+    private var audioManager: AudioManager? = null
 
     private val mainHandler =
         Handler(Looper.getMainLooper())
 
     private val deviceCallback =
         object : AudioDeviceCallback() {
-
             override fun onAudioDevicesAdded(
-                addedDevices:
-                    Array<out AudioDeviceInfo>
+                addedDevices: Array<out AudioDeviceInfo>
             ) {
                 scheduleRouteCheck()
             }
 
             override fun onAudioDevicesRemoved(
-                removedDevices:
-                    Array<out AudioDeviceInfo>
+                removedDevices: Array<out AudioDeviceInfo>
             ) {
                 scheduleRouteCheck()
             }
@@ -86,12 +49,7 @@ internal object VidoraAudioRouteManager {
     fun register(
         context: PlayerActivity
     ) {
-
-        player =
-            context.player
-
-        applicationContext =
-            context.applicationContext
+        player = context.player
 
         audioManager =
             context.getSystemService(
@@ -99,23 +57,12 @@ internal object VidoraAudioRouteManager {
             ) as? AudioManager
 
         val manager =
-            audioManager
-                ?: return
+            audioManager ?: return
 
         if (!registered) {
-
-            migrateBrokenRouteVolumes(context)
-
-            registered =
-                true
-
-            lastRoute =
-                detectRoute(
-                    manager
-                )
-
-            mutedAfterHeadphoneRemoval =
-                false
+            registered = true
+            lastRoute = detectRoute(manager)
+            mutedAfterHeadphoneRemoval = false
 
             manager.registerAudioDeviceCallback(
                 deviceCallback,
@@ -123,78 +70,35 @@ internal object VidoraAudioRouteManager {
             )
         }
 
-        applyCurrentRouteVolume(
-            context
-        )
+        applyCurrentRouteVolume(context)
     }
 
     fun unregister(
         context: PlayerActivity
     ) {
-
-        val currentPlayer =
-            player
-
-        val contextToSave =
-            applicationContext
-
-        if (
-            currentPlayer != null &&
-            contextToSave != null &&
-            lastRoute.isNotBlank()
-        ) {
-            if (
-                !(
-                    lastRoute == KEY_SPEAKER &&
-                    mutedAfterHeadphoneRemoval
-                )
-            ) {
-                saveVolume(
-                    contextToSave,
-                    lastRoute,
-                    currentPlayer.volume
-                )
-            }
-        }
-
         if (registered) {
-
-            audioManager
-                ?.unregisterAudioDeviceCallback(
-                    deviceCallback
-                )
+            audioManager?.unregisterAudioDeviceCallback(
+                deviceCallback
+            )
         }
 
         mainHandler.removeCallbacksAndMessages(null)
 
-        registered =
-            false
-
-        lastRoute =
-            ""
-
-        mutedAfterHeadphoneRemoval =
-            false
-
-        player =
-            null
-
-        audioManager =
-            null
-
-        applicationContext =
-            null
+        registered = false
+        lastRoute = ""
+        mutedAfterHeadphoneRemoval = false
+        player = null
+        audioManager = null
     }
 
+    /**
+     * gain داخلی همیشه 100% است.
+     * ولوم واقعی فقط از STREAM_MUSIC می‌آید.
+     */
     fun applyCurrentRouteVolume(
         context: PlayerActivity
     ) {
-
-        player =
-            context.player
-
-        applicationContext =
-            context.applicationContext
+        player = context.player
 
         audioManager =
             context.getSystemService(
@@ -207,43 +111,14 @@ internal object VidoraAudioRouteManager {
         val manager =
             audioManager ?: return
 
-        val route =
-            detectRoute(
-                manager
-            )
+        lastRoute = detectRoute(manager)
+        mutedAfterHeadphoneRemoval = false
 
-        lastRoute =
-            route
-
-        mutedAfterHeadphoneRemoval =
-            false
-
-        val saved =
-            getSavedVolume(
-                context,
-                route
-            )
-
-        val targetVolume =
-            (saved ?: DEFAULT_VOLUME).coerceIn(
-                0f,
-                1f
-            )
-
-        currentPlayer.volume = targetVolume
+        currentPlayer.volume = 1f
     }
 
     /**
-     * وقتی کاربر با ژست تغییر صدا را به‌صورت دستی انجام می‌دهد،
-     * mute موقت ناشی از جدا شدن هندزفری باید برداشته شود.
-     */
-    /**
-     * اگر صدای Media خود Android روی صفر باشد، حتی player.volume
-     * بالاتر از صفر هم خروجی شنیداری نخواهد داشت.
-     *
-     * این فقط در لحظه شروع پخش و فقط وقتی سیستم واقعاً صفر است
-     * یک پله صدای Media را بالا می‌برد؛ مقدار Vidora همچنان مستقل
-     * و جداگانه مدیریت می‌شود.
+     * اگر Media volume سیستم صفر باشد، هنگام شروع پخش فقط یک پله بالا می‌رود.
      */
     fun ensureSystemMediaVolumeAudible(
         context: PlayerActivity
@@ -274,46 +149,84 @@ internal object VidoraAudioRouteManager {
         }
     }
 
+    /**
+     * ژست سمت راست = ولوم واقعی Media گوشی.
+     */
     fun onUserVolumeChanged(
         volume: Float
     ) {
-
-        val context =
-            applicationContext
-                ?: return
-
         val currentPlayer =
-            player
-                ?: return
+            player ?: return
 
-        val route =
-            lastRoute
+        val manager =
+            audioManager ?: return
 
-        if (route.isBlank()) {
+        if (manager.isVolumeFixed()) {
+            currentPlayer.volume = 1f
+            mutedAfterHeadphoneRemoval = false
             return
         }
 
-        mutedAfterHeadphoneRemoval =
-            false
-
         val safeVolume =
-            volume.coerceIn(
-                0f,
-                1f
+            volume.coerceIn(0f, 1f)
+
+        val maxVolume =
+            manager.getStreamMaxVolume(
+                AudioManager.STREAM_MUSIC
             )
 
-        currentPlayer.volume =
-            safeVolume
+        if (maxVolume > 0) {
+            val targetIndex =
+                (safeVolume * maxVolume)
+                    .toInt()
+                    .coerceIn(
+                        0,
+                        maxVolume
+                    )
 
-        saveVolume(
-            context,
-            route,
-            safeVolume
+            try {
+                manager.setStreamVolume(
+                    AudioManager.STREAM_MUSIC,
+                    targetIndex,
+                    0
+                )
+            } catch (_: Exception) {
+            }
+        }
+
+        currentPlayer.volume = 1f
+        mutedAfterHeadphoneRemoval = false
+    }
+
+    /**
+     * درصد واقعی Media volume سیستم.
+     */
+    fun getSystemMediaVolumePercent(): Int {
+        val manager =
+            audioManager ?: return 0
+
+        val maxVolume =
+            manager.getStreamMaxVolume(
+                AudioManager.STREAM_MUSIC
+            )
+
+        if (maxVolume <= 0) {
+            return 0
+        }
+
+        val currentVolume =
+            manager.getStreamVolume(
+                AudioManager.STREAM_MUSIC
+            )
+
+        return (
+            currentVolume * 100f / maxVolume
         )
+            .toInt()
+            .coerceIn(0, 100)
     }
 
     private fun scheduleRouteCheck() {
-
         mainHandler.removeCallbacks(
             routeCheckRunnable
         )
@@ -330,28 +243,16 @@ internal object VidoraAudioRouteManager {
         }
 
     private fun handleRouteChanged() {
-
-        val context =
-            applicationContext
-                ?: return
-
         val currentPlayer =
-            player
-                ?: return
+            player ?: return
 
         val manager =
-            audioManager
-                ?: return
+            audioManager ?: return
 
         val newRoute =
-            detectRoute(
-                manager
-            )
+            detectRoute(manager)
 
-        if (
-            newRoute ==
-            lastRoute
-        ) {
+        if (newRoute == lastRoute) {
             return
         }
 
@@ -359,139 +260,48 @@ internal object VidoraAudioRouteManager {
             lastRoute
 
         val oldWasHeadphone =
-            isHeadphoneRoute(
-                oldRoute
-            )
+            isHeadphoneRoute(oldRoute)
 
         val newIsSpeaker =
-            newRoute ==
-                KEY_SPEAKER
+            newRoute == KEY_SPEAKER
 
-        /*
-         * ابتدا حجم مسیر قبلی را ذخیره می‌کنیم.
-         * بنابراین volume هندزفری هیچ‌وقت جای volume بلندگو را نمی‌گیرد.
-         */
-        if (
-            oldRoute.isNotBlank() &&
-            !(
-                oldRoute == KEY_SPEAKER &&
-                mutedAfterHeadphoneRemoval
-            )
-        ) {
-            saveVolume(
-                context,
-                oldRoute,
-                currentPlayer.volume
-            )
-        }
+        lastRoute = newRoute
 
-        lastRoute =
-            newRoute
-
-        /*
-         * هندزفری جدا شده و خروجی به بلندگو برگشته:
-         * صدای بلندگو را از مقدار ذخیره‌شده‌اش بازیابی نمی‌کنیم.
-         * فقط موقتاً player را mute می‌کنیم تا صدا خودکار از بلندگو پخش نشود.
-         *
-         * مقدار واقعی volume بلندگو در SharedPreferences دست‌نخورده می‌ماند.
-         */
         if (
             oldWasHeadphone &&
             newIsSpeaker
         ) {
-            mutedAfterHeadphoneRemoval =
-                true
-
-            currentPlayer.volume =
-                0f
-
+            mutedAfterHeadphoneRemoval = true
+            currentPlayer.volume = 0f
             return
         }
 
-        /*
-         * در سایر تغییر مسیرها، volume مخصوص همان مسیر را اعمال می‌کنیم.
-         */
-        mutedAfterHeadphoneRemoval =
-            false
-
-        val saved =
-            getSavedVolume(
-                context,
-                newRoute
-            )
-
-        val targetVolume =
-            (saved ?: DEFAULT_VOLUME).coerceIn(
-                0f,
-                1f
-            )
-
-        currentPlayer.volume = targetVolume
+        mutedAfterHeadphoneRemoval = false
+        currentPlayer.volume = 1f
     }
-
 
     private fun isHeadphoneRoute(
         route: String
     ): Boolean {
-
-        return route ==
-            KEY_WIRED ||
-            route ==
-            KEY_BLUETOOTH ||
-            route ==
-            KEY_USB
-    }
-
-    private fun migrateBrokenRouteVolumes(
-        context: Context
-    ) {
-
-        val prefs =
-            context.getSharedPreferences(
-                PREFS_NAME,
-                Context.MODE_PRIVATE
-            )
-
-        if (
-            prefs.getBoolean(
-                KEY_MIGRATION,
-                false
-            )
-        ) {
-            return
-        }
-
-        prefs.edit()
-            .clear()
-            .putBoolean(
-                KEY_MIGRATION,
-                true
-            )
-            .apply()
+        return route == KEY_WIRED ||
+            route == KEY_BLUETOOTH ||
+            route == KEY_USB
     }
 
     private fun detectRoute(
         manager: AudioManager
     ): String {
-
         val outputs =
             manager.getDevices(
                 AudioManager.GET_DEVICES_OUTPUTS
             )
 
-        var hasBluetooth =
-            false
-
-        var hasWired =
-            false
-
-        var hasUsb =
-            false
+        var hasBluetooth = false
+        var hasWired = false
+        var hasUsb = false
 
         for (device in outputs) {
-
             when (device.type) {
-
                 AudioDeviceInfo.TYPE_BLUETOOTH_A2DP,
                 AudioDeviceInfo.TYPE_BLUETOOTH_SCO ->
                     hasBluetooth = true
@@ -506,78 +316,15 @@ internal object VidoraAudioRouteManager {
         }
 
         return when {
-
-            hasBluetooth ->
-                KEY_BLUETOOTH
-
-            hasWired ->
-                KEY_WIRED
-
-            hasUsb ->
-                KEY_USB
-
-            else ->
-                KEY_SPEAKER
+            hasBluetooth -> KEY_BLUETOOTH
+            hasWired -> KEY_WIRED
+            hasUsb -> KEY_USB
+            else -> KEY_SPEAKER
         }
     }
 
-    private fun getSavedVolume(
-        context: Context,
-        route: String
-    ): Float? {
-
-        val prefs =
-            context.getSharedPreferences(
-                PREFS_NAME,
-                Context.MODE_PRIVATE
-            )
-
-        if (
-            !prefs.contains(route)
-        ) {
-            return null
-        }
-
-        val value =
-            prefs.getFloat(
-                route,
-                DEFAULT_VOLUME
-            )
-
-        return if (
-            value.isFinite() &&
-            value in 0f..1f
-        ) {
-            value
-        } else {
-            null
-        }
-    }
-
-    private fun saveVolume(
-        context: Context,
-        route: String,
-        volume: Float
-    ) {
-
-        if (
-            route.isBlank()
-        ) {
-            return
-        }
-
-        context.getSharedPreferences(
-            PREFS_NAME,
-            Context.MODE_PRIVATE
-        )
-            .edit()
-            .putFloat(
-                route,
-                volume.coerceIn(
-                    0f,
-                    1f
-                )
-            )
-            .apply()
-    }
+    private const val KEY_SPEAKER = "speaker"
+    private const val KEY_WIRED = "wired"
+    private const val KEY_BLUETOOTH = "bluetooth"
+    private const val KEY_USB = "usb"
 }
