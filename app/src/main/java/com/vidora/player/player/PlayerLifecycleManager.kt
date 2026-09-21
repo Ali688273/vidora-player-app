@@ -2,6 +2,7 @@ package com.vidora.player
 
 import android.app.PictureInPictureParams
 import android.content.ComponentName
+import android.media.AudioManager
 import android.os.Build
 import android.util.Rational
 
@@ -10,6 +11,14 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 
 internal fun PlayerActivity.connectToPlaybackService() {
+
+    /*
+     * کلیدهای فیزیکی صدا در صفحه پخش باید روی Media باشند.
+     * خود Vidora همچنان player.volume را برای ولوم داخلی نگه می‌دارد.
+     */
+    setVolumeControlStream(
+        AudioManager.STREAM_MUSIC
+    )
 
     val sessionToken =
         SessionToken(
