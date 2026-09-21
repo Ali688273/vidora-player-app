@@ -723,30 +723,44 @@ object AdsManager {
     internal fun onPlayerWindowFocusGained(
         activity: PlayerActivity
     ) {
-        if (!showingAd) {
+        /*
+         * Window focus is not an ad-close signal.
+         * Adivery/Tapsell callbacks are the source of truth.
+         */
+        if (showingAd) {
             return
         }
-
-        showingAd = false
-        resumePlayerAfterAd(activity)
     }
 
     private fun showAdiveryInterstitial(
         activity: Activity
     ) {
+        if (
+            activity !is PlayerActivity ||
+            activity.isFinishing ||
+            activity.isDestroyed
+        ) {
+            return
+        }
 
+        activeAdiveryActivity = activity
+        activeAdiveryRewardCallback = null
         showingAd = true
 
         try {
+            if (!Adivery.isLoaded(BuildConfig.ADIVERY_INTERSTITIAL)) {
+                showingAd = false
+                activeAdiveryActivity = null
+                resumePlayerAfterAd(activity)
 
-            Adivery.showAd(
-                BuildConfig.ADIVERY_INTERSTITIAL
-            )
+                Adivery.prepareInterstitialAd(
+                    activity,
+                    BuildConfig.ADIVERY_INTERSTITIAL
+                )
+                return
+            }
 
-            Log.d(
-                TAG,
-                "Adivery interstitial requested"
-            )
+            Adivery.showAd(BuildConfig.ADIVERY_INTERSTITIAL)
 
         } catch (e: Exception) {
             Log.e(
@@ -756,11 +770,13 @@ object AdsManager {
             )
 
             showingAd = false
+            activeAdiveryActivity = null
+            activeAdiveryRewardCallback = null
             resumePlayerAfterAd(activity)
 
             try {
                 Adivery.prepareInterstitialAd(
-                    activity.application,
+                    activity,
                     BuildConfig.ADIVERY_INTERSTITIAL
                 )
             } catch (_: Exception) {
@@ -772,19 +788,33 @@ object AdsManager {
         activity: Activity,
         onRewarded: () -> Unit
     ) {
+        if (
+            activity !is PlayerActivity ||
+            activity.isFinishing ||
+            activity.isDestroyed
+        ) {
+            return
+        }
 
+        activeAdiveryActivity = activity
+        activeAdiveryRewardCallback = onRewarded
         showingAd = true
 
         try {
+            if (!Adivery.isLoaded(BuildConfig.ADIVERY_REWARDED)) {
+                showingAd = false
+                activeAdiveryActivity = null
+                activeAdiveryRewardCallback = null
+                resumePlayerAfterAd(activity)
 
-            Adivery.showAd(
-                BuildConfig.ADIVERY_REWARDED
-            )
+                Adivery.prepareRewardedAd(
+                    activity,
+                    BuildConfig.ADIVERY_REWARDED
+                )
+                return
+            }
 
-            Log.d(
-                TAG,
-                "Adivery rewarded requested"
-            )
+            Adivery.showAd(BuildConfig.ADIVERY_REWARDED)
 
         } catch (e: Exception) {
             Log.e(
@@ -794,7 +824,18 @@ object AdsManager {
             )
 
             showingAd = false
+            activeAdiveryActivity = null
+            activeAdiveryRewardCallback = null
             resumePlayerAfterAd(activity)
+
+            try {
+                Adivery.prepareRewardedAd(
+                    activity,
+                    BuildConfig.ADIVERY_REWARDED
+                )
+            } catch (_: Exception) {
+            }
         }
     }
+
 }
