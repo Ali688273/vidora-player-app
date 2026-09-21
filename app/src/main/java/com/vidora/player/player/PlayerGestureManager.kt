@@ -61,7 +61,7 @@ internal fun PlayerActivity.setupPlayerGestures() {
                         player?.playbackParameters =
                             androidx.media3.common.PlaybackParameters(2.0f)
 
-                        showGestureInfo("2.0×")
+                        hideGestureInfo()
                     }
                 }
 
@@ -96,13 +96,7 @@ internal fun PlayerActivity.setupPlayerGestures() {
                     player?.playbackParameters =
                         androidx.media3.common.PlaybackParameters(speed)
 
-                    showGestureInfo(
-                        String.format(
-                            java.util.Locale.US,
-                            "%.1f×",
-                            speed
-                        )
-                    )
+                    hideGestureInfo()
 
                     return@setOnTouchListener true
                 }
