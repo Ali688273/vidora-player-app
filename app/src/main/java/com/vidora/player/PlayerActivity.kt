@@ -65,6 +65,7 @@ class PlayerActivity : FragmentActivity() {
     internal lateinit var totalTimeText: TextView
 
     internal lateinit var gestureInfo: TextView
+    internal lateinit var speedIndicator: TextView
     internal lateinit var lockedOverlay: TextView
 
     internal var player: Player? = null
@@ -418,6 +419,9 @@ class PlayerActivity : FragmentActivity() {
 
         gestureInfo =
             findViewById(R.id.gestureInfo)
+
+        speedIndicator =
+            findViewById(R.id.speedIndicator)
 
         lockedOverlay =
             findViewById(R.id.lockedOverlay)
