@@ -8,6 +8,7 @@ import android.os.Looper
 import android.util.Log
 
 import com.adivery.sdk.Adivery
+import com.adivery.sdk.AdiveryListener
 
 import ir.tapsell.plus.AdRequestCallback
 import ir.tapsell.plus.TapsellPlus
@@ -32,6 +33,68 @@ object AdsManager {
 
     private var lifecycleRegistered = false
     private var showingAd = false
+    private var activeAdiveryActivity: PlayerActivity? = null
+    private var activeAdiveryRewardCallback: (() -> Unit)? = null
+    private var adiveryListenersRegistered = false
+
+    private val adiveryInterstitialListener =
+        object : AdiveryListener() {
+            override fun onInterstitialAdShown(
+                placementId: String
+            ) {
+                Log.d(TAG, "Adivery interstitial shown")
+            }
+
+            override fun onInterstitialAdClosed(
+                placementId: String
+            ) {
+                if (placementId != BuildConfig.ADIVERY_INTERSTITIAL) {
+                    return
+                }
+
+                showingAd = false
+
+                val activity = activeAdiveryActivity
+                activeAdiveryActivity = null
+                activeAdiveryRewardCallback = null
+
+                if (activity != null) {
+                    resumePlayerAfterAd(activity)
+                }
+            }
+        }
+
+    private val adiveryRewardedListener =
+        object : AdiveryListener() {
+            override fun onRewardedAdShown(
+                placementId: String
+            ) {
+                Log.d(TAG, "Adivery rewarded shown")
+            }
+
+            override fun onRewardedAdClosed(
+                placementId: String,
+                isRewarded: Boolean
+            ) {
+                if (placementId != BuildConfig.ADIVERY_REWARDED) {
+                    return
+                }
+
+                if (isRewarded) {
+                    activeAdiveryRewardCallback?.invoke()
+                }
+
+                showingAd = false
+
+                val activity = activeAdiveryActivity
+                activeAdiveryActivity = null
+                activeAdiveryRewardCallback = null
+
+                if (activity != null) {
+                    resumePlayerAfterAd(activity)
+                }
+            }
+        }
 
     private val mainHandler =
         Handler(Looper.getMainLooper())
@@ -75,6 +138,20 @@ object AdsManager {
                 application,
                 BuildConfig.ADIVERY_REWARDED
             )
+
+            if (!adiveryListenersRegistered) {
+                Adivery.addPlacementListener(
+                    BuildConfig.ADIVERY_INTERSTITIAL,
+                    adiveryInterstitialListener
+                )
+
+                Adivery.addPlacementListener(
+                    BuildConfig.ADIVERY_REWARDED,
+                    adiveryRewardedListener
+                )
+
+                adiveryListenersRegistered = true
+            }
 
             Log.d(
                 TAG,
