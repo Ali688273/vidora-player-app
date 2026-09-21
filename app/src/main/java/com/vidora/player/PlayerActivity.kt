@@ -2,7 +2,6 @@ package com.vidora.player
 
 import android.content.Context
 import android.content.res.Configuration
-import android.media.AudioManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -116,12 +115,6 @@ class PlayerActivity : FragmentActivity() {
                 )
             }
         }
-
-    internal val audioManager: AudioManager by lazy {
-        getSystemService(
-            Context.AUDIO_SERVICE
-        ) as AudioManager
-    }
 
     internal val sleepHandler =
         Handler(Looper.getMainLooper())
@@ -683,33 +676,6 @@ class PlayerActivity : FragmentActivity() {
 
     internal fun loadSavedDisplaySettings() {
 
-        val savedVolume =
-            getSharedPreferences(
-                DISPLAY_PREFS,
-                Context.MODE_PRIVATE
-            )
-                .getInt(
-                    KEY_VOLUME,
-                    -1
-                )
-
-        if (savedVolume >= 0) {
-
-            val maxVolume =
-                audioManager.getStreamMaxVolume(
-                    AudioManager.STREAM_MUSIC
-                )
-
-            audioManager.setStreamVolume(
-                AudioManager.STREAM_MUSIC,
-                savedVolume.coerceIn(
-                    0,
-                    maxVolume
-                ),
-                0
-            )
-        }
-
         val savedBrightness =
             getSharedPreferences(
                 DISPLAY_PREFS,
@@ -751,12 +717,6 @@ class PlayerActivity : FragmentActivity() {
             Context.MODE_PRIVATE
         )
             .edit()
-            .putInt(
-                KEY_VOLUME,
-                audioManager.getStreamVolume(
-                    AudioManager.STREAM_MUSIC
-                )
-            )
             .putFloat(
                 KEY_BRIGHTNESS,
                 currentBrightness
@@ -1059,8 +1019,6 @@ class PlayerActivity : FragmentActivity() {
         internal const val DISPLAY_PREFS =
             "vidora_display_settings"
 
-        internal const val KEY_VOLUME =
-            "volume"
 
         internal const val KEY_BRIGHTNESS =
             "brightness"
