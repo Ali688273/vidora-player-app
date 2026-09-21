@@ -45,6 +45,9 @@ internal fun PlayerActivity.setupPlayerButtons() {
             if (currentPlayer.isPlaying) {
                 currentPlayer.pause()
             } else {
+                VidoraAudioRouteManager.ensureSystemMediaVolumeAudible(
+                    this
+                )
                 currentPlayer.play()
             }
 
@@ -230,6 +233,9 @@ internal fun PlayerActivity.setupPlayerCenterButtons() {
             if (currentPlayer.isPlaying) {
                 currentPlayer.pause()
             } else {
+                VidoraAudioRouteManager.ensureSystemMediaVolumeAudible(
+                    this
+                )
                 currentPlayer.play()
             }
 
