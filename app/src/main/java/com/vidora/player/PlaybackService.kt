@@ -5,10 +5,7 @@ import androidx.media3.cast.CastPlayer
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.audio.AudioSink
-import androidx.media3.exoplayer.audio.DefaultAudioSink
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 
@@ -19,17 +16,8 @@ class PlaybackService : MediaSessionService() {
 
     private var localPlayer: ExoPlayer? = null
 
-    private var audioSyncProcessor:
-        AudioSyncProcessor? = null
-
     override fun onCreate() {
         super.onCreate()
-
-        val processor =
-            AudioSyncProcessor()
-
-        audioSyncProcessor =
-            processor
 
         val audioAttributes =
             AudioAttributes.Builder()
@@ -40,31 +28,6 @@ class PlaybackService : MediaSessionService() {
                     C.AUDIO_CONTENT_TYPE_MOVIE
                 )
                 .build()
-
-        val renderersFactory =
-            object : DefaultRenderersFactory(this) {
-
-                override fun buildAudioSink(
-                    context: android.content.Context,
-                    enableFloatOutput: Boolean,
-                    enableAudioTrackPlaybackParams: Boolean
-                ): AudioSink? {
-
-                    return DefaultAudioSink.Builder(
-                        context
-                    )
-                        .setEnableFloatOutput(
-                            enableFloatOutput
-                        )
-                        .setEnableAudioTrackPlaybackParams(
-                            enableAudioTrackPlaybackParams
-                        )
-                        .setAudioProcessors(
-                            arrayOf(processor)
-                        )
-                        .build()
-                }
-            }
 
         val player =
             ExoPlayer.Builder(
@@ -154,8 +117,6 @@ class PlaybackService : MediaSessionService() {
         mediaSession = null
 
         localPlayer = null
-
-        audioSyncProcessor = null
 
         super.onDestroy()
     }
