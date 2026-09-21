@@ -22,6 +22,7 @@ class AudioSyncProcessor : AudioProcessor {
         AudioProcessor.EMPTY_BUFFER
 
     private var ended = false
+    private var configured = false
 
     fun setOffset(
         offset: Long
@@ -40,15 +41,9 @@ class AudioSyncProcessor : AudioProcessor {
         inputAudioFormat: AudioProcessor.AudioFormat
     ): AudioProcessor.AudioFormat {
 
-        if (
-            inputAudioFormat.encoding !=
-            C.ENCODING_PCM_16BIT
-        ) {
-
-            throw AudioProcessor.UnhandledAudioFormatException(
-                inputAudioFormat
-            )
-        }
+        configured =
+            inputAudioFormat.encoding ==
+                C.ENCODING_PCM_16BIT
 
         sampleRate =
             inputAudioFormat.sampleRate
@@ -57,45 +52,25 @@ class AudioSyncProcessor : AudioProcessor {
             inputAudioFormat.channelCount
 
         bytesPerFrame =
-            (channelCount * 2)
-                .coerceAtLeast(1)
+            if (configured) {
+                (channelCount * 2).coerceAtLeast(1)
+            } else {
+                0
+            }
 
         return inputAudioFormat
     }
 
     override fun isActive(): Boolean {
-        return offsetMs != 0L
+        return configured && offsetMs != 0L
     }
 
     override fun queueInput(
         inputBuffer: ByteBuffer
     ) {
 
-        if (!isActive()) {
-
-            val size =
-                inputBuffer.remaining()
-
-            if (size <= 0) {
-
-                outputBuffer =
-                    AudioProcessor.EMPTY_BUFFER
-
-                return
-            }
-
-            val output =
-                ByteBuffer.allocateDirect(
-                    size
-                ).order(
-                    ByteOrder.nativeOrder()
-                )
-
-            output.put(inputBuffer)
-            output.flip()
-
-            outputBuffer = output
-
+        if (!configured || !isActive()) {
+            outputBuffer = inputBuffer
             return
         }
 
@@ -349,6 +324,7 @@ class AudioSyncProcessor : AudioProcessor {
 
         skipBytes =
             if (
+                configured &&
                 offsetMs < 0L &&
                 sampleRate > 0 &&
                 bytesPerFrame > 0
@@ -382,5 +358,6 @@ class AudioSyncProcessor : AudioProcessor {
         channelCount = 0
         bytesPerFrame = 0
         skipBytes = 0
+        configured = false
     }
 }
