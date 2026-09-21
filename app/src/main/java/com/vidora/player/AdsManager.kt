@@ -436,14 +436,8 @@ object AdsManager {
                     },
 
                     {
-                        showingAd = false
-
                         tapsellInterstitialResponseId =
                             null
-
-                        resumePlayerAfterAd(
-                            activity
-                        )
 
                         Log.e(
                             TAG,
@@ -550,14 +544,8 @@ object AdsManager {
                     },
 
                     {
-                        showingAd = false
-
                         tapsellRewardedResponseId =
                             null
-
-                        resumePlayerAfterAd(
-                            activity
-                        )
 
                         Log.e(
                             TAG,
@@ -651,9 +639,26 @@ object AdsManager {
         }
     }
 
+    internal fun isShowingAd(): Boolean {
+        return showingAd
+    }
+
+    internal fun onPlayerWindowFocusGained(
+        activity: PlayerActivity
+    ) {
+        if (!showingAd) {
+            return
+        }
+
+        showingAd = false
+        resumePlayerAfterAd(activity)
+    }
+
     private fun showAdiveryInterstitial(
         activity: Activity
     ) {
+
+        showingAd = true
 
         try {
 
@@ -674,9 +679,18 @@ object AdsManager {
                 e
             )
 
-        } finally {
+        } catch (e: Exception) {
+
+            Log.e(
+                TAG,
+                "Adivery interstitial error",
+                e
+            )
 
             showingAd = false
+            resumePlayerAfterAd(activity)
+
+        } finally {
 
             try {
 
@@ -694,6 +708,8 @@ object AdsManager {
         activity: Activity,
         onRewarded: () -> Unit
     ) {
+
+        showingAd = true
 
         try {
 
@@ -714,9 +730,16 @@ object AdsManager {
                 e
             )
 
-        } finally {
+        } catch (e: Exception) {
+
+            Log.e(
+                TAG,
+                "Adivery rewarded error",
+                e
+            )
 
             showingAd = false
+            resumePlayerAfterAd(activity)
         }
     }
 }
