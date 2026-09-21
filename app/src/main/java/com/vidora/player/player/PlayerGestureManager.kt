@@ -25,7 +25,9 @@ internal fun PlayerActivity.setupPlayerGestures() {
                         ?: 0L
 
                 startVolume =
-                    getSystemMediaVolumePercent()
+                    ((player?.volume ?: 0.30f) * 100f)
+                        .toInt()
+                        .coerceIn(0, 100)
 
                 startBrightness =
                     window.attributes.screenBrightness
