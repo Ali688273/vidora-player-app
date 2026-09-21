@@ -246,31 +246,6 @@ internal fun PlayerActivity.setupPlayerGestures() {
 }
 
 
-internal fun PlayerActivity.getSystemMediaVolumePercent(): Int {
-    val manager =
-        getSystemService(
-            android.content.Context.AUDIO_SERVICE
-        ) as? android.media.AudioManager
-            ?: return 30
-
-    val max =
-        manager.getStreamMaxVolume(
-            android.media.AudioManager.STREAM_MUSIC
-        )
-
-    if (max <= 0) {
-        return 30
-    }
-
-    return (
-        manager.getStreamVolume(
-            android.media.AudioManager.STREAM_MUSIC
-        ).toFloat() /
-            max.toFloat() *
-            100f
-        ).toInt().coerceIn(0, 100)
-}
-
 internal fun PlayerActivity.handleDoubleTap(
     x: Float
 ) {
@@ -393,6 +368,10 @@ internal fun PlayerActivity.handleVolume(
 
     val currentPlayer =
         player ?: return
+
+    VidoraAudioRouteManager.ensureSystemMediaVolumeAudible(
+        this
+    )
 
     val height =
         playerView.height
