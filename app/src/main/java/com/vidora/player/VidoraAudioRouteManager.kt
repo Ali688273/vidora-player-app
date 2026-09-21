@@ -237,6 +237,43 @@ internal object VidoraAudioRouteManager {
      * وقتی کاربر با ژست تغییر صدا را به‌صورت دستی انجام می‌دهد،
      * mute موقت ناشی از جدا شدن هندزفری باید برداشته شود.
      */
+    /**
+     * اگر صدای Media خود Android روی صفر باشد، حتی player.volume
+     * بالاتر از صفر هم خروجی شنیداری نخواهد داشت.
+     *
+     * این فقط در لحظه شروع پخش و فقط وقتی سیستم واقعاً صفر است
+     * یک پله صدای Media را بالا می‌برد؛ مقدار Vidora همچنان مستقل
+     * و جداگانه مدیریت می‌شود.
+     */
+    fun ensureSystemMediaVolumeAudible(
+        context: PlayerActivity
+    ) {
+        val manager =
+            context.getSystemService(
+                Context.AUDIO_SERVICE
+            ) as? AudioManager
+                ?: return
+
+        if (manager.isVolumeFixed()) {
+            return
+        }
+
+        if (
+            manager.getStreamVolume(
+                AudioManager.STREAM_MUSIC
+            ) <= 0
+        ) {
+            try {
+                manager.adjustStreamVolume(
+                    AudioManager.STREAM_MUSIC,
+                    AudioManager.ADJUST_RAISE,
+                    0
+                )
+            } catch (_: Exception) {
+            }
+        }
+    }
+
     fun onUserVolumeChanged(
         volume: Float
     ) {
