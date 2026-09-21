@@ -81,7 +81,7 @@ internal fun PlayerActivity.setupPlayerButtons() {
     audioButton.setOnClickListener {
 
         if (!isLocked) {
-            showAudioTrackDialog()
+            openAudioFileManager()
             showPlayerControlsTemporarily()
         }
     }
@@ -205,6 +205,8 @@ internal fun PlayerActivity.setupPlayerButtons() {
     updatePauseButton()
     updateCenterPlayButton()
 }
+
+private const val AUDIO_FILE_REQUEST_CODE = 6102
 
 internal fun PlayerActivity.setupPlayerCenterButtons() {
 
@@ -662,4 +664,33 @@ internal fun PlayerActivity.enterFullscreen() {
             View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
             View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
             View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+}
+
+internal fun PlayerActivity.openAudioFileManager() {
+
+    try {
+        val intent =
+            android.content.Intent(
+                android.content.Intent.ACTION_OPEN_DOCUMENT
+            ).apply {
+                addCategory(
+                    android.content.Intent.CATEGORY_OPENABLE
+                )
+                type = "audio/*"
+            }
+
+        startActivityForResult(
+            intent,
+            AUDIO_FILE_REQUEST_CODE
+        )
+
+    } catch (_: Exception) {
+
+        showTemporaryMessage(
+            p(
+                "مدیریت فایل در دسترس نیست.",
+                "File manager is not available."
+            )
+        )
+    }
 }
