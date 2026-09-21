@@ -525,6 +525,9 @@ internal fun PlayerActivity.createPlayer(
     if (
         pendingResumePosition <= 0L
     ) {
+        VidoraAudioRouteManager.ensureSystemMediaVolumeAudible(
+            this
+        )
         currentPlayer.play()
     }
 }
@@ -584,6 +587,10 @@ internal fun PlayerActivity.applyPendingResumePosition() {
 
     } catch (_: Exception) {
     }
+
+    VidoraAudioRouteManager.ensureSystemMediaVolumeAudible(
+        this
+    )
 
     currentPlayer.play()
 
