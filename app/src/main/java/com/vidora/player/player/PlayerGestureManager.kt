@@ -7,6 +7,10 @@ import kotlin.math.abs
 
 internal fun PlayerActivity.setupPlayerGestures() {
 
+    var longPressSpeedActive = false
+    var longPressOriginalSpeed = 1.0f
+    var longPressRunnable: Runnable? = null
+
     playerView.setOnTouchListener { _, event ->
 
         when (event.action) {
@@ -23,22 +27,46 @@ internal fun PlayerActivity.setupPlayerGestures() {
                 startVolume =
                     player?.volume
                         ?.let {
-                            (
-                                it * 100f
-                            )
-                                .toInt()
+                            (it * 100f).toInt()
                         }
                         ?: 100
 
                 startBrightness =
                     window.attributes.screenBrightness
-                        .takeIf {
-                            it >= 0f
-                        }
+                        .takeIf { it >= 0f }
                         ?: 0.5f
 
                 gestureMode =
                     PlayerActivity.GestureMode.NONE
+
+                longPressSpeedActive = false
+                longPressOriginalSpeed =
+                    player?.playbackParameters?.speed
+                        ?: 1.0f
+
+                longPressRunnable?.let {
+                    controlsHandler.removeCallbacks(it)
+                }
+
+                val runnable = Runnable {
+                    if (
+                        !isLocked &&
+                        gestureMode == PlayerActivity.GestureMode.NONE
+                    ) {
+                        longPressSpeedActive = true
+                        longPressOriginalSpeed =
+                            player?.playbackParameters?.speed
+                                ?: 1.0f
+
+                        player?.playbackParameters =
+                            androidx.media3.common.PlaybackParameters(2.0f)
+
+                        showGestureInfo("2.0×")
+                    }
+                }
+
+                longPressRunnable = runnable
+                controlsHandler.postDelayed(runnable, 450L)
 
                 if (isLocked) {
                     return@setOnTouchListener true
@@ -53,11 +81,31 @@ internal fun PlayerActivity.setupPlayerGestures() {
                     return@setOnTouchListener true
                 }
 
-                val deltaX =
-                    event.x - downX
+                val deltaX = event.x - downX
+                val deltaY = event.y - downY
 
-                val deltaY =
-                    event.y - downY
+                if (longPressSpeedActive) {
+                    val steps =
+                        kotlin.math.round(deltaX / 50f)
+                            .toInt()
+
+                    val speed =
+                        (2.0f + steps * 0.1f)
+                            .coerceIn(0.5f, 4.0f)
+
+                    player?.playbackParameters =
+                        androidx.media3.common.PlaybackParameters(speed)
+
+                    showGestureInfo(
+                        String.format(
+                            java.util.Locale.US,
+                            "%.1f×",
+                            speed
+                        )
+                    )
+
+                    return@setOnTouchListener true
+                }
 
                 if (
                     gestureMode ==
@@ -66,23 +114,26 @@ internal fun PlayerActivity.setupPlayerGestures() {
 
                     if (
                         abs(deltaX) > 30 &&
-                        abs(deltaX) >
-                        abs(deltaY)
+                        abs(deltaX) > abs(deltaY)
                     ) {
+                        longPressRunnable?.let {
+                            controlsHandler.removeCallbacks(it)
+                        }
 
                         gestureMode =
                             PlayerActivity.GestureMode.SEEK
 
                     } else if (
                         abs(deltaY) > 30 &&
-                        abs(deltaY) >
-                        abs(deltaX)
+                        abs(deltaY) > abs(deltaX)
                     ) {
+                        longPressRunnable?.let {
+                            controlsHandler.removeCallbacks(it)
+                        }
 
                         gestureMode =
                             if (
-                                downX <
-                                playerView.width / 2f
+                                downX < playerView.width / 2f
                             ) {
                                 PlayerActivity.GestureMode.BRIGHTNESS
                             } else {
@@ -111,19 +162,33 @@ internal fun PlayerActivity.setupPlayerGestures() {
 
             MotionEvent.ACTION_UP -> {
 
+                longPressRunnable?.let {
+                    controlsHandler.removeCallbacks(it)
+                }
+
+                if (longPressSpeedActive) {
+                    player?.playbackParameters =
+                        androidx.media3.common.PlaybackParameters(
+                            longPressOriginalSpeed
+                        )
+
+                    longPressSpeedActive = false
+                    hideGestureInfo()
+                    gestureMode =
+                        PlayerActivity.GestureMode.NONE
+
+                    return@setOnTouchListener true
+                }
+
                 if (isLocked) {
                     return@setOnTouchListener true
                 }
 
-                val deltaX =
-                    event.x - downX
-
-                val deltaY =
-                    event.y - downY
+                val deltaX = event.x - downX
+                val deltaY = event.y - downY
 
                 val movement =
-                    abs(deltaX) +
-                        abs(deltaY)
+                    abs(deltaX) + abs(deltaY)
 
                 val now =
                     System.currentTimeMillis()
@@ -136,29 +201,16 @@ internal fun PlayerActivity.setupPlayerGestures() {
 
                     val doubleTap =
                         now - lastTapTime < 350L &&
-                            abs(
-                                event.x -
-                                    lastTapX
-                            ) < 80f &&
-                            abs(
-                                event.y -
-                                    lastTapY
-                            ) < 80f
+                            abs(event.x - lastTapX) < 80f &&
+                            abs(event.y - lastTapY) < 80f
 
                     if (doubleTap) {
-
-                        handleDoubleTap(
-                            event.x
-                        )
-
+                        handleDoubleTap(event.x)
                         lastTapTime = 0L
-
                     } else {
-
                         lastTapTime = now
                         lastTapX = event.x
                         lastTapY = event.y
-
                         togglePlayerControls()
                     }
 
@@ -174,6 +226,18 @@ internal fun PlayerActivity.setupPlayerGestures() {
             }
 
             MotionEvent.ACTION_CANCEL -> {
+
+                longPressRunnable?.let {
+                    controlsHandler.removeCallbacks(it)
+                }
+
+                if (longPressSpeedActive) {
+                    player?.playbackParameters =
+                        androidx.media3.common.PlaybackParameters(
+                            longPressOriginalSpeed
+                        )
+                    longPressSpeedActive = false
+                }
 
                 gestureMode =
                     PlayerActivity.GestureMode.NONE
