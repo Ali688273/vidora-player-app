@@ -4,19 +4,23 @@ import android.content.Context
 import android.media.AudioDeviceCallback
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
+import android.os.Handler
+import android.os.Looper
 import androidx.media3.common.Player
 
 /**
- * مدیریت حجم صدای داخلی Vidora برای مسیرهای مختلف خروجی.
+ * مدیریت مستقل صدای خروجی‌های مختلف Vidora.
  *
- * صدای سیستم را تغییر نمی‌دهد.
- * فقط player.volume را برای هر مسیر خروجی جداگانه نگه می‌دارد.
- *
- * مسیرها:
+ * حجم هر مسیر جداگانه ذخیره می‌شود:
  * - speaker
  * - wired
  * - bluetooth
  * - usb
+ *
+ * نکته مهم:
+ * حذف هندزفری نباید حجم ذخیره‌شده هندزفری را به بلندگو منتقل کند.
+ * همچنین بعد از جدا شدن هندزفری، پخش خودکار از بلندگو انجام نمی‌شود.
+ * در این حالت فقط صدای player موقتاً صفر می‌شود و با تغییر دستی صدا دوباره فعال می‌شود.
  */
 internal object VidoraAudioRouteManager {
 
@@ -38,13 +42,16 @@ internal object VidoraAudioRouteManager {
     private const val DEFAULT_VOLUME = 0.30f
 
     private const val KEY_MIGRATION =
-        "route_volume_migration_v6"
+        "route_volume_migration_v7"
 
     private var registered =
         false
 
     private var lastRoute =
         ""
+
+    private var mutedAfterHeadphoneRemoval =
+        false
 
     private var player:
         Player? = null
@@ -55,6 +62,9 @@ internal object VidoraAudioRouteManager {
     private var applicationContext:
         Context? = null
 
+    private val mainHandler =
+        Handler(Looper.getMainLooper())
+
     private val deviceCallback =
         object : AudioDeviceCallback() {
 
@@ -62,14 +72,14 @@ internal object VidoraAudioRouteManager {
                 addedDevices:
                     Array<out AudioDeviceInfo>
             ) {
-                handleRouteChanged()
+                scheduleRouteCheck()
             }
 
             override fun onAudioDevicesRemoved(
                 removedDevices:
                     Array<out AudioDeviceInfo>
             ) {
-                handleRouteChanged()
+                scheduleRouteCheck()
             }
         }
 
@@ -104,6 +114,9 @@ internal object VidoraAudioRouteManager {
                     manager
                 )
 
+            mutedAfterHeadphoneRemoval =
+                false
+
             manager.registerAudioDeviceCallback(
                 deviceCallback,
                 null
@@ -130,12 +143,18 @@ internal object VidoraAudioRouteManager {
             contextToSave != null &&
             lastRoute.isNotBlank()
         ) {
-
-            saveVolume(
-                contextToSave,
-                lastRoute,
-                currentPlayer.volume
-            )
+            if (
+                !(
+                    lastRoute == KEY_SPEAKER &&
+                    mutedAfterHeadphoneRemoval
+                )
+            ) {
+                saveVolume(
+                    contextToSave,
+                    lastRoute,
+                    currentPlayer.volume
+                )
+            }
         }
 
         if (registered) {
@@ -146,11 +165,16 @@ internal object VidoraAudioRouteManager {
                 )
         }
 
+        mainHandler.removeCallbacksAndMessages(null)
+
         registered =
             false
 
         lastRoute =
             ""
+
+        mutedAfterHeadphoneRemoval =
+            false
 
         player =
             null
@@ -191,6 +215,9 @@ internal object VidoraAudioRouteManager {
         lastRoute =
             route
 
+        mutedAfterHeadphoneRemoval =
+            false
+
         val saved =
             getSavedVolume(
                 context,
@@ -203,6 +230,65 @@ internal object VidoraAudioRouteManager {
                 1f
             )
     }
+
+    /**
+     * وقتی کاربر با ژست تغییر صدا را به‌صورت دستی انجام می‌دهد،
+     * mute موقت ناشی از جدا شدن هندزفری باید برداشته شود.
+     */
+    fun onUserVolumeChanged(
+        volume: Float
+    ) {
+
+        val context =
+            applicationContext
+                ?: return
+
+        val currentPlayer =
+            player
+                ?: return
+
+        val route =
+            lastRoute
+
+        if (route.isBlank()) {
+            return
+        }
+
+        mutedAfterHeadphoneRemoval =
+            false
+
+        val safeVolume =
+            volume.coerceIn(
+                0f,
+                1f
+            )
+
+        currentPlayer.volume =
+            safeVolume
+
+        saveVolume(
+            context,
+            route,
+            safeVolume
+        )
+    }
+
+    private fun scheduleRouteCheck() {
+
+        mainHandler.removeCallbacks(
+            routeCheckRunnable
+        )
+
+        mainHandler.postDelayed(
+            routeCheckRunnable,
+            250L
+        )
+    }
+
+    private val routeCheckRunnable =
+        Runnable {
+            handleRouteChanged()
+        }
 
     private fun handleRouteChanged() {
 
@@ -230,19 +316,64 @@ internal object VidoraAudioRouteManager {
             return
         }
 
-        if (
-            lastRoute.isNotBlank()
-        ) {
+        val oldRoute =
+            lastRoute
 
+        val oldWasHeadphone =
+            isHeadphoneRoute(
+                oldRoute
+            )
+
+        val newIsSpeaker =
+            newRoute ==
+                KEY_SPEAKER
+
+        /*
+         * ابتدا حجم مسیر قبلی را ذخیره می‌کنیم.
+         * بنابراین volume هندزفری هیچ‌وقت جای volume بلندگو را نمی‌گیرد.
+         */
+        if (
+            oldRoute.isNotBlank() &&
+            !(
+                oldRoute == KEY_SPEAKER &&
+                mutedAfterHeadphoneRemoval
+            )
+        ) {
             saveVolume(
                 context,
-                lastRoute,
+                oldRoute,
                 currentPlayer.volume
             )
         }
 
         lastRoute =
             newRoute
+
+        /*
+         * هندزفری جدا شده و خروجی به بلندگو برگشته:
+         * صدای بلندگو را از مقدار ذخیره‌شده‌اش بازیابی نمی‌کنیم.
+         * فقط موقتاً player را mute می‌کنیم تا صدا خودکار از بلندگو پخش نشود.
+         *
+         * مقدار واقعی volume بلندگو در SharedPreferences دست‌نخورده می‌ماند.
+         */
+        if (
+            oldWasHeadphone &&
+            newIsSpeaker
+        ) {
+            mutedAfterHeadphoneRemoval =
+                true
+
+            currentPlayer.volume =
+                0f
+
+            return
+        }
+
+        /*
+         * در سایر تغییر مسیرها، volume مخصوص همان مسیر را اعمال می‌کنیم.
+         */
+        mutedAfterHeadphoneRemoval =
+            false
 
         val saved =
             getSavedVolume(
@@ -255,6 +386,18 @@ internal object VidoraAudioRouteManager {
                 0f,
                 1f
             )
+    }
+
+    private fun isHeadphoneRoute(
+        route: String
+    ): Boolean {
+
+        return route ==
+            KEY_WIRED ||
+            route ==
+            KEY_BLUETOOTH ||
+            route ==
+            KEY_USB
     }
 
     private fun migrateBrokenRouteVolumes(
