@@ -944,10 +944,18 @@ class PlayerActivity : FragmentActivity() {
 
         if (
             hasFocus &&
-            wasPlayingBeforeWindowFocusLoss &&
             !isInPictureInPictureMode &&
             !enteringPictureInPicture
         ) {
+
+            if (AdsManager.isShowingAd()) {
+                AdsManager.onPlayerWindowFocusGained(this)
+                return
+            }
+
+            if (!wasPlayingBeforeWindowFocusLoss) {
+                return
+            }
 
             val currentPlayer =
                 player
