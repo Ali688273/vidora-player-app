@@ -672,15 +672,6 @@ object AdsManager {
             )
 
         } catch (e: Exception) {
-
-            Log.e(
-                TAG,
-                "Adivery interstitial error",
-                e
-            )
-
-        } catch (e: Exception) {
-
             Log.e(
                 TAG,
                 "Adivery interstitial error",
@@ -690,15 +681,11 @@ object AdsManager {
             showingAd = false
             resumePlayerAfterAd(activity)
 
-        } finally {
-
             try {
-
                 Adivery.prepareInterstitialAd(
                     activity.application,
                     BuildConfig.ADIVERY_INTERSTITIAL
                 )
-
             } catch (_: Exception) {
             }
         }
@@ -723,15 +710,6 @@ object AdsManager {
             )
 
         } catch (e: Exception) {
-
-            Log.e(
-                TAG,
-                "Adivery rewarded error",
-                e
-            )
-
-        } catch (e: Exception) {
-
             Log.e(
                 TAG,
                 "Adivery rewarded error",
