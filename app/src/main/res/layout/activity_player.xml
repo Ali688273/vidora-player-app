@@ -311,6 +311,23 @@
     </HorizontalScrollView>
 
     <TextView
+        android:id="@+id/speedIndicator"
+        android:layout_width="wrap_content"
+        android:layout_height="32dp"
+        android:layout_gravity="top|center_horizontal"
+        android:layout_marginTop="8dp"
+        android:minWidth="54dp"
+        android:gravity="center"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:background="#CC111111"
+        android:text="2.0×"
+        android:textColor="#FFFFFF"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        android:visibility="gone" />
+
+    <TextView
         android:id="@+id/gestureInfo"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
