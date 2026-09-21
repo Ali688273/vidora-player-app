@@ -30,10 +30,7 @@ class PlaybackService : MediaSessionService() {
                 .build()
 
         val player =
-            ExoPlayer.Builder(
-                this,
-                renderersFactory
-            )
+            ExoPlayer.Builder(this)
                 .setAudioAttributes(
                     audioAttributes,
                     true
@@ -50,32 +47,6 @@ class PlaybackService : MediaSessionService() {
             CastPlayer.Builder(this)
                 .setLocalPlayer(player)
                 .build()
-
-        castPlayer.addListener(
-            object :
-                androidx.media3.common.Player.Listener {
-
-                override fun onMediaItemTransition(
-                    mediaItem:
-                        androidx.media3.common.MediaItem?,
-                    reason: Int
-                ) {
-
-                    val uri =
-                        mediaItem
-                            ?.localConfiguration
-                            ?.uri
-                            ?: return
-
-                    processor.setOffset(
-                        AudioSyncManager.getOffset(
-                            this@PlaybackService,
-                            uri
-                        )
-                    )
-                }
-            }
-        )
 
         mediaSession =
             MediaSession.Builder(
