@@ -38,7 +38,7 @@ internal object VidoraAudioRouteManager {
     private const val DEFAULT_VOLUME = 0.30f
 
     private const val KEY_MIGRATION =
-        "route_volume_migration_v4"
+        "route_volume_migration_v5"
 
     private var registered =
         false
