@@ -25,9 +25,8 @@ internal fun PlayerActivity.setupPlayerGestures() {
                         ?: 0L
 
                 startVolume =
-                    ((player?.volume ?: 0.30f) * 100f)
-                        .toInt()
-                        .coerceIn(0, 100)
+                    VidoraAudioRouteManager
+                        .getSystemMediaVolumePercent()
 
                 startBrightness =
                     window.attributes.screenBrightness
@@ -368,10 +367,6 @@ internal fun PlayerActivity.handleVolume(
 
     val currentPlayer =
         player ?: return
-
-    VidoraAudioRouteManager.ensureSystemMediaVolumeAudible(
-        this
-    )
 
     val height =
         playerView.height
