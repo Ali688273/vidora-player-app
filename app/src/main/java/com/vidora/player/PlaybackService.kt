@@ -54,7 +54,7 @@ class PlaybackService : MediaSessionService() {
                         context
                     )
                         .setEnableFloatOutput(
-                            false
+                            enableFloatOutput
                         )
                         .setEnableAudioTrackPlaybackParams(
                             enableAudioTrackPlaybackParams
